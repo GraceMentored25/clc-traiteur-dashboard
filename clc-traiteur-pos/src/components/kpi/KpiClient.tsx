@@ -28,14 +28,7 @@ import {
 import { useStore } from "@/lib/store";
 import { formatCurrency } from "@/lib/utils";
 
-const MONTHLY_DATA = [
-  { month: "Jan", devis: 8, ca: 12400 },
-  { month: "Fév", devis: 11, ca: 18700 },
-  { month: "Mar", devis: 7, ca: 9800 },
-  { month: "Avr", devis: 14, ca: 22300 },
-  { month: "Mai", devis: 12, ca: 19600 },
-  { month: "Jun", devis: 18, ca: 31400 },
-];
+const MONTH_LABELS = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
 
 const CATEGORY_DATA = [
   { name: "Plats principaux", value: 34, color: "#E8960C" },
@@ -71,7 +64,7 @@ const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?:
 export default function KpiClient() {
   const { devisList } = useStore();
 
-  const metrics = useMemo(() => {
+  const { metrics, monthlyData } = useMemo(() => {
     const confirmed = devisList.filter((d) => d.status === "Confirmé");
     const sent = devisList.filter((d) => d.status === "Envoyé");
     const totalCA = confirmed.reduce((s, d) => s + d.totalTTC, 0);
@@ -79,13 +72,27 @@ export default function KpiClient() {
     const convRate = devisList.length
       ? Math.round((confirmed.length / devisList.length) * 100)
       : 0;
+
+    // Build last-6-months sliding window
+    const now = new Date();
+    const slots = Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
+      return { year: d.getFullYear(), month: d.getMonth(), label: MONTH_LABELS[d.getMonth()] };
+    });
+    const monthly = slots.map(({ year, month, label }) => {
+      const inMonth = devisList.filter((d) => {
+        const c = new Date(d.createdAt);
+        return c.getFullYear() === year && c.getMonth() === month;
+      });
+      const ca = inMonth
+        .filter((d) => d.status === "Confirmé")
+        .reduce((s, d) => s + d.totalTTC, 0);
+      return { month: label, devis: inMonth.length, ca };
+    });
+
     return {
-      totalCA,
-      totalDevis: devisList.length,
-      confirmed: confirmed.length,
-      convRate,
-      avgDevis,
-      pending: sent.length,
+      metrics: { totalCA, totalDevis: devisList.length, confirmed: confirmed.length, convRate, avgDevis, pending: sent.length },
+      monthlyData: monthly,
     };
   }, [devisList]);
 
@@ -152,7 +159,7 @@ export default function KpiClient() {
             </span>
           </div>
           <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={MONTHLY_DATA} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+            <AreaChart data={monthlyData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="caGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#E8960C" stopOpacity={0.25} />
@@ -227,7 +234,7 @@ export default function KpiClient() {
             </div>
           </div>
           <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={MONTHLY_DATA} margin={{ top: 4, right: 4, left: -20, bottom: 0 }} barSize={28}>
+            <BarChart data={monthlyData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }} barSize={28}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
               <XAxis dataKey="month" tick={{ fill: "#8B949E", fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: "#8B949E", fontSize: 11 }} axisLine={false} tickLine={false} />
