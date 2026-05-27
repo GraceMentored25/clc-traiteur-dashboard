@@ -9,3 +9,12 @@ build/
 *.log
 .DS_Store
 Thumbs.db
+
+# Claude Code local config & logs
+.claude/
+
+# Playwright MCP session artifacts
+.playwright-mcp/
+
+# Auto-generated agent instructions
+clc-traiteur-pos/AGENTS.md
