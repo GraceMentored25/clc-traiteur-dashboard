@@ -4,10 +4,9 @@ import { useState, useMemo, memo, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MagnifyingGlass, ShoppingCart, SquaresFour, Rows,
-  SortAscending, List
+  SortAscending,
 } from "@phosphor-icons/react";
 import { CATEGORIES, DISHES } from "@/lib/data/dishes";
-import { Dish } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { cn, formatCurrency } from "@/lib/utils";
 import DishCard from "./DishCard";
@@ -37,9 +36,7 @@ export default function DashboardClient() {
   useEffect(() => {
     if (!sortOpen) return;
     const handleClick = (e: MouseEvent) => {
-      if (sortRef.current && !sortRef.current.contains(e.target as Node)) {
-        setSortOpen(false);
-      }
+      if (sortRef.current && !sortRef.current.contains(e.target as Node)) setSortOpen(false);
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
@@ -47,7 +44,6 @@ export default function DashboardClient() {
 
   const cart = useStore((s) => s.cart);
   const cartTotal = useStore((s) => s.cartTotal);
-
   const cartCount = cart.length;
 
   const filtered = useMemo(() => {
@@ -63,8 +59,9 @@ export default function DashboardClient() {
 
   return (
     <div className="flex flex-col min-h-[100dvh]">
-      {/* Top bar */}
-      <header className="sticky top-0 z-30 flex items-center gap-3 px-8 py-4 bg-[var(--surface-1)]/80 backdrop-blur-xl border-b border-[var(--border)] overflow-visible">
+
+      {/* ── DESKTOP header ─────────────────────────────────────── */}
+      <header className="hidden lg:flex sticky top-0 z-30 items-center gap-3 px-8 py-4 bg-[var(--surface-1)]/80 backdrop-blur-xl border-b border-[var(--border)]">
         <div className="flex-1">
           <h1 className="text-lg font-bold text-[var(--text-primary)] tracking-tight">Création de devis</h1>
           <p className="text-xs text-[var(--text-muted)]">Sélectionnez les plats et définissez les quantités</p>
@@ -78,11 +75,11 @@ export default function DashboardClient() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Rechercher..."
-            className="w-full h-9 pl-8 pr-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--amber)]/50 focus:ring-1 focus:ring-[var(--amber)]/15 transition-all"
+            className="w-full h-9 pl-8 pr-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--amber)]/50 transition-all"
           />
         </div>
 
-        {/* Sort dropdown */}
+        {/* Sort */}
         <div className="relative" ref={sortRef}>
           <button
             onClick={() => setSortOpen((v) => !v)}
@@ -94,7 +91,7 @@ export default function DashboardClient() {
             )}
           >
             <SortAscending size={15} />
-            <span className="hidden sm:inline">{SORT_OPTIONS.find(s => s.value === sortMode)?.label}</span>
+            <span>{SORT_OPTIONS.find(s => s.value === sortMode)?.label}</span>
           </button>
           <AnimatePresence>
             {sortOpen && (
@@ -127,27 +124,21 @@ export default function DashboardClient() {
 
         {/* View toggle */}
         <div className="flex items-center bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-0.5">
-          <button
-            onClick={() => setViewMode("grid")}
-            className={cn(
-              "w-8 h-7 rounded-lg flex items-center justify-center transition-all",
-              viewMode === "grid" ? "bg-[var(--amber)] text-[var(--surface)]" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
-            )}
-          >
-            <SquaresFour size={15} weight={viewMode === "grid" ? "fill" : "regular"} />
-          </button>
-          <button
-            onClick={() => setViewMode("list")}
-            className={cn(
-              "w-8 h-7 rounded-lg flex items-center justify-center transition-all",
-              viewMode === "list" ? "bg-[var(--amber)] text-[var(--surface)]" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
-            )}
-          >
-            <Rows size={15} weight={viewMode === "list" ? "fill" : "regular"} />
-          </button>
+          {(["grid", "list"] as ViewMode[]).map((v) => (
+            <button
+              key={v}
+              onClick={() => setViewMode(v)}
+              className={cn(
+                "w-8 h-7 rounded-lg flex items-center justify-center transition-all",
+                viewMode === v ? "bg-[var(--amber)] text-[var(--surface)]" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+              )}
+            >
+              {v === "grid" ? <SquaresFour size={15} weight={viewMode === "grid" ? "fill" : "regular"} /> : <Rows size={15} weight={viewMode === "list" ? "fill" : "regular"} />}
+            </button>
+          ))}
         </div>
 
-        {/* Cart button */}
+        {/* Cart */}
         <motion.button
           whileTap={{ scale: 0.96 }}
           onClick={() => setCartOpen(true)}
@@ -156,15 +147,9 @@ export default function DashboardClient() {
           <ShoppingCart size={17} weight="fill" />
           <span>Panier</span>
           {cartCount > 0 && (
-            <motion.span
-              key={cartCount}
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-[var(--amber)] text-[var(--surface)] text-[10px] font-bold flex items-center justify-center"
-            >
+            <span className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-[var(--amber)] text-[var(--surface)] text-[10px] font-bold flex items-center justify-center">
               {cartCount}
-            </motion.span>
+            </span>
           )}
         </motion.button>
 
@@ -176,23 +161,36 @@ export default function DashboardClient() {
             onClick={() => setDevisModalOpen(true)}
             className="h-9 px-5 rounded-xl bg-[var(--amber)] hover:bg-[var(--amber-light)] text-[var(--surface)] font-semibold text-sm transition-colors whitespace-nowrap"
           >
-            Générer un devis — {formatCurrency(cartTotal())}
+            Générer — {formatCurrency(cartTotal())}
           </motion.button>
         )}
       </header>
 
+      {/* ── MOBILE search bar ──────────────────────────────────── */}
+      <div className="lg:hidden px-4 pt-3 pb-2">
+        <div className="relative">
+          <MagnifyingGlass size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Rechercher un plat..."
+            className="w-full h-10 pl-9 pr-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--amber)]/50 transition-all"
+          />
+        </div>
+      </div>
 
-      {/* Category bar */}
-      <div className="px-8 py-3 flex items-center gap-2 overflow-x-auto scrollbar-hide border-b border-[var(--border)]">
+      {/* ── Category bar ───────────────────────────────────────── */}
+      <div className="px-4 lg:px-8 py-2.5 flex items-center gap-2 overflow-x-auto scrollbar-hide border-b border-[var(--border)]">
         {CATEGORIES.map((cat) => (
           <button
             key={cat}
             onClick={() => setActiveCategory(cat)}
             className={cn(
-              "shrink-0 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all duration-200",
+              "shrink-0 px-3 py-1.5 rounded-full text-xs lg:text-sm font-medium transition-all duration-200",
               activeCategory === cat
                 ? "bg-[var(--amber)] text-[var(--surface)]"
-                : "bg-[var(--surface-2)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-3)] border border-[var(--border)]"
+                : "bg-[var(--surface-2)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)]"
             )}
           >
             {cat}
@@ -200,18 +198,18 @@ export default function DashboardClient() {
         ))}
       </div>
 
-      {/* Dishes */}
-      <div className="flex-1 px-8 py-5">
+      {/* ── Dishes grid ────────────────────────────────────────── */}
+      <div className="flex-1 px-4 lg:px-8 py-4 pb-24 lg:pb-5">
         {filtered.length === 0 ? (
           <EmptyDishes search={search} />
         ) : (
           <>
-            <p className="text-xs text-[var(--text-muted)] mb-4">
-              {filtered.length} plat{filtered.length > 1 ? "s" : ""} · vue {viewMode === "grid" ? "grille" : "liste"}
+            <p className="text-xs text-[var(--text-muted)] mb-3">
+              {filtered.length} plat{filtered.length > 1 ? "s" : ""}
             </p>
 
             {viewMode === "grid" ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
                 <AnimatePresence mode="popLayout">
                   {filtered.map((dish, i) => (
                     <motion.div
@@ -229,8 +227,7 @@ export default function DashboardClient() {
               </div>
             ) : (
               <div className="flex flex-col gap-1.5">
-                {/* List header */}
-                <div className="grid grid-cols-[2fr_1fr_120px_140px] gap-4 px-4 pb-1 border-b border-[var(--border)]">
+                <div className="hidden lg:grid grid-cols-[2fr_1fr_120px_140px] gap-4 px-4 pb-1 border-b border-[var(--border)]">
                   {["Plat", "Catégorie", "Prix / unité", "Quantité"].map((h) => (
                     <p key={h} className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">{h}</p>
                   ))}
@@ -253,6 +250,27 @@ export default function DashboardClient() {
             )}
           </>
         )}
+      </div>
+
+      {/* ── Mobile FAB cart ────────────────────────────────────── */}
+      <div className="lg:hidden fixed bottom-5 left-0 right-0 flex justify-center z-30 px-4">
+        <motion.button
+          whileTap={{ scale: 0.97 }}
+          onClick={() => cartCount > 0 ? setCartOpen(true) : null}
+          className={cn(
+            "flex items-center gap-3 h-14 px-6 rounded-2xl shadow-2xl font-semibold text-sm transition-all",
+            cartCount > 0
+              ? "bg-[var(--amber)] text-[var(--surface)] cursor-pointer"
+              : "bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-muted)] cursor-default"
+          )}
+        >
+          <ShoppingCart size={20} weight="fill" />
+          {cartCount > 0 ? (
+            <span>{cartCount} article{cartCount > 1 ? "s" : ""} — {formatCurrency(cartTotal())}</span>
+          ) : (
+            <span>Panier vide</span>
+          )}
+        </motion.button>
       </div>
 
       <AnimatePresence>
