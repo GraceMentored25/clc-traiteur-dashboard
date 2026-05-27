@@ -1,0 +1,385 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  CurrencyEur,
+  Receipt,
+  TrendUp,
+  CheckCircle,
+  FilePdf,
+  Download,
+  Calendar,
+  X,
+  Printer,
+} from "@phosphor-icons/react";
+import { useStore } from "@/lib/store";
+import { Devis } from "@/lib/types";
+import { formatCurrency, formatDate } from "@/lib/utils";
+
+type Period = "all" | "month" | "quarter" | "year";
+
+const TVA_RATE = 0.20;
+
+export default function ComptabiliteClient() {
+  const { devisList } = useStore();
+  const [period, setPeriod] = useState<Period>("all");
+  const [docModal, setDocModal] = useState<"summary" | "invoices" | "tva" | null>(null);
+
+  const confirmed = useMemo(() => {
+    const now = new Date();
+    return devisList.filter((d) => {
+      if (d.status !== "Confirmé") return false;
+      if (period === "all") return true;
+      const date = new Date(d.eventDate);
+      if (period === "month") return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+      if (period === "quarter") {
+        const q = Math.floor(now.getMonth() / 3);
+        return Math.floor(date.getMonth() / 3) === q && date.getFullYear() === now.getFullYear();
+      }
+      if (period === "year") return date.getFullYear() === now.getFullYear();
+      return true;
+    });
+  }, [devisList, period]);
+
+  const metrics = useMemo(() => {
+    const totalHT = confirmed.reduce((s, d) => s + d.totalHT, 0);
+    const totalTVA = confirmed.reduce((s, d) => s + (d.totalTTC - d.totalHT), 0);
+    const totalTTC = confirmed.reduce((s, d) => s + d.totalTTC, 0);
+    const avgDevis = confirmed.length ? totalTTC / confirmed.length : 0;
+    return { totalHT, totalTVA, totalTTC, avgDevis, count: confirmed.length };
+  }, [confirmed]);
+
+  const PERIOD_OPTIONS: { value: Period; label: string }[] = [
+    { value: "all", label: "Tout" },
+    { value: "month", label: "Ce mois" },
+    { value: "quarter", label: "Ce trimestre" },
+    { value: "year", label: "Cette année" },
+  ];
+
+  return (
+    <div className="px-8 py-8 min-h-[100dvh]">
+      {/* Header */}
+      <div className="flex items-start justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)] tracking-tight">Gestion comptable</h1>
+          <p className="text-sm text-[var(--text-muted)] mt-1">
+            Suivi financier des devis confirmés
+          </p>
+        </div>
+
+        {/* Generate doc button */}
+        <div className="flex items-center gap-2">
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => setDocModal("summary")}
+            className="flex items-center gap-2 h-9 px-4 rounded-xl bg-[var(--amber)] hover:bg-[var(--amber-light)] text-[var(--surface)] text-sm font-semibold transition-colors"
+          >
+            <FilePdf size={16} weight="fill" />
+            Générer la documentation
+          </motion.button>
+        </div>
+      </div>
+
+      {/* Period filter */}
+      <div className="flex items-center gap-1.5 bg-[var(--surface-2)] rounded-xl p-1 border border-[var(--border)] w-fit mb-8">
+        {PERIOD_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => setPeriod(opt.value)}
+            className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              period === opt.value
+                ? "bg-[var(--amber)] text-[var(--surface)]"
+                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
+      {/* KPI cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {[
+          { label: "CA Total TTC", value: formatCurrency(metrics.totalTTC), icon: <CurrencyEur size={18} weight="fill" />, accent: true },
+          { label: "CA Hors Taxes", value: formatCurrency(metrics.totalHT), icon: <TrendUp size={18} weight="fill" />, accent: false },
+          { label: "TVA collectée (20%)", value: formatCurrency(metrics.totalTVA), icon: <Receipt size={18} weight="fill" />, accent: false },
+          { label: "Devis confirmés", value: String(metrics.count), icon: <CheckCircle size={18} weight="fill" />, accent: false },
+        ].map((card, i) => (
+          <motion.div
+            key={card.label}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.06, type: "spring", stiffness: 200, damping: 25 }}
+            className={`p-5 rounded-2xl border ${
+              card.accent
+                ? "bg-[var(--amber)]/8 border-[var(--amber)]/20"
+                : "bg-[var(--surface-1)] border-[var(--border)]"
+            }`}
+          >
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-4 ${
+              card.accent ? "bg-[var(--amber)]/20 text-[var(--amber)]" : "bg-[var(--surface-2)] text-[var(--text-secondary)]"
+            }`}>
+              {card.icon}
+            </div>
+            <p className="text-[11px] text-[var(--text-muted)] mb-1">{card.label}</p>
+            <p className={`text-xl font-bold font-mono tracking-tight ${card.accent ? "text-[var(--amber)]" : "text-[var(--text-primary)]"}`}>
+              {card.value}
+            </p>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Récapitulatif financier par devis */}
+      <div className="rounded-2xl border border-[var(--border)] overflow-hidden bg-[var(--surface-1)] mb-6">
+        <div className="px-6 py-4 border-b border-[var(--border)] flex items-center justify-between">
+          <h2 className="font-bold text-[var(--text-primary)] text-sm">Détail des encaissements</h2>
+          <span className="text-xs text-[var(--text-muted)]">{confirmed.length} facture{confirmed.length > 1 ? "s" : ""}</span>
+        </div>
+
+        {confirmed.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <CurrencyEur size={36} className="text-[var(--text-muted)] mb-3" />
+            <p className="text-sm font-medium text-[var(--text-secondary)]">Aucun devis confirmé</p>
+            <p className="text-xs text-[var(--text-muted)] mt-1">Les devis confirmés apparaîtront ici</p>
+          </div>
+        ) : (
+          <>
+            {/* Table header */}
+            <div className="grid grid-cols-[80px_1fr_130px_110px_110px_120px] gap-0 px-6 py-3 border-b border-[var(--border)]">
+              {["Réf.", "Client", "Événement", "Montant HT", "TVA 20%", "Total TTC"].map((h) => (
+                <p key={h} className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">{h}</p>
+              ))}
+            </div>
+            {confirmed.map((devis, i) => (
+              <motion.div
+                key={devis.id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: i * 0.03 }}
+                className="grid grid-cols-[80px_1fr_130px_110px_110px_120px] gap-0 px-6 py-3.5 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors"
+              >
+                <p className="text-xs font-mono font-medium text-[var(--amber)] self-center">{devis.id}</p>
+                <div className="self-center">
+                  <p className="text-sm font-medium text-[var(--text-primary)]">{devis.clientName}</p>
+                  <div className="flex items-center gap-1 text-xs text-[var(--text-muted)] mt-0.5">
+                    <Calendar size={11} />
+                    {formatDate(devis.eventDate)}
+                  </div>
+                </div>
+                <p className="text-xs text-[var(--text-secondary)] self-center">{devis.eventType}</p>
+                <p className="text-sm font-mono text-[var(--text-primary)] self-center">{formatCurrency(devis.totalHT)}</p>
+                <p className="text-sm font-mono text-[var(--text-secondary)] self-center">{formatCurrency(devis.totalTTC - devis.totalHT)}</p>
+                <p className="text-sm font-mono font-bold text-[var(--amber)] self-center">{formatCurrency(devis.totalTTC)}</p>
+              </motion.div>
+            ))}
+            {/* Total row */}
+            <div className="grid grid-cols-[80px_1fr_130px_110px_110px_120px] gap-0 px-6 py-4 bg-[var(--surface-2)] border-t-2 border-[var(--amber)]/20">
+              <div className="col-span-3 self-center">
+                <p className="text-sm font-bold text-[var(--text-primary)]">TOTAL</p>
+              </div>
+              <p className="text-sm font-mono font-bold text-[var(--text-primary)] self-center">{formatCurrency(metrics.totalHT)}</p>
+              <p className="text-sm font-mono font-bold text-[var(--text-secondary)] self-center">{formatCurrency(metrics.totalTVA)}</p>
+              <p className="text-sm font-mono font-bold text-[var(--amber)] self-center text-base">{formatCurrency(metrics.totalTTC)}</p>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Doc generation modal */}
+      <AnimatePresence>
+        {docModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setDocModal(null)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+            />
+            <motion.div
+              initial={{ scale: 0.93, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 28 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-full max-w-md bg-[var(--surface-1)] rounded-2xl border border-[var(--border)] shadow-2xl overflow-hidden">
+                <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--border)]">
+                  <div className="flex items-center gap-2.5">
+                    <FilePdf size={18} weight="fill" className="text-[var(--amber)]" />
+                    <h2 className="font-bold text-[var(--text-primary)]">Documentation légale</h2>
+                  </div>
+                  <button onClick={() => setDocModal(null)} className="w-8 h-8 rounded-xl bg-[var(--surface-2)] hover:bg-[var(--surface-3)] flex items-center justify-center text-[var(--text-secondary)] transition-colors">
+                    <X size={16} />
+                  </button>
+                </div>
+
+                <div className="px-6 py-6 space-y-3">
+                  <p className="text-xs text-[var(--text-muted)] mb-4">
+                    Sélectionnez le document à générer pour la période : <span className="text-[var(--amber)] font-semibold">{PERIOD_OPTIONS.find(p => p.value === period)?.label}</span>
+                  </p>
+
+                  {[
+                    {
+                      id: "summary",
+                      icon: <Receipt size={20} weight="fill" />,
+                      title: "Récapitulatif comptable",
+                      desc: `Tableau de synthèse CA HT/TVA/TTC — ${confirmed.length} devis confirmés`,
+                    },
+                    {
+                      id: "invoices",
+                      icon: <FilePdf size={20} weight="fill" />,
+                      title: "Journal des ventes",
+                      desc: "Liste chronologique des prestations facturées avec références",
+                    },
+                    {
+                      id: "tva",
+                      icon: <CurrencyEur size={20} weight="fill" />,
+                      title: "Déclaration TVA",
+                      desc: `TVA collectée : ${formatCurrency(metrics.totalTVA)} — Base imposable HT : ${formatCurrency(metrics.totalHT)}`,
+                    },
+                  ].map((doc) => (
+                    <DocButton
+                      key={doc.id}
+                      icon={doc.icon}
+                      title={doc.title}
+                      desc={doc.desc}
+                      onGenerate={() => handleGenerate(doc.id, confirmed, metrics)}
+                    />
+                  ))}
+                </div>
+
+                <div className="px-6 pb-5">
+                  <p className="text-[11px] text-[var(--text-muted)] text-center">
+                    Les documents sont générés au format texte imprimable. Pour un usage comptable officiel, transmettez-les à votre expert-comptable.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function DocButton({ icon, title, desc, onGenerate }: {
+  icon: React.ReactNode;
+  title: string;
+  desc: string;
+  onGenerate: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const handleClick = async () => {
+    setLoading(true);
+    await new Promise(r => setTimeout(r, 800));
+    onGenerate();
+    setLoading(false);
+    setDone(true);
+    setTimeout(() => setDone(false), 2000);
+  };
+
+  return (
+    <div className="flex items-center gap-4 p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--amber)]/20 transition-all group">
+      <div className="w-10 h-10 rounded-xl bg-[var(--amber)]/10 text-[var(--amber)] flex items-center justify-center shrink-0">
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-[var(--text-primary)]">{title}</p>
+        <p className="text-[11px] text-[var(--text-muted)] mt-0.5 line-clamp-1">{desc}</p>
+      </div>
+      <motion.button
+        whileTap={{ scale: 0.95 }}
+        onClick={handleClick}
+        disabled={loading}
+        className={`flex items-center gap-1.5 px-3 h-8 rounded-lg text-xs font-semibold transition-all shrink-0 ${
+          done
+            ? "bg-green-500/15 text-[var(--success)] border border-green-500/30"
+            : "bg-[var(--amber)]/10 text-[var(--amber)] hover:bg-[var(--amber)] hover:text-[var(--surface)] border border-[var(--amber)]/20"
+        }`}
+      >
+        {loading ? (
+          <span className="w-3 h-3 rounded-full border-2 border-current/30 border-t-current animate-spin" />
+        ) : done ? (
+          "Généré"
+        ) : (
+          <><Download size={12} weight="bold" /> Générer</>
+        )}
+      </motion.button>
+    </div>
+  );
+}
+
+function handleGenerate(
+  type: string,
+  confirmed: Devis[],
+  metrics: { totalHT: number; totalTVA: number; totalTTC: number; count: number; avgDevis: number }
+) {
+  const now = new Date().toLocaleDateString("fr-FR");
+  let content = "";
+
+  if (type === "summary") {
+    content = `RÉCAPITULATIF COMPTABLE — CHEZ LA CAMEROUNAISE\n`;
+    content += `Généré le ${now}\n`;
+    content += `${"=".repeat(60)}\n\n`;
+    content += `SYNTHÈSE FINANCIÈRE\n`;
+    content += `  Nombre de devis confirmés : ${metrics.count}\n`;
+    content += `  Chiffre d'affaires HT     : ${metrics.totalHT.toFixed(2)} €\n`;
+    content += `  TVA collectée (20%)       : ${metrics.totalTVA.toFixed(2)} €\n`;
+    content += `  Chiffre d'affaires TTC    : ${metrics.totalTTC.toFixed(2)} €\n\n`;
+    content += `DÉTAIL PAR DEVIS\n`;
+    content += `${"-".repeat(60)}\n`;
+    confirmed.forEach(d => {
+      content += `  ${d.id} | ${d.clientName} | ${d.eventType}\n`;
+      content += `     Date : ${formatDate(d.eventDate)}\n`;
+      content += `     HT : ${d.totalHT.toFixed(2)} € | TVA : ${(d.totalTTC - d.totalHT).toFixed(2)} € | TTC : ${d.totalTTC.toFixed(2)} €\n\n`;
+    });
+  } else if (type === "invoices") {
+    content = `JOURNAL DES VENTES — CHEZ LA CAMEROUNAISE\n`;
+    content += `Généré le ${now}\n`;
+    content += `${"=".repeat(60)}\n\n`;
+    confirmed.forEach((d, i) => {
+      content += `N° ${String(i + 1).padStart(3, "0")} — Réf. ${d.id}\n`;
+      content += `  Client       : ${d.clientName} (${d.clientPhone})\n`;
+      content += `  Événement    : ${d.eventType} — ${formatDate(d.eventDate)}\n`;
+      content += `  Convives     : ${d.guestCount}\n`;
+      content += `  Montant HT   : ${d.totalHT.toFixed(2)} €\n`;
+      content += `  TVA (20%)    : ${(d.totalTTC - d.totalHT).toFixed(2)} €\n`;
+      content += `  Montant TTC  : ${d.totalTTC.toFixed(2)} €\n`;
+      content += `  Prestations  :\n`;
+      d.items.forEach(item => {
+        content += `    - ${item.dishName} × ${item.quantity} = ${item.subtotal.toFixed(2)} €\n`;
+      });
+      content += `\n`;
+    });
+    content += `${"=".repeat(60)}\n`;
+    content += `TOTAL TTC : ${metrics.totalTTC.toFixed(2)} €\n`;
+  } else if (type === "tva") {
+    content = `DÉCLARATION TVA — CHEZ LA CAMEROUNAISE\n`;
+    content += `Généré le ${now}\n`;
+    content += `${"=".repeat(60)}\n\n`;
+    content += `OPÉRATIONS IMPOSABLES\n\n`;
+    content += `  Base HT totale (taux 20%) : ${metrics.totalHT.toFixed(2)} €\n`;
+    content += `  TVA due (20%)             : ${metrics.totalTVA.toFixed(2)} €\n\n`;
+    content += `DÉTAIL DES OPÉRATIONS\n`;
+    content += `${"-".repeat(60)}\n`;
+    confirmed.forEach(d => {
+      content += `  ${d.id} — ${d.clientName} — ${formatDate(d.eventDate)}\n`;
+      content += `    Base : ${d.totalHT.toFixed(2)} € | TVA : ${(d.totalTTC - d.totalHT).toFixed(2)} €\n`;
+    });
+    content += `\n${"=".repeat(60)}\n`;
+    content += `TVA COLLECTÉE TOTALE : ${metrics.totalTVA.toFixed(2)} €\n`;
+    content += `\nDocument à transmettre à votre expert-comptable.\n`;
+  }
+
+  // Téléchargement
+  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `clc-traiteur-${type}-${now.replace(/\//g, "-")}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
