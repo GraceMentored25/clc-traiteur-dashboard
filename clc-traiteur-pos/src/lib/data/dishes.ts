@@ -89,7 +89,7 @@ export const DISHES: Dish[] = [
     name: "Poisson Braisé",
     category: "Poissons",
     price: 17,
-    image: "/dishes/poisson-braise.jpg",
+    image: "/dishes/poisson-braise.png",
     description: "Tilapia frais braisé, sauce tomate pimentée",
     unit: "pièce",
   },
