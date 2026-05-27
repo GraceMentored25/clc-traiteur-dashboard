@@ -11,6 +11,7 @@ import {
   SignOut,
   User,
   Wallet,
+  X,
 } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -22,7 +23,7 @@ const NAV_ITEMS = [
   { href: "/kpi", label: "KPI & Métriques", icon: ChartBar },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useStore();
@@ -33,7 +34,15 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-64 flex flex-col bg-[var(--surface-1)] border-r border-[var(--border)] z-40">
+    <aside
+      className={cn(
+        "fixed left-0 top-0 h-full w-64 flex flex-col bg-[var(--surface-1)] border-r border-[var(--border)] z-40 transition-transform duration-300",
+        // Desktop: always visible
+        "lg:translate-x-0",
+        // Mobile: slide in/out
+        open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+      )}
+    >
       {/* Logo */}
       <div className="px-4 pt-4 pb-4 border-b border-[var(--border)]">
         <div className="flex items-center gap-3">
@@ -44,12 +53,21 @@ export default function Sidebar() {
             height={52}
             className="shrink-0 rounded-full"
           />
-          <div>
+          <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-[var(--text-primary)] tracking-tight leading-none">
               Chez La Camerounaise
             </p>
             <p className="text-xs text-[var(--text-muted)] mt-0.5">Système POS</p>
           </div>
+          {/* Close button — mobile only */}
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)] shrink-0"
+            >
+              <X size={16} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -61,7 +79,7 @@ export default function Sidebar() {
         {NAV_ITEMS.map((item) => {
           const active = pathname === item.href;
           return (
-            <Link key={item.href} href={item.href}>
+            <Link key={item.href} href={item.href} onClick={onClose}>
               <div
                 className={cn(
                   "relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer group",
