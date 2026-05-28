@@ -31,7 +31,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <main className="flex-1 lg:ml-64 min-h-[100dvh] overflow-x-hidden">
+      <main className="flex-1 lg:ml-64 min-h-[100dvh] overflow-x-hidden w-full min-w-0">
         {/* Mobile topbar */}
         <div className="lg:hidden flex items-center gap-3 px-4 py-3 border-b border-[var(--border)] bg-[var(--surface-1)] sticky top-0 z-20">
           <button

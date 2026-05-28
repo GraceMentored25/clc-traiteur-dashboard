@@ -43,6 +43,7 @@
 
 html {
   color-scheme: dark;
+  overflow-x: hidden;
 }
 
 body {
@@ -51,6 +52,8 @@ body {
   font-family: "Outfit", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 /* Scrollbar */
