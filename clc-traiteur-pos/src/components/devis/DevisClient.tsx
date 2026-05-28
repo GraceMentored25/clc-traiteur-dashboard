@@ -134,7 +134,7 @@ export default function DevisClient() {
         ) : (
           <>
             {/* Desktop header */}
-            <div className="hidden lg:grid grid-cols-[80px_1fr_130px_120px_120px_100px_80px] gap-0 px-4 py-3 border-b border-[var(--border)]">
+            <div className="hidden md:grid grid-cols-[80px_1fr_130px_120px_120px_100px_80px] gap-0 px-4 py-3 border-b border-[var(--border)]">
               {["Réf.", "Client", "Événement", "Date", "Total TTC", "Statut", "Actions"].map((h) => (
                 <p key={h} className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">{h}</p>
               ))}
@@ -150,7 +150,7 @@ export default function DevisClient() {
                 >
                   {/* Desktop row */}
                   <div
-                    className="hidden lg:grid grid-cols-[80px_1fr_130px_120px_120px_100px_80px] gap-0 px-4 py-3.5 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors group cursor-pointer"
+                    className="hidden md:grid grid-cols-[80px_1fr_130px_120px_120px_100px_80px] gap-0 px-4 py-3.5 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors group cursor-pointer"
                     onClick={() => setSelected(devis)}
                   >
                     <p className="text-xs font-mono font-medium text-[var(--amber)] self-center">{devis.id}</p>
@@ -181,7 +181,7 @@ export default function DevisClient() {
 
                   {/* Mobile card */}
                   <div
-                    className="lg:hidden px-4 py-4 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors"
+                    className="md:hidden px-4 py-4 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors"
                     onClick={() => setSelected(devis)}
                   >
                     <div className="flex items-start justify-between gap-3 mb-2">

@@ -141,7 +141,7 @@ export default function ComptabiliteClient() {
         ) : (
           <>
             {/* Desktop table header */}
-            <div className="hidden lg:grid grid-cols-[80px_1fr_130px_110px_110px_120px] gap-0 px-6 py-3 border-b border-[var(--border)]">
+            <div className="hidden md:grid grid-cols-[80px_1fr_130px_110px_110px_120px] gap-0 px-6 py-3 border-b border-[var(--border)]">
               {["Réf.", "Client", "Événement", "Montant HT", "TVA 20%", "Total TTC"].map((h) => (
                 <p key={h} className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">{h}</p>
               ))}
@@ -150,7 +150,7 @@ export default function ComptabiliteClient() {
             {confirmed.map((devis, i) => (
               <motion.div key={devis.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}>
                 {/* Desktop row */}
-                <div className="hidden lg:grid grid-cols-[80px_1fr_130px_110px_110px_120px] gap-0 px-6 py-3.5 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors">
+                <div className="hidden md:grid grid-cols-[80px_1fr_130px_110px_110px_120px] gap-0 px-6 py-3.5 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors">
                   <p className="text-xs font-mono font-medium text-[var(--amber)] self-center">{devis.id}</p>
                   <div className="self-center min-w-0">
                     <p className="text-sm font-medium text-[var(--text-primary)] truncate">{devis.clientName}</p>
@@ -165,7 +165,7 @@ export default function ComptabiliteClient() {
                 </div>
 
                 {/* Mobile card */}
-                <div className="lg:hidden px-4 py-4 border-b border-[var(--border)] last:border-0">
+                <div className="md:hidden px-4 py-4 border-b border-[var(--border)] last:border-0">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-mono font-medium text-[var(--amber)]">{devis.id}</span>
                     <span className="text-xs font-mono font-bold text-[var(--amber)]">{formatCurrency(devis.totalTTC)}</span>
@@ -185,7 +185,7 @@ export default function ComptabiliteClient() {
             {/* Total row */}
             <div className="px-4 lg:px-6 py-4 bg-[var(--surface-2)] border-t-2 border-[var(--amber)]/20">
               {/* Desktop */}
-              <div className="hidden lg:grid grid-cols-[80px_1fr_130px_110px_110px_120px] gap-0">
+              <div className="hidden md:grid grid-cols-[80px_1fr_130px_110px_110px_120px] gap-0">
                 <div className="col-span-3 self-center">
                   <p className="text-sm font-bold text-[var(--text-primary)]">TOTAL</p>
                 </div>
