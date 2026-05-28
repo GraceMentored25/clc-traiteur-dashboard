@@ -91,6 +91,14 @@ export const useStore = create<AppState>()(
     }),
     {
       name: "clc-traiteur-storage",
+      version: 2,
+      migrate: (persisted: unknown, version: number) => {
+        // v2 : reset devisList to updated mock data
+        if (version < 2) {
+          return { ...(persisted as object), devisList: MOCK_DEVIS };
+        }
+        return persisted as AppState;
+      },
       partialize: (state) => ({ user: state.user, devisList: state.devisList }),
     }
   )
