@@ -54,9 +54,9 @@ export default function DevisClient() {
   };
 
   return (
-    <div className="px-8 py-8 min-h-[100dvh]">
+    <div className="px-4 lg:px-8 py-6 lg:py-8 min-h-[100dvh]">
       {/* Header */}
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex items-start justify-between mb-6 lg:mb-8">
         <div>
           <h1 className="text-2xl font-bold text-[var(--text-primary)] tracking-tight">Gestion de devis</h1>
           <p className="text-sm text-[var(--text-muted)] mt-1">
@@ -122,13 +122,8 @@ export default function DevisClient() {
         </div>
       </div>
 
-      {/* Table */}
+      {/* Table — desktop */}
       <div className="rounded-2xl border border-[var(--border)] overflow-hidden bg-[var(--surface-1)]">
-        <div className="grid grid-cols-[80px_1fr_120px_110px_120px_100px_80px] gap-0 px-4 py-3 border-b border-[var(--border)]">
-          {["Réf.", "Client", "Événement", "Date", "Total TTC", "Statut", "Actions"].map((h) => (
-            <p key={h} className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">{h}</p>
-          ))}
-        </div>
 
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -137,66 +132,91 @@ export default function DevisClient() {
             <p className="text-xs text-[var(--text-muted)] mt-1">Modifiez vos filtres ou créez un nouveau devis</p>
           </div>
         ) : (
-          <div>
-            {filtered.map((devis, i) => (
-              <motion.div
-                key={devis.id}
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.04 }}
-                className="grid grid-cols-[80px_1fr_120px_110px_120px_100px_80px] gap-0 px-4 py-3.5 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors group"
-              >
-                <p
-                  onClick={() => setSelected(devis)}
-                  className="text-xs font-mono font-medium text-[var(--amber)] self-center cursor-pointer"
-                >
-                  {devis.id}
-                </p>
-                <div
-                  onClick={() => setSelected(devis)}
-                  className="self-center cursor-pointer"
-                >
-                  <p className="text-sm font-medium text-[var(--text-primary)] group-hover:text-white transition-colors">
-                    {devis.clientName}
-                  </p>
-                  <p className="text-xs text-[var(--text-muted)]">{devis.clientPhone}</p>
-                </div>
-                <p onClick={() => setSelected(devis)} className="text-xs text-[var(--text-secondary)] self-center cursor-pointer">
-                  {devis.eventType}
-                </p>
-                <div onClick={() => setSelected(devis)} className="self-center flex items-center gap-1.5 text-xs text-[var(--text-muted)] cursor-pointer">
-                  <Calendar size={12} />
-                  {formatDate(devis.eventDate)}
-                </div>
-                <p onClick={() => setSelected(devis)} className="text-sm font-mono font-bold text-[var(--text-primary)] self-center cursor-pointer">
-                  {formatCurrency(devis.totalTTC)}
-                </p>
-                <div onClick={() => setSelected(devis)} className="self-center cursor-pointer">
-                  <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold ${STATUS_COLORS[devis.status]}`}>
-                    {devis.status}
-                  </span>
-                </div>
+          <>
+            {/* Desktop header */}
+            <div className="hidden lg:grid grid-cols-[80px_1fr_130px_120px_120px_100px_80px] gap-0 px-4 py-3 border-b border-[var(--border)]">
+              {["Réf.", "Client", "Événement", "Date", "Total TTC", "Statut", "Actions"].map((h) => (
+                <p key={h} className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">{h}</p>
+              ))}
+            </div>
 
-                {/* Actions */}
-                <div className="self-center flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    onClick={() => setEditing(devis)}
-                    title="Modifier"
-                    className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 transition-all"
+            <div>
+              {filtered.map((devis, i) => (
+                <motion.div
+                  key={devis.id}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                >
+                  {/* Desktop row */}
+                  <div
+                    className="hidden lg:grid grid-cols-[80px_1fr_130px_120px_120px_100px_80px] gap-0 px-4 py-3.5 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors group cursor-pointer"
+                    onClick={() => setSelected(devis)}
                   >
-                    <PencilSimple size={14} />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(devis)}
-                    title="Supprimer"
-                    className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition-all"
+                    <p className="text-xs font-mono font-medium text-[var(--amber)] self-center">{devis.id}</p>
+                    <div className="self-center min-w-0">
+                      <p className="text-sm font-medium text-[var(--text-primary)] truncate">{devis.clientName}</p>
+                      <p className="text-xs text-[var(--text-muted)] truncate">{devis.clientPhone}</p>
+                    </div>
+                    <p className="text-xs text-[var(--text-secondary)] self-center truncate">{devis.eventType}</p>
+                    <div className="self-center flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+                      <Calendar size={12} className="shrink-0" />
+                      <span className="truncate">{formatDate(devis.eventDate)}</span>
+                    </div>
+                    <p className="text-sm font-mono font-bold text-[var(--text-primary)] self-center">{formatCurrency(devis.totalTTC)}</p>
+                    <div className="self-center">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold ${STATUS_COLORS[devis.status]}`}>
+                        {devis.status}
+                      </span>
+                    </div>
+                    <div className="self-center flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      <button onClick={() => setEditing(devis)} className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 transition-all">
+                        <PencilSimple size={14} />
+                      </button>
+                      <button onClick={() => handleDelete(devis)} className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition-all">
+                        <Trash size={14} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Mobile card */}
+                  <div
+                    className="lg:hidden px-4 py-4 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors"
+                    onClick={() => setSelected(devis)}
                   >
-                    <Trash size={14} />
-                  </button>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-xs font-mono font-medium text-[var(--amber)] shrink-0">{devis.id}</span>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-semibold shrink-0 ${STATUS_COLORS[devis.status]}`}>
+                          {devis.status}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <button onClick={() => setEditing(devis)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 transition-all">
+                          <PencilSimple size={15} />
+                        </button>
+                        <button onClick={() => handleDelete(devis)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition-all">
+                          <Trash size={15} />
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-sm font-semibold text-[var(--text-primary)] mb-0.5">{devis.clientName}</p>
+                    <p className="text-xs text-[var(--text-muted)] mb-2">{devis.clientPhone}</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-xs text-[var(--text-secondary)] truncate">{devis.eventType}</span>
+                        <div className="flex items-center gap-1 text-xs text-[var(--text-muted)] shrink-0">
+                          <Calendar size={11} />
+                          <span>{formatDate(devis.eventDate)}</span>
+                        </div>
+                      </div>
+                      <p className="text-sm font-mono font-bold text-[var(--amber)] shrink-0">{formatCurrency(devis.totalTTC)}</p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
