@@ -199,7 +199,7 @@ export default function DashboardClient() {
       </div>
 
       {/* ── Dishes grid ────────────────────────────────────────── */}
-      <div className="flex-1 px-4 lg:px-8 py-4 pb-24 lg:pb-5">
+      <div className="flex-1 px-3 lg:px-5 py-4 pb-24 lg:pb-5">
         {filtered.length === 0 ? (
           <EmptyDishes search={search} />
         ) : (
@@ -209,7 +209,7 @@ export default function DashboardClient() {
             </p>
 
             {viewMode === "grid" ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
                 <AnimatePresence mode="popLayout">
                   {filtered.map((dish, i) => (
                     <motion.div

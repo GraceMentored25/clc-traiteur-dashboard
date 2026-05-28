@@ -36,11 +36,11 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 h-full w-64 flex flex-col bg-[var(--surface-1)] border-r border-[var(--border)] z-40 transition-transform duration-300",
-        // Desktop: always visible
-        "lg:translate-x-0",
-        // Mobile: slide in/out
-        open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        "fixed left-0 top-0 h-full w-64 flex flex-col bg-[var(--surface-1)] border-r border-[var(--border)] z-40",
+        // Desktop: always visible, no transition to avoid layout shift
+        "lg:translate-x-0 lg:transition-none",
+        // Mobile: slide in/out with transition
+        open ? "translate-x-0 transition-transform duration-300" : "-translate-x-full transition-transform duration-300 lg:translate-x-0"
       )}
     >
       {/* Logo */}
