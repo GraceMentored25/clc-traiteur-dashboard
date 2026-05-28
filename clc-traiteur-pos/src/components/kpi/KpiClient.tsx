@@ -97,10 +97,10 @@ export default function KpiClient() {
   }, [devisList]);
 
   return (
-    <div className="px-8 py-8 min-h-[100dvh] space-y-8">
+    <div className="px-4 lg:px-8 py-6 lg:py-8 min-h-[100dvh] space-y-6 lg:space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-[var(--text-primary)] tracking-tight">
+        <h1 className="text-xl lg:text-2xl font-bold text-[var(--text-primary)] tracking-tight">
           KPI & Métriques
         </h1>
         <p className="text-sm text-[var(--text-muted)] mt-1">
@@ -108,8 +108,8 @@ export default function KpiClient() {
         </p>
       </div>
 
-      {/* KPI cards — 2-col asymmetric then 2 */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* KPI cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
         <KpiCard
           label="Chiffre d'affaires TTC"
           value={formatCurrency(metrics.totalCA)}
@@ -146,9 +146,9 @@ export default function KpiClient() {
       </div>
 
       {/* Charts row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
         {/* Revenue area chart */}
-        <div className="lg:col-span-2 rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] p-6">
+        <div className="lg:col-span-2 rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] p-4 lg:p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="font-bold text-[var(--text-primary)] text-sm">Évolution du CA</h3>
@@ -183,32 +183,30 @@ export default function KpiClient() {
         </div>
 
         {/* Pie chart */}
-        <div className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] p-6">
+        <div className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] p-4 lg:p-6">
           <h3 className="font-bold text-[var(--text-primary)] text-sm mb-1">Répartition catégories</h3>
           <p className="text-xs text-[var(--text-muted)] mb-4">En % des commandes</p>
-          <ResponsiveContainer width="100%" height={160}>
-            <PieChart>
-              <Pie
-                data={CATEGORY_DATA}
-                cx="50%"
-                cy="50%"
-                innerRadius={48}
-                outerRadius={72}
-                paddingAngle={3}
-                dataKey="value"
-              >
-                {CATEGORY_DATA.map((entry, index) => (
-                  <Cell key={index} fill={entry.color} strokeWidth={0} />
-                ))}
-              </Pie>
-              <Tooltip
-                formatter={(v) => [`${v}%`, ""]}
-                contentStyle={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 12, fontSize: 12 }}
-                labelStyle={{ color: "var(--text-secondary)" }}
-                itemStyle={{ color: "var(--text-primary)" }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
+          <PieChart width={240} height={180} style={{ margin: "0 auto" }}>
+            <Pie
+              data={CATEGORY_DATA}
+              cx={120}
+              cy={90}
+              innerRadius={50}
+              outerRadius={76}
+              paddingAngle={3}
+              dataKey="value"
+            >
+              {CATEGORY_DATA.map((entry, index) => (
+                <Cell key={index} fill={entry.color} strokeWidth={0} />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(v) => [`${v}%`, ""]}
+              contentStyle={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 12, fontSize: 12 }}
+              labelStyle={{ color: "var(--text-secondary)" }}
+              itemStyle={{ color: "var(--text-primary)" }}
+            />
+          </PieChart>
           <div className="space-y-2 mt-2">
             {CATEGORY_DATA.map((c) => (
               <div key={c.name} className="flex items-center justify-between text-xs">
@@ -224,10 +222,10 @@ export default function KpiClient() {
       </div>
 
       {/* Bar chart + top dishes */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
         {/* Bar chart */}
-        <div className="lg:col-span-2 rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] p-6">
-          <div className="flex items-center justify-between mb-6">
+        <div className="lg:col-span-2 rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] p-4 lg:p-6">
+          <div className="flex items-center justify-between mb-4 lg:mb-6">
             <div>
               <h3 className="font-bold text-[var(--text-primary)] text-sm">Volume de devis</h3>
               <p className="text-xs text-[var(--text-muted)] mt-0.5">Nombre par mois</p>
@@ -245,7 +243,7 @@ export default function KpiClient() {
         </div>
 
         {/* Top dishes */}
-        <div className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] p-6">
+        <div className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] p-4 lg:p-6">
           <h3 className="font-bold text-[var(--text-primary)] text-sm mb-1">Top plats</h3>
           <p className="text-xs text-[var(--text-muted)] mb-5">Commandes cumulées</p>
           <div className="space-y-3">

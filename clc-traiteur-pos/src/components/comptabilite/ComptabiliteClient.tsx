@@ -58,36 +58,31 @@ export default function ComptabiliteClient() {
   ];
 
   return (
-    <div className="px-8 py-8 min-h-[100dvh]">
+    <div className="px-4 lg:px-8 py-6 lg:py-8 min-h-[100dvh]">
       {/* Header */}
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex items-start justify-between gap-3 mb-6 lg:mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)] tracking-tight">Gestion comptable</h1>
-          <p className="text-sm text-[var(--text-muted)] mt-1">
-            Suivi financier des devis confirmés
-          </p>
+          <h1 className="text-xl lg:text-2xl font-bold text-[var(--text-primary)] tracking-tight">Gestion comptable</h1>
+          <p className="text-sm text-[var(--text-muted)] mt-1">Suivi financier des devis confirmés</p>
         </div>
-
-        {/* Generate doc button */}
-        <div className="flex items-center gap-2">
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={() => setDocModal("summary")}
-            className="flex items-center gap-2 h-9 px-4 rounded-xl bg-[var(--amber)] hover:bg-[var(--amber-light)] text-[var(--surface)] text-sm font-semibold transition-colors"
-          >
-            <FilePdf size={16} weight="fill" />
-            Générer la documentation
-          </motion.button>
-        </div>
+        <motion.button
+          whileTap={{ scale: 0.97 }}
+          onClick={() => setDocModal("summary")}
+          className="flex items-center gap-2 h-9 px-3 lg:px-4 rounded-xl bg-[var(--amber)] hover:bg-[var(--amber-light)] text-[var(--surface)] text-xs lg:text-sm font-semibold transition-colors shrink-0"
+        >
+          <FilePdf size={15} weight="fill" />
+          <span className="hidden sm:inline">Générer la documentation</span>
+          <span className="sm:hidden">Générer</span>
+        </motion.button>
       </div>
 
       {/* Period filter */}
-      <div className="flex items-center gap-1.5 bg-[var(--surface-2)] rounded-xl p-1 border border-[var(--border)] w-fit mb-8">
+      <div className="flex items-center gap-1 bg-[var(--surface-2)] rounded-xl p-1 border border-[var(--border)] w-full lg:w-fit mb-6 lg:mb-8">
         {PERIOD_OPTIONS.map((opt) => (
           <button
             key={opt.value}
             onClick={() => setPeriod(opt.value)}
-            className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex-1 lg:flex-none px-2 lg:px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               period === opt.value
                 ? "bg-[var(--amber)] text-[var(--surface)]"
                 : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
@@ -132,7 +127,7 @@ export default function ComptabiliteClient() {
 
       {/* Récapitulatif financier par devis */}
       <div className="rounded-2xl border border-[var(--border)] overflow-hidden bg-[var(--surface-1)] mb-6">
-        <div className="px-6 py-4 border-b border-[var(--border)] flex items-center justify-between">
+        <div className="px-4 lg:px-6 py-4 border-b border-[var(--border)] flex items-center justify-between">
           <h2 className="font-bold text-[var(--text-primary)] text-sm">Détail des encaissements</h2>
           <span className="text-xs text-[var(--text-muted)]">{confirmed.length} facture{confirmed.length > 1 ? "s" : ""}</span>
         </div>
@@ -145,42 +140,64 @@ export default function ComptabiliteClient() {
           </div>
         ) : (
           <>
-            {/* Table header */}
-            <div className="grid grid-cols-[80px_1fr_130px_110px_110px_120px] gap-0 px-6 py-3 border-b border-[var(--border)]">
+            {/* Desktop table header */}
+            <div className="hidden lg:grid grid-cols-[80px_1fr_130px_110px_110px_120px] gap-0 px-6 py-3 border-b border-[var(--border)]">
               {["Réf.", "Client", "Événement", "Montant HT", "TVA 20%", "Total TTC"].map((h) => (
                 <p key={h} className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">{h}</p>
               ))}
             </div>
+
             {confirmed.map((devis, i) => (
-              <motion.div
-                key={devis.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: i * 0.03 }}
-                className="grid grid-cols-[80px_1fr_130px_110px_110px_120px] gap-0 px-6 py-3.5 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors"
-              >
-                <p className="text-xs font-mono font-medium text-[var(--amber)] self-center">{devis.id}</p>
-                <div className="self-center">
-                  <p className="text-sm font-medium text-[var(--text-primary)]">{devis.clientName}</p>
-                  <div className="flex items-center gap-1 text-xs text-[var(--text-muted)] mt-0.5">
-                    <Calendar size={11} />
-                    {formatDate(devis.eventDate)}
+              <motion.div key={devis.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}>
+                {/* Desktop row */}
+                <div className="hidden lg:grid grid-cols-[80px_1fr_130px_110px_110px_120px] gap-0 px-6 py-3.5 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors">
+                  <p className="text-xs font-mono font-medium text-[var(--amber)] self-center">{devis.id}</p>
+                  <div className="self-center min-w-0">
+                    <p className="text-sm font-medium text-[var(--text-primary)] truncate">{devis.clientName}</p>
+                    <div className="flex items-center gap-1 text-xs text-[var(--text-muted)] mt-0.5">
+                      <Calendar size={11} />{formatDate(devis.eventDate)}
+                    </div>
+                  </div>
+                  <p className="text-xs text-[var(--text-secondary)] self-center truncate">{devis.eventType}</p>
+                  <p className="text-sm font-mono text-[var(--text-primary)] self-center">{formatCurrency(devis.totalHT)}</p>
+                  <p className="text-sm font-mono text-[var(--text-secondary)] self-center">{formatCurrency(devis.totalTTC - devis.totalHT)}</p>
+                  <p className="text-sm font-mono font-bold text-[var(--amber)] self-center">{formatCurrency(devis.totalTTC)}</p>
+                </div>
+
+                {/* Mobile card */}
+                <div className="lg:hidden px-4 py-4 border-b border-[var(--border)] last:border-0">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-mono font-medium text-[var(--amber)]">{devis.id}</span>
+                    <span className="text-xs font-mono font-bold text-[var(--amber)]">{formatCurrency(devis.totalTTC)}</span>
+                  </div>
+                  <p className="text-sm font-semibold text-[var(--text-primary)] mb-0.5">{devis.clientName}</p>
+                  <p className="text-xs text-[var(--text-secondary)] mb-1">{devis.eventType}</p>
+                  <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
+                    <div className="flex items-center gap-1">
+                      <Calendar size={11} />{formatDate(devis.eventDate)}
+                    </div>
+                    <span>HT {formatCurrency(devis.totalHT)} · TVA {formatCurrency(devis.totalTTC - devis.totalHT)}</span>
                   </div>
                 </div>
-                <p className="text-xs text-[var(--text-secondary)] self-center">{devis.eventType}</p>
-                <p className="text-sm font-mono text-[var(--text-primary)] self-center">{formatCurrency(devis.totalHT)}</p>
-                <p className="text-sm font-mono text-[var(--text-secondary)] self-center">{formatCurrency(devis.totalTTC - devis.totalHT)}</p>
-                <p className="text-sm font-mono font-bold text-[var(--amber)] self-center">{formatCurrency(devis.totalTTC)}</p>
               </motion.div>
             ))}
+
             {/* Total row */}
-            <div className="grid grid-cols-[80px_1fr_130px_110px_110px_120px] gap-0 px-6 py-4 bg-[var(--surface-2)] border-t-2 border-[var(--amber)]/20">
-              <div className="col-span-3 self-center">
-                <p className="text-sm font-bold text-[var(--text-primary)]">TOTAL</p>
+            <div className="px-4 lg:px-6 py-4 bg-[var(--surface-2)] border-t-2 border-[var(--amber)]/20">
+              {/* Desktop */}
+              <div className="hidden lg:grid grid-cols-[80px_1fr_130px_110px_110px_120px] gap-0">
+                <div className="col-span-3 self-center">
+                  <p className="text-sm font-bold text-[var(--text-primary)]">TOTAL</p>
+                </div>
+                <p className="text-sm font-mono font-bold text-[var(--text-primary)] self-center">{formatCurrency(metrics.totalHT)}</p>
+                <p className="text-sm font-mono font-bold text-[var(--text-secondary)] self-center">{formatCurrency(metrics.totalTVA)}</p>
+                <p className="text-sm font-mono font-bold text-[var(--amber)] self-center">{formatCurrency(metrics.totalTTC)}</p>
               </div>
-              <p className="text-sm font-mono font-bold text-[var(--text-primary)] self-center">{formatCurrency(metrics.totalHT)}</p>
-              <p className="text-sm font-mono font-bold text-[var(--text-secondary)] self-center">{formatCurrency(metrics.totalTVA)}</p>
-              <p className="text-sm font-mono font-bold text-[var(--amber)] self-center text-base">{formatCurrency(metrics.totalTTC)}</p>
+              {/* Mobile */}
+              <div className="lg:hidden flex items-center justify-between">
+                <p className="text-sm font-bold text-[var(--text-primary)]">TOTAL</p>
+                <p className="text-base font-mono font-bold text-[var(--amber)]">{formatCurrency(metrics.totalTTC)}</p>
+              </div>
             </div>
           </>
         )}
