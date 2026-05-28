@@ -57,7 +57,7 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
       <motion.aside
         initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="fixed right-0 top-0 h-full w-[460px] bg-[var(--surface-1)] border-l border-[var(--border)] z-50 flex flex-col overflow-y-auto"
+        className="fixed right-0 top-0 h-full w-full sm:w-[460px] bg-[var(--surface-1)] border-l border-[var(--border)] z-50 flex flex-col overflow-y-auto"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--border)] sticky top-0 bg-[var(--surface-1)] z-10">
