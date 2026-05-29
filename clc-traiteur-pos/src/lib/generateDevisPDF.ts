@@ -17,7 +17,7 @@ const CLC = {
 };
 
 function getAcompteInfo(totalTTC: number, eventDate: string) {
-  const pct = totalTTC < 2000 ? 30 : totalTTC < 5000 ? 40 : 50;
+  const pct = totalTTC < 2000 ? 15 : totalTTC < 5000 ? 20 : 20;
   const montant = totalTTC * (pct / 100);
   const event = new Date(eventDate);
   const now = new Date();
@@ -28,15 +28,22 @@ function getAcompteInfo(totalTTC: number, eventDate: string) {
   return { pct, montant, deadlineStr: deadline.toLocaleDateString("fr-FR"), monthsBefore };
 }
 
-async function loadLogoBase64(): Promise<string | null> {
+async function loadLogo(): Promise<{ data: string; w: number; h: number } | null> {
   try {
     const res = await fetch("/logo.png");
     const blob = await res.blob();
-    return await new Promise((resolve) => {
+    const data = await new Promise<string>((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result as string);
       reader.readAsDataURL(blob);
     });
+    // Lire les dimensions natives pour respecter le ratio
+    const { w, h } = await new Promise<{ w: number; h: number }>((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+      img.src = data;
+    });
+    return { data, w, h };
   } catch {
     return null;
   }
@@ -54,19 +61,22 @@ export async function generateDevisPDF(devis: Devis) {
   const { pct, montant, deadlineStr, monthsBefore } = getAcompteInfo(devis.totalTTC, devis.eventDate);
 
   // Charger le logo
-  const logoData = await loadLogoBase64();
+  const logo = await loadLogo();
 
   // ── EN-TÊTE ──────────────────────────────────────────────────────────────
   doc.setFillColor(...AMBER);
   doc.rect(0, 0, W, 34, "F");
 
-  // Logo
-  if (logoData) {
-    doc.addImage(logoData, "PNG", L, 4, 22, 22);
+  // Logo — hauteur fixe 24mm, largeur calculée selon ratio natif
+  let logoW = 0;
+  if (logo) {
+    const logoH = 24;
+    logoW = (logo.w / logo.h) * logoH;
+    doc.addImage(logo.data, "PNG", L, 4, logoW, logoH);
   }
 
   // Nom société (décalé pour laisser place au logo)
-  const textX = logoData ? L + 26 : L;
+  const textX = logoW > 0 ? L + logoW + 4 : L;
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(15);
   doc.setFont("helvetica", "bold");
@@ -156,10 +166,10 @@ export async function generateDevisPDF(devis: Devis) {
     },
     alternateRowStyles: { fillColor: LIGHT_BG },
     columnStyles: {
-      0: { halign: "left" },
-      1: { halign: "left" },
-      2: { halign: "left" },
-      3: { halign: "left", fontStyle: "bold" },
+      0: { halign: "left", cellWidth: "auto" },
+      1: { halign: "right", cellWidth: 24 },
+      2: { halign: "right", cellWidth: 28 },
+      3: { halign: "right", cellWidth: 30, fontStyle: "bold" },
     },
     styles: { fontSize: 9, cellPadding: { top: 3, bottom: 3, left: 4, right: 4 } },
     margin: { left: L, right: 14 },
