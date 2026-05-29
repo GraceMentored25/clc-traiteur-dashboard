@@ -157,21 +157,25 @@ export async function generateDevisPDF(devis: Devis) {
       `${item.unitPrice.toFixed(2)} €`,
       `${item.subtotal.toFixed(2)} €`,
     ]),
-    headStyles: {
-      fillColor: DARK,
-      textColor: [255, 255, 255],
-      fontStyle: "bold",
-      fontSize: 9,
-    },
     alternateRowStyles: { fillColor: LIGHT_BG },
     columnStyles: {
       0: { halign: "left", cellWidth: "auto" },
-      1: { halign: "right", cellWidth: 22 },
-      2: { halign: "right", cellWidth: 26 },
-      3: { halign: "right", cellWidth: 28, fontStyle: "bold" },
+      1: { halign: "right", cellWidth: 26 },
+      2: { halign: "right", cellWidth: 30 },
+      3: { halign: "right", cellWidth: 32, fontStyle: "bold" },
     },
-    styles: { fontSize: 9, cellPadding: { top: 3, bottom: 3, left: 4, right: 4 } },
+    styles: { fontSize: 9, cellPadding: { top: 3.5, bottom: 3.5, left: 5, right: 5 } },
     margin: { left: L, right: 14 },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    didParseCell: (data: any) => {
+      if (data.section === "head") {
+        data.cell.styles.fillColor = [...DARK];
+        data.cell.styles.textColor = [255, 255, 255];
+        data.cell.styles.fontStyle = "bold";
+        data.cell.styles.fontSize = 9;
+        data.cell.styles.halign = data.column.index === 0 ? "left" : "right";
+      }
+    },
   });
 
   const afterTable = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
