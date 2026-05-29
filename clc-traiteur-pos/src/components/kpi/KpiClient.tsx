@@ -62,7 +62,8 @@ const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?:
 };
 
 export default function KpiClient() {
-  const { devisList } = useStore();
+  const { devisList, appMode } = useStore();
+  const isPro = appMode === "pro";
 
   const { metrics, monthlyData } = useMemo(() => {
     const confirmed = devisList.filter((d) => d.status === "Confirmé");
@@ -104,7 +105,7 @@ export default function KpiClient() {
           KPI & Métriques
         </h1>
         <p className="text-sm text-[var(--text-muted)] mt-1">
-          Performance globale — données cumulées
+          {isPro ? "Mode Production — données réelles" : "Performance globale — données cumulées"}
         </p>
       </div>
 
@@ -114,7 +115,7 @@ export default function KpiClient() {
           label="Chiffre d'affaires TTC"
           value={formatCurrency(metrics.totalCA)}
           icon={<CurrencyEur size={18} weight="fill" />}
-          delta="+23.4%"
+          delta={isPro ? null : "+23.4%"}
           positive
           accent
           delay={0}
@@ -123,7 +124,7 @@ export default function KpiClient() {
           label="Devis générés"
           value={metrics.totalDevis.toString()}
           icon={<Receipt size={18} weight="fill" />}
-          delta="+6"
+          delta={isPro ? null : "+6"}
           positive
           delay={0.06}
         />
@@ -131,7 +132,7 @@ export default function KpiClient() {
           label="Taux de conversion"
           value={`${metrics.convRate}%`}
           icon={<TrendUp size={18} weight="fill" />}
-          delta="+4.2 pts"
+          delta={isPro ? null : "+4.2 pts"}
           positive
           delay={0.12}
         />
@@ -139,7 +140,7 @@ export default function KpiClient() {
           label="Valeur moy. devis"
           value={formatCurrency(metrics.avgDevis)}
           icon={<CheckCircle size={18} weight="fill" />}
-          delta="-2.1%"
+          delta={isPro ? null : "-2.1%"}
           positive={false}
           delay={0.18}
         />
@@ -154,9 +155,11 @@ export default function KpiClient() {
               <h3 className="font-bold text-[var(--text-primary)] text-sm">Évolution du CA</h3>
               <p className="text-xs text-[var(--text-muted)] mt-0.5">6 derniers mois</p>
             </div>
-            <span className="text-xs font-semibold text-[var(--success)] bg-green-500/10 px-2.5 py-1 rounded-lg">
-              +28.3%
-            </span>
+            {!isPro && (
+              <span className="text-xs font-semibold text-[var(--success)] bg-green-500/10 px-2.5 py-1 rounded-lg">
+                +28.3%
+              </span>
+            )}
           </div>
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={monthlyData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
@@ -294,7 +297,7 @@ const KpiCard = memo(function KpiCard({
   label: string;
   value: string;
   icon: React.ReactNode;
-  delta: string;
+  delta: string | null;
   positive: boolean;
   accent?: boolean;
   delay?: number;
@@ -320,14 +323,16 @@ const KpiCard = memo(function KpiCard({
         >
           {icon}
         </div>
-        <span
-          className={`text-xs font-semibold flex items-center gap-0.5 ${
-            positive ? "text-[var(--success)]" : "text-[var(--danger)]"
-          }`}
-        >
-          {positive ? <ArrowUp size={11} weight="bold" /> : <ArrowDown size={11} weight="bold" />}
-          {delta}
-        </span>
+        {delta !== null && (
+          <span
+            className={`text-xs font-semibold flex items-center gap-0.5 ${
+              positive ? "text-[var(--success)]" : "text-[var(--danger)]"
+            }`}
+          >
+            {positive ? <ArrowUp size={11} weight="bold" /> : <ArrowDown size={11} weight="bold" />}
+            {delta}
+          </span>
+        )}
       </div>
       <p className="text-[11px] text-[var(--text-muted)] mb-1">{label}</p>
       <p
