@@ -11,7 +11,6 @@ import {
   Download,
   Calendar,
   X,
-  Printer,
 } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
 import { Devis } from "@/lib/types";
@@ -329,74 +328,257 @@ function DocButton({ icon, title, desc, onGenerate }: {
   );
 }
 
-function handleGenerate(
+async function handleGenerate(
   type: string,
   confirmed: Devis[],
   metrics: { totalHT: number; totalTVA: number; totalTTC: number; count: number; avgDevis: number }
 ) {
-  const now = new Date().toLocaleDateString("fr-FR");
-  let content = "";
+  const { jsPDF } = await import("jspdf");
+  const autoTable = (await import("jspdf-autotable")).default;
 
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("fr-FR");
+  const fileName = `clc-traiteur-${type}-${dateStr.replace(/\//g, "-")}.pdf`;
+
+  const AMBER = [232, 150, 12] as [number, number, number];
+  const DARK  = [26, 30, 36]  as [number, number, number];
+  const GRAY  = [87, 96, 106] as [number, number, number];
+
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const W = doc.internal.pageSize.getWidth();
+
+  const addHeader = (title: string, subtitle: string) => {
+    // Bande amber
+    doc.setFillColor(...AMBER);
+    doc.rect(0, 0, W, 22, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("C.LC. Traiteur — Chez La Camerounaise", 14, 10);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text("Traiteur événementiel · contact@clctraiteur.fr", 14, 17);
+
+    // Titre document
+    doc.setTextColor(...DARK);
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text(title, 14, 34);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...GRAY);
+    doc.text(subtitle, 14, 40);
+    doc.text(`Généré le ${dateStr}`, W - 14, 40, { align: "right" });
+
+    // Ligne séparatrice
+    doc.setDrawColor(...AMBER);
+    doc.setLineWidth(0.5);
+    doc.line(14, 43, W - 14, 43);
+  };
+
+  const addFooter = (pageNum: number, total: number) => {
+    const y = doc.internal.pageSize.getHeight() - 10;
+    doc.setFontSize(8);
+    doc.setTextColor(...GRAY);
+    doc.setFont("helvetica", "normal");
+    doc.text("Document conforme aux obligations légales françaises (CGI art. 289) — À conserver 10 ans", 14, y);
+    doc.text(`Page ${pageNum} / ${total}`, W - 14, y, { align: "right" });
+  };
+
+  // ─── RÉCAPITULATIF COMPTABLE ───────────────────────────────────────────────
   if (type === "summary") {
-    content = `RÉCAPITULATIF COMPTABLE — CHEZ LA CAMEROUNAISE\n`;
-    content += `Généré le ${now}\n`;
-    content += `${"=".repeat(60)}\n\n`;
-    content += `SYNTHÈSE FINANCIÈRE\n`;
-    content += `  Nombre de devis confirmés : ${metrics.count}\n`;
-    content += `  Chiffre d'affaires HT     : ${metrics.totalHT.toFixed(2)} €\n`;
-    content += `  TVA collectée (20%)       : ${metrics.totalTVA.toFixed(2)} €\n`;
-    content += `  Chiffre d'affaires TTC    : ${metrics.totalTTC.toFixed(2)} €\n\n`;
-    content += `DÉTAIL PAR DEVIS\n`;
-    content += `${"-".repeat(60)}\n`;
-    confirmed.forEach(d => {
-      content += `  ${d.id} | ${d.clientName} | ${d.eventType}\n`;
-      content += `     Date : ${formatDate(d.eventDate)}\n`;
-      content += `     HT : ${d.totalHT.toFixed(2)} € | TVA : ${(d.totalTTC - d.totalHT).toFixed(2)} € | TTC : ${d.totalTTC.toFixed(2)} €\n\n`;
+    addHeader("Récapitulatif Comptable", `Période : ensemble des devis confirmés — ${metrics.count} facture(s)`);
+
+    // Synthèse
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...DARK);
+    doc.text("Synthèse financière", 14, 52);
+
+    autoTable(doc, {
+      startY: 56,
+      head: [["Indicateur", "Montant"]],
+      body: [
+        ["Chiffre d'affaires Hors Taxes", `${metrics.totalHT.toFixed(2)} €`],
+        ["TVA collectée (taux 20%)", `${metrics.totalTVA.toFixed(2)} €`],
+        ["Chiffre d'affaires TTC", `${metrics.totalTTC.toFixed(2)} €`],
+        ["Nombre de prestations facturées", String(metrics.count)],
+        ["Valeur moyenne par devis TTC", `${metrics.count ? (metrics.totalTTC / metrics.count).toFixed(2) : "0.00"} €`],
+      ],
+      headStyles: { fillColor: AMBER, textColor: [255, 255, 255], fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [246, 248, 250] },
+      columnStyles: { 1: { halign: "right", fontStyle: "bold" } },
+      styles: { fontSize: 10, cellPadding: 3 },
+      margin: { left: 14, right: 14 },
     });
-  } else if (type === "invoices") {
-    content = `JOURNAL DES VENTES — CHEZ LA CAMEROUNAISE\n`;
-    content += `Généré le ${now}\n`;
-    content += `${"=".repeat(60)}\n\n`;
-    confirmed.forEach((d, i) => {
-      content += `N° ${String(i + 1).padStart(3, "0")} — Réf. ${d.id}\n`;
-      content += `  Client       : ${d.clientName} (${d.clientPhone})\n`;
-      content += `  Événement    : ${d.eventType} — ${formatDate(d.eventDate)}\n`;
-      content += `  Convives     : ${d.guestCount}\n`;
-      content += `  Montant HT   : ${d.totalHT.toFixed(2)} €\n`;
-      content += `  TVA (20%)    : ${(d.totalTTC - d.totalHT).toFixed(2)} €\n`;
-      content += `  Montant TTC  : ${d.totalTTC.toFixed(2)} €\n`;
-      content += `  Prestations  :\n`;
-      d.items.forEach(item => {
-        content += `    - ${item.dishName} × ${item.quantity} = ${item.subtotal.toFixed(2)} €\n`;
-      });
-      content += `\n`;
+
+    const afterSummary = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...DARK);
+    doc.text("Détail par prestation", 14, afterSummary);
+
+    autoTable(doc, {
+      startY: afterSummary + 4,
+      head: [["Réf.", "Client", "Type", "Date", "HT", "TVA", "TTC"]],
+      body: confirmed.map(d => [
+        d.id,
+        d.clientName,
+        d.eventType,
+        formatDate(d.eventDate),
+        `${d.totalHT.toFixed(2)} €`,
+        `${(d.totalTTC - d.totalHT).toFixed(2)} €`,
+        `${d.totalTTC.toFixed(2)} €`,
+      ]),
+      foot: [["", "", "", "TOTAL", `${metrics.totalHT.toFixed(2)} €`, `${metrics.totalTVA.toFixed(2)} €`, `${metrics.totalTTC.toFixed(2)} €`]],
+      headStyles: { fillColor: DARK, textColor: [255, 255, 255], fontStyle: "bold" },
+      footStyles: { fillColor: AMBER, textColor: [255, 255, 255], fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [246, 248, 250] },
+      columnStyles: { 4: { halign: "right" }, 5: { halign: "right" }, 6: { halign: "right", fontStyle: "bold" } },
+      styles: { fontSize: 9, cellPadding: 2.5 },
+      margin: { left: 14, right: 14 },
     });
-    content += `${"=".repeat(60)}\n`;
-    content += `TOTAL TTC : ${metrics.totalTTC.toFixed(2)} €\n`;
-  } else if (type === "tva") {
-    content = `DÉCLARATION TVA — CHEZ LA CAMEROUNAISE\n`;
-    content += `Généré le ${now}\n`;
-    content += `${"=".repeat(60)}\n\n`;
-    content += `OPÉRATIONS IMPOSABLES\n\n`;
-    content += `  Base HT totale (taux 20%) : ${metrics.totalHT.toFixed(2)} €\n`;
-    content += `  TVA due (20%)             : ${metrics.totalTVA.toFixed(2)} €\n\n`;
-    content += `DÉTAIL DES OPÉRATIONS\n`;
-    content += `${"-".repeat(60)}\n`;
-    confirmed.forEach(d => {
-      content += `  ${d.id} — ${d.clientName} — ${formatDate(d.eventDate)}\n`;
-      content += `    Base : ${d.totalHT.toFixed(2)} € | TVA : ${(d.totalTTC - d.totalHT).toFixed(2)} €\n`;
-    });
-    content += `\n${"=".repeat(60)}\n`;
-    content += `TVA COLLECTÉE TOTALE : ${metrics.totalTVA.toFixed(2)} €\n`;
-    content += `\nDocument à transmettre à votre expert-comptable.\n`;
+
+    addFooter(1, 1);
   }
 
-  // Téléchargement
-  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `clc-traiteur-${type}-${now.replace(/\//g, "-")}.txt`;
-  a.click();
-  URL.revokeObjectURL(url);
+  // ─── JOURNAL DES VENTES ────────────────────────────────────────────────────
+  else if (type === "invoices") {
+    addHeader("Journal des Ventes", `Registre chronologique des prestations — ${confirmed.length} entrée(s)`);
+
+    const rows: string[][] = [];
+    confirmed.forEach((d, i) => {
+      rows.push([
+        `${String(i + 1).padStart(3, "0")}`,
+        d.id,
+        d.clientName,
+        d.clientPhone,
+        d.eventType,
+        formatDate(d.eventDate),
+        String(d.guestCount),
+        `${d.totalHT.toFixed(2)} €`,
+        `${(d.totalTTC - d.totalHT).toFixed(2)} €`,
+        `${d.totalTTC.toFixed(2)} €`,
+      ]);
+    });
+
+    autoTable(doc, {
+      startY: 50,
+      head: [["N°", "Réf.", "Client", "Téléphone", "Type", "Date", "Conv.", "HT", "TVA", "TTC"]],
+      body: rows,
+      foot: [["", "", "", "", "", "", "", `${metrics.totalHT.toFixed(2)} €`, `${metrics.totalTVA.toFixed(2)} €`, `${metrics.totalTTC.toFixed(2)} €`]],
+      headStyles: { fillColor: DARK, textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
+      footStyles: { fillColor: AMBER, textColor: [255, 255, 255], fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [246, 248, 250] },
+      columnStyles: {
+        7: { halign: "right" },
+        8: { halign: "right" },
+        9: { halign: "right", fontStyle: "bold" },
+      },
+      styles: { fontSize: 8, cellPadding: 2 },
+      margin: { left: 14, right: 14 },
+      didDrawPage: (data) => {
+        addFooter(data.pageNumber, doc.getNumberOfPages());
+      },
+    });
+
+    // Détail des prestations
+    confirmed.forEach((d, idx) => {
+      doc.addPage();
+      addHeader(`Détail Prestation — ${d.id}`, `${d.clientName} · ${d.eventType} · ${formatDate(d.eventDate)}`);
+
+      doc.setFontSize(9);
+      doc.setTextColor(...GRAY);
+      doc.text(`Client : ${d.clientName} · ${d.clientPhone}`, 14, 52);
+      doc.text(`Convives : ${d.guestCount} · Statut : ${d.status}`, 14, 57);
+
+      autoTable(doc, {
+        startY: 62,
+        head: [["Plat / Prestation", "Quantité", "Prix unit.", "Sous-total"]],
+        body: d.items.map(item => [
+          item.dishName,
+          String(item.quantity),
+          `${item.unitPrice.toFixed(2)} €`,
+          `${item.subtotal.toFixed(2)} €`,
+        ]),
+        foot: [
+          ["", "", "Sous-total HT", `${d.totalHT.toFixed(2)} €`],
+          ["", "", "TVA 20%", `${(d.totalTTC - d.totalHT).toFixed(2)} €`],
+          ["", "", "TOTAL TTC", `${d.totalTTC.toFixed(2)} €`],
+        ],
+        headStyles: { fillColor: DARK, textColor: [255, 255, 255], fontStyle: "bold" },
+        footStyles: { fillColor: AMBER, textColor: [255, 255, 255], fontStyle: "bold" },
+        alternateRowStyles: { fillColor: [246, 248, 250] },
+        columnStyles: { 1: { halign: "center" }, 2: { halign: "right" }, 3: { halign: "right", fontStyle: "bold" } },
+        styles: { fontSize: 9, cellPadding: 2.5 },
+        margin: { left: 14, right: 14 },
+      });
+
+      addFooter(idx + 2, confirmed.length + 1);
+    });
+  }
+
+  // ─── DÉCLARATION TVA ───────────────────────────────────────────────────────
+  else if (type === "tva") {
+    addHeader("Déclaration de TVA Collectée", `Régime réel simplifié · Taux 20% · ${dateStr}`);
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...DARK);
+    doc.text("Récapitulatif des opérations imposables", 14, 52);
+
+    autoTable(doc, {
+      startY: 56,
+      head: [["Intitulé", "Montant"]],
+      body: [
+        ["Base d'imposition HT (taux 20%)", `${metrics.totalHT.toFixed(2)} €`],
+        ["TVA collectée due (20%)", `${metrics.totalTVA.toFixed(2)} €`],
+        ["Chiffre d'affaires TTC", `${metrics.totalTTC.toFixed(2)} €`],
+      ],
+      headStyles: { fillColor: AMBER, textColor: [255, 255, 255], fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [246, 248, 250] },
+      columnStyles: { 1: { halign: "right", fontStyle: "bold" } },
+      styles: { fontSize: 11, cellPadding: 4 },
+      margin: { left: 14, right: 14 },
+    });
+
+    const afterTotals = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...DARK);
+    doc.text("Détail des opérations", 14, afterTotals);
+
+    autoTable(doc, {
+      startY: afterTotals + 4,
+      head: [["Réf.", "Client", "Date événement", "Base HT", "TVA 20%"]],
+      body: confirmed.map(d => [
+        d.id,
+        d.clientName,
+        formatDate(d.eventDate),
+        `${d.totalHT.toFixed(2)} €`,
+        `${(d.totalTTC - d.totalHT).toFixed(2)} €`,
+      ]),
+      foot: [["", "", "TOTAL", `${metrics.totalHT.toFixed(2)} €`, `${metrics.totalTVA.toFixed(2)} €`]],
+      headStyles: { fillColor: DARK, textColor: [255, 255, 255], fontStyle: "bold" },
+      footStyles: { fillColor: AMBER, textColor: [255, 255, 255], fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [246, 248, 250] },
+      columnStyles: { 3: { halign: "right" }, 4: { halign: "right", fontStyle: "bold" } },
+      styles: { fontSize: 9, cellPadding: 2.5 },
+      margin: { left: 14, right: 14 },
+    });
+
+    const afterDetail = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(...GRAY);
+    const mention = [
+      "Conformément à l'article 289 du Code Général des Impôts, ce document récapitulatif de TVA collectée doit être",
+      "conservé pendant 10 ans et transmis à votre expert-comptable pour établissement de votre déclaration CA3.",
+    ];
+    mention.forEach((line, i) => doc.text(line, 14, afterDetail + i * 5));
+
+    addFooter(1, 1);
+  }
+
+  doc.save(fileName);
 }
