@@ -272,7 +272,7 @@ export default function DashboardClient() {
           <>
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs text-[var(--text-muted)]">
-                {filtered.length} plat{filtered.length > 1 ? "s" : ""}
+                {filtered.length} {activeCategory === "Tous" ? `plat${filtered.length > 1 ? "s" : ""}` : activeCategory.toLowerCase()}
               </p>
               {activeCategory !== "Tous" && (
                 <button
