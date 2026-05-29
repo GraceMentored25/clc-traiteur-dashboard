@@ -224,9 +224,7 @@ export async function generateDevisPDF(devis: Devis) {
     currentY += 6 + noteLines.length * 6 + 4;
   }
 
-  // ── ACOMPTE + CGV + SIGNATURES → toujours sur la page 2 ─────────────────
-  doc.addPage();
-  currentY = 14;
+  // Acompte reste page 1
   const aY = currentY + 5;
   doc.setFillColor(255, 248, 230);
   doc.roundedRect(L, aY, R - L, 28, 2, 2, "F");
@@ -244,8 +242,9 @@ export async function generateDevisPDF(devis: Devis) {
   doc.text(`Date limite de versement : ${deadlineStr} (${monthsBefore} mois avant l'événement)`, L + 5, aY + 16);
   doc.text("En cas de rétractation après versement, l'acompte ne sera pas remboursé.", L + 5, aY + 23);
 
-  // ── CONDITIONS GÉNÉRALES ─────────────────────────────────────────────────
-  const cgY = aY + 34;
+  // ── CONDITIONS GÉNÉRALES + SIGNATURES → toujours page 2 ─────────────────
+  doc.addPage();
+  const cgY = 14;
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...DARK);
