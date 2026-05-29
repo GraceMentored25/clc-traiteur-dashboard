@@ -17,7 +17,7 @@ const CLC = {
 };
 
 function getAcompteInfo(totalTTC: number, eventDate: string) {
-  const pct = totalTTC < 2000 ? 15 : totalTTC < 5000 ? 20 : 20;
+  const pct = totalTTC < 2000 ? 15 : 20;
   const montant = totalTTC * (pct / 100);
   const event = new Date(eventDate);
   const now = new Date();
@@ -37,7 +37,6 @@ async function loadLogo(): Promise<{ data: string; w: number; h: number } | null
       reader.onloadend = () => resolve(reader.result as string);
       reader.readAsDataURL(blob);
     });
-    // Lire les dimensions natives pour respecter le ratio
     const { w, h } = await new Promise<{ w: number; h: number }>((resolve) => {
       const img = new Image();
       img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
@@ -60,68 +59,64 @@ export async function generateDevisPDF(devis: Devis) {
   const now = new Date().toLocaleDateString("fr-FR");
   const { pct, montant, deadlineStr, monthsBefore } = getAcompteInfo(devis.totalTTC, devis.eventDate);
 
-  // Charger le logo
   const logo = await loadLogo();
 
   // ── EN-TÊTE ──────────────────────────────────────────────────────────────
   doc.setFillColor(...AMBER);
-  doc.rect(0, 0, W, 34, "F");
+  doc.rect(0, 0, W, 38, "F");
 
-  // Logo — hauteur fixe 24mm, largeur calculée selon ratio natif
   let logoW = 0;
   if (logo) {
-    const logoH = 24;
+    const logoH = 28;
     logoW = (logo.w / logo.h) * logoH;
-    doc.addImage(logo.data, "PNG", L, 4, logoW, logoH);
+    doc.addImage(logo.data, "PNG", L, 5, logoW, logoH);
   }
 
-  // Nom société (décalé pour laisser place au logo)
-  const textX = logoW > 0 ? L + logoW + 4 : L;
+  const textX = logoW > 0 ? L + logoW + 5 : L;
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(15);
+  doc.setFontSize(17);
   doc.setFont("helvetica", "bold");
-  doc.text(CLC.nom, textX, 13);
-  doc.setFontSize(8);
+  doc.text(CLC.nom, textX, 14);
+  doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text(CLC.sousTitre, textX, 19);
-  doc.text(`${CLC.adresse} · ${CLC.tel} · ${CLC.email}`, textX, 25);
+  doc.text(CLC.sousTitre, textX, 21);
+  doc.text(`${CLC.adresse} · ${CLC.tel} · ${CLC.email}`, textX, 28);
 
-  // Numéro de devis (droite)
-  doc.setFontSize(13);
+  doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
-  doc.text(`DEVIS N° ${devis.id}`, R, 13, { align: "right" });
-  doc.setFontSize(8);
+  doc.text(`DEVIS N° ${devis.id}`, R, 14, { align: "right" });
+  doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text(`Émis le ${now}`, R, 20, { align: "right" });
-  doc.text(`Statut : ${devis.status}`, R, 26, { align: "right" });
+  doc.text(`Émis le ${now}`, R, 22, { align: "right" });
+  doc.text(`Statut : ${devis.status}`, R, 30, { align: "right" });
 
   // ── CLIENT / ÉVÉNEMENT ───────────────────────────────────────────────────
-  const infoY = 42;
+  const infoY = 46;
 
-  doc.setFontSize(8);
+  doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...GRAY);
   doc.text("CLIENT", L, infoY);
   doc.setDrawColor(...AMBER);
   doc.setLineWidth(0.4);
-  doc.line(L, infoY + 1.5, L + 30, infoY + 1.5);
+  doc.line(L, infoY + 2, L + 32, infoY + 2);
 
-  doc.setFontSize(10);
+  doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...DARK);
-  doc.text(devis.clientName, L, infoY + 7);
-  doc.setFontSize(9);
+  doc.text(devis.clientName, L, infoY + 9);
+  doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...GRAY);
-  doc.text(devis.clientPhone, L, infoY + 13);
+  doc.text(devis.clientPhone, L, infoY + 16);
 
   const evX = W / 2;
-  doc.setFontSize(8);
+  doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...GRAY);
   doc.text("ÉVÉNEMENT", evX, infoY);
   doc.setDrawColor(...AMBER);
-  doc.line(evX, infoY + 1.5, evX + 36, infoY + 1.5);
+  doc.line(evX, infoY + 2, evX + 40, infoY + 2);
 
   const evRows: [string, string][] = [
     ["Type :", devis.eventType],
@@ -129,24 +124,24 @@ export async function generateDevisPDF(devis: Devis) {
     ["Convives :", `${devis.guestCount} personnes`],
   ];
   evRows.forEach(([label, val], i) => {
-    doc.setFontSize(9);
+    doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...DARK);
-    doc.text(label, evX, infoY + 7 + i * 6);
+    doc.text(label, evX, infoY + 9 + i * 7);
     doc.setFont("helvetica", "normal");
-    doc.text(val, evX + 22, infoY + 7 + i * 6);
+    doc.text(val, evX + 24, infoY + 9 + i * 7);
   });
 
   doc.setDrawColor(220, 220, 220);
   doc.setLineWidth(0.3);
-  doc.line(L, infoY + 27, R, infoY + 27);
+  doc.line(L, infoY + 32, R, infoY + 32);
 
   // ── TABLEAU PRESTATIONS ──────────────────────────────────────────────────
-  const tableY = infoY + 33;
-  doc.setFontSize(10);
+  const tableY = infoY + 39;
+  doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...DARK);
-  doc.text("Détail des prestations", L, tableY - 3);
+  doc.text("Détail des prestations", L, tableY - 4);
 
   autoTable(doc, {
     startY: tableY,
@@ -160,11 +155,11 @@ export async function generateDevisPDF(devis: Devis) {
     alternateRowStyles: { fillColor: LIGHT_BG },
     columnStyles: {
       0: { halign: "left", cellWidth: "auto" },
-      1: { halign: "right", cellWidth: 26 },
-      2: { halign: "right", cellWidth: 30 },
-      3: { halign: "right", cellWidth: 32, fontStyle: "bold" },
+      1: { halign: "right", cellWidth: 28 },
+      2: { halign: "right", cellWidth: 32 },
+      3: { halign: "right", cellWidth: 34, fontStyle: "bold" },
     },
-    styles: { fontSize: 9, cellPadding: { top: 3.5, bottom: 3.5, left: 5, right: 5 } },
+    styles: { fontSize: 11, cellPadding: { top: 4, bottom: 4, left: 5, right: 5 } },
     margin: { left: L, right: 14 },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     didParseCell: (data: any) => {
@@ -172,7 +167,7 @@ export async function generateDevisPDF(devis: Devis) {
         data.cell.styles.fillColor = [...DARK];
         data.cell.styles.textColor = [255, 255, 255];
         data.cell.styles.fontStyle = "bold";
-        data.cell.styles.fontSize = 9;
+        data.cell.styles.fontSize = 11;
         data.cell.styles.halign = data.column.index === 0 ? "left" : "right";
       }
     },
@@ -181,73 +176,73 @@ export async function generateDevisPDF(devis: Devis) {
   const afterTable = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
   const lastTable = (doc as unknown as { lastAutoTable: { columns: Array<{ x: number; width: number }> } }).lastAutoTable;
   const colSousTotal = lastTable.columns[3];
-  const totalsLeft = colSousTotal?.x ?? (W - 70);
+  const totalsLeft = colSousTotal?.x ?? (W - 80);
 
   // ── TOTAUX ───────────────────────────────────────────────────────────────
-  const tY = afterTable + 3;
-  const rowH = 6.5;
+  const tY = afterTable + 4;
+  const rowH = 8;
 
   doc.setFillColor(...LIGHT_BG);
-  doc.roundedRect(totalsLeft, tY, R - totalsLeft, rowH * 3 + 4, 1.5, 1.5, "F");
+  doc.roundedRect(totalsLeft, tY, R - totalsLeft, rowH * 3 + 5, 2, 2, "F");
 
-  doc.setFontSize(9);
+  doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...GRAY);
-  doc.text("Sous-total HT :", totalsLeft + 3, tY + rowH - 1);
+  doc.text("Sous-total HT :", totalsLeft + 4, tY + rowH - 1);
   doc.setTextColor(...DARK);
-  doc.text(`${devis.totalHT.toFixed(2)} €`, R - 3, tY + rowH - 1, { align: "right" });
+  doc.text(`${devis.totalHT.toFixed(2)} €`, R - 4, tY + rowH - 1, { align: "right" });
 
   doc.setTextColor(...GRAY);
-  doc.text("TVA (20%) :", totalsLeft + 3, tY + rowH * 2 - 1);
+  doc.text("TVA (20%) :", totalsLeft + 4, tY + rowH * 2 - 1);
   doc.setTextColor(...DARK);
-  doc.text(`${(devis.totalTTC - devis.totalHT).toFixed(2)} €`, R - 3, tY + rowH * 2 - 1, { align: "right" });
+  doc.text(`${(devis.totalTTC - devis.totalHT).toFixed(2)} €`, R - 4, tY + rowH * 2 - 1, { align: "right" });
 
   doc.setDrawColor(...AMBER);
   doc.setLineWidth(0.4);
-  doc.line(totalsLeft + 3, tY + rowH * 2 + 1, R - 3, tY + rowH * 2 + 1);
+  doc.line(totalsLeft + 4, tY + rowH * 2 + 2, R - 4, tY + rowH * 2 + 2);
 
-  doc.setFontSize(11);
+  doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...DARK);
-  doc.text("TOTAL TTC :", totalsLeft + 3, tY + rowH * 3 + 1);
+  doc.text("TOTAL TTC :", totalsLeft + 4, tY + rowH * 3 + 2);
   doc.setTextColor(AMBER[0], AMBER[1], AMBER[2]);
-  doc.text(`${devis.totalTTC.toFixed(2)} €`, R - 3, tY + rowH * 3 + 1, { align: "right" });
+  doc.text(`${devis.totalTTC.toFixed(2)} €`, R - 4, tY + rowH * 3 + 2, { align: "right" });
 
   // Notes
-  let currentY = tY + rowH * 3 + 10;
+  let currentY = tY + rowH * 3 + 13;
   if (devis.notes) {
-    doc.setFontSize(9);
+    doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...DARK);
     doc.text("Notes :", L, currentY);
     doc.setFont("helvetica", "italic");
     doc.setTextColor(...GRAY);
     const noteLines = doc.splitTextToSize(devis.notes, R - L);
-    doc.text(noteLines, L, currentY + 5);
-    currentY += 5 + noteLines.length * 5 + 4;
+    doc.text(noteLines, L, currentY + 6);
+    currentY += 6 + noteLines.length * 6 + 4;
   }
 
   // ── ACOMPTE ──────────────────────────────────────────────────────────────
-  const aY = currentY + 4;
+  const aY = currentY + 5;
   doc.setFillColor(255, 248, 230);
-  doc.roundedRect(L, aY, R - L, 24, 2, 2, "F");
+  doc.roundedRect(L, aY, R - L, 28, 2, 2, "F");
   doc.setDrawColor(...AMBER);
   doc.setLineWidth(0.4);
-  doc.roundedRect(L, aY, R - L, 24, 2, 2, "D");
+  doc.roundedRect(L, aY, R - L, 28, 2, 2, "D");
 
-  doc.setFontSize(10);
+  doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...DARK);
-  doc.text(`Acompte de ${pct}% requis à la validation — ${montant.toFixed(2)} €`, L + 4, aY + 7);
-  doc.setFontSize(8.5);
+  doc.text(`Acompte de ${pct}% requis à la validation — ${montant.toFixed(2)} €`, L + 5, aY + 8);
+  doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...GRAY);
-  doc.text(`Date limite de versement : ${deadlineStr} (${monthsBefore} mois avant l'événement)`, L + 4, aY + 13);
-  doc.text("En cas de rétractation après versement de l'acompte, celui-ci ne sera pas remboursé.", L + 4, aY + 19);
+  doc.text(`Date limite de versement : ${deadlineStr} (${monthsBefore} mois avant l'événement)`, L + 5, aY + 16);
+  doc.text("En cas de rétractation après versement, l'acompte ne sera pas remboursé.", L + 5, aY + 23);
 
   // ── CONDITIONS GÉNÉRALES ─────────────────────────────────────────────────
-  const cgY = aY + 30;
-  doc.setFontSize(8);
+  const cgY = aY + 34;
+  doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...DARK);
   doc.text("Conditions générales de vente", L, cgY);
@@ -261,48 +256,46 @@ export async function generateDevisPDF(devis: Devis) {
     "• Solde exigible au plus tard 7 jours avant la date de la prestation.",
     "• Tout litige fera l'objet d'une tentative de résolution amiable préalable.",
   ];
-  cg.forEach((line, i) => doc.text(line, L, cgY + 5 + i * 4.5, { maxWidth: R - L }));
+  cg.forEach((line, i) => doc.text(line, L, cgY + 7 + i * 6, { maxWidth: R - L }));
 
-  // ── SIGNATURES ÉLECTRONIQUES ─────────────────────────────────────────────
-  const sigY = cgY + 42;
+  // ── SIGNATURES ───────────────────────────────────────────────────────────
+  const sigY = cgY + 52;
   const needNewPage = sigY + 55 > 280;
   if (needNewPage) doc.addPage();
   const sY = needNewPage ? 24 : sigY;
 
   const sigW = (R - L - 8) / 2;
-  const sigH = 40;
+  const sigH = 44;
 
-  // Cadre signature client
+  // Cadre client
   doc.setFillColor(...LIGHT_BG);
   doc.roundedRect(L, sY, sigW, sigH, 2, 2, "F");
   doc.setDrawColor(200, 200, 200);
   doc.setLineWidth(0.3);
   doc.roundedRect(L, sY, sigW, sigH, 2, 2, "D");
 
-  doc.setFontSize(8);
+  doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...DARK);
-  doc.text("Signature du client", L + 3, sY + 6);
-  doc.setFontSize(7);
+  doc.text("Signature du client", L + 4, sY + 7);
+  doc.setFontSize(9);
   doc.setFont("helvetica", "italic");
   doc.setTextColor(...GRAY);
-  doc.text("Précédée de « Bon pour accord »", L + 3, sY + 11);
+  doc.text("Précédée de « Bon pour accord »", L + 4, sY + 13);
 
-  // Zone de signature client (rectangle amber)
   doc.setDrawColor(...AMBER);
   doc.setLineWidth(0.4);
-  doc.roundedRect(L + 3, sY + 14, sigW - 6, 18, 1, 1, "D");
-
-  doc.setFontSize(7);
+  doc.roundedRect(L + 4, sY + 16, sigW - 8, 20, 1, 1, "D");
+  doc.setFontSize(9);
   doc.setTextColor(200, 200, 200);
-  doc.text("Signer ici", L + 3 + (sigW - 6) / 2, sY + 24, { align: "center" });
+  doc.text("Signer ici", L + 4 + (sigW - 8) / 2, sY + 27, { align: "center" });
 
-  doc.setFontSize(7.5);
+  doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...GRAY);
-  doc.text(devis.clientName, L + 3, sY + 36);
+  doc.text(devis.clientName, L + 4, sY + 40);
 
-  // Cadre signature CLC
+  // Cadre CLC
   const sig2X = L + sigW + 8;
   doc.setFillColor(...LIGHT_BG);
   doc.roundedRect(sig2X, sY, sigW, sigH, 2, 2, "F");
@@ -310,35 +303,33 @@ export async function generateDevisPDF(devis: Devis) {
   doc.setLineWidth(0.3);
   doc.roundedRect(sig2X, sY, sigW, sigH, 2, 2, "D");
 
-  doc.setFontSize(8);
+  doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...DARK);
-  doc.text("Signature C.LC. Traiteur", sig2X + 3, sY + 6);
-  doc.setFontSize(7);
+  doc.text("Signature C.LC. Traiteur", sig2X + 4, sY + 7);
+  doc.setFontSize(9);
   doc.setFont("helvetica", "italic");
   doc.setTextColor(...GRAY);
-  doc.text("Représentant(e) autorisé(e)", sig2X + 3, sY + 11);
+  doc.text("Représentant(e) autorisé(e)", sig2X + 4, sY + 13);
 
-  // Zone de signature CLC
   doc.setDrawColor(...AMBER);
   doc.setLineWidth(0.4);
-  doc.roundedRect(sig2X + 3, sY + 14, sigW - 6, 18, 1, 1, "D");
-
-  doc.setFontSize(7);
+  doc.roundedRect(sig2X + 4, sY + 16, sigW - 8, 20, 1, 1, "D");
+  doc.setFontSize(9);
   doc.setTextColor(200, 200, 200);
-  doc.text("Signer ici", sig2X + 3 + (sigW - 6) / 2, sY + 24, { align: "center" });
+  doc.text("Signer ici", sig2X + 4 + (sigW - 8) / 2, sY + 27, { align: "center" });
 
-  doc.setFontSize(7.5);
+  doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...GRAY);
-  doc.text("Chez La Camerounaise", sig2X + 3, sY + 36);
+  doc.text("Chez La Camerounaise", sig2X + 4, sY + 40);
 
   // ── PIED DE PAGE ─────────────────────────────────────────────────────────
   const pages = doc.getNumberOfPages();
   for (let i = 1; i <= pages; i++) {
     doc.setPage(i);
     const fY = doc.internal.pageSize.getHeight() - 7;
-    doc.setFontSize(7);
+    doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...GRAY);
     doc.text(`${CLC.nom} — SIRET : ${CLC.siret} — TVA : ${CLC.tva} — ${CLC.adresse}`, L, fY);
