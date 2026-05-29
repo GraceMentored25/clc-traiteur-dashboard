@@ -3,7 +3,7 @@
 import { useState, memo, useCallback, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Minus, ShoppingCartSimple, PencilSimple, Check, X, Trash } from "@phosphor-icons/react";
+import { Plus, Minus, ShoppingCartSimple, Check, X, Trash } from "@phosphor-icons/react";
 import { Dish } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { formatCurrency, cn } from "@/lib/utils";
@@ -32,7 +32,8 @@ const DishCard = memo(function DishCard({ dish }: Props) {
   const displayQty = inCart ? cartItem!.quantity : quantity;
   const isCustomDish = customDishes.some((d) => d.id === dish.id);
 
-  const openEdit = useCallback(() => {
+  const openEdit = useCallback((e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setEditForm({ price: String(effectivePrice), unit: dish.unit });
     setEditOpen(true);
   }, [effectivePrice, dish.unit]);
@@ -114,8 +115,11 @@ const DishCard = memo(function DishCard({ dish }: Props) {
             : "border-[var(--border)] bg-[var(--surface-1)] hover:border-[var(--surface-3)]"
         )}
       >
-        {/* Image */}
-        <div className="relative w-full h-32 overflow-hidden bg-[var(--surface-3)] shrink-0">
+        {/* Image — clic pour éditer */}
+        <div
+          className="relative w-full h-32 overflow-hidden bg-[var(--surface-3)] shrink-0 cursor-pointer"
+          onClick={openEdit}
+        >
           <Image
             src={dish.image}
             alt={dish.name}
@@ -172,7 +176,6 @@ const DishCard = memo(function DishCard({ dish }: Props) {
                 >
                   {formatCurrency(effectivePrice)}
                   <span className="text-white/60 font-normal text-[10px]"> / {dish.unit}</span>
-                  <PencilSimple size={9} className="opacity-0 group-hover/price:opacity-100 transition-opacity" />
                 </motion.button>
               )}
             </AnimatePresence>
@@ -183,24 +186,11 @@ const DishCard = memo(function DishCard({ dish }: Props) {
             <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[var(--amber)] shadow-[0_0_6px_rgba(232,150,12,0.8)]" />
           )}
 
-          {/* Edit button — plats custom uniquement */}
-          {isCustomDish && (
-            <button
-              onClick={(e) => { e.stopPropagation(); openEdit(); }}
-              title="Modifier / Supprimer"
-              className="absolute top-2 left-2 w-6 h-6 rounded-lg bg-black/50 backdrop-blur-sm flex items-center justify-center text-white/70 hover:text-white hover:bg-black/70 transition-all opacity-0 group-hover:opacity-100"
-            >
-              <PencilSimple size={11} weight="bold" />
-            </button>
-          )}
         </div>
 
         {/* Body */}
         <div className="p-3 flex flex-col gap-2.5 flex-1">
-          <div
-            className={cn("cursor-default", isCustomDish && "cursor-pointer")}
-            onClick={isCustomDish ? openEdit : undefined}
-          >
+          <div className="cursor-pointer" onClick={openEdit}>
             <h3 className="font-semibold text-sm text-[var(--text-primary)] leading-tight truncate">
               {dish.name}
             </h3>
