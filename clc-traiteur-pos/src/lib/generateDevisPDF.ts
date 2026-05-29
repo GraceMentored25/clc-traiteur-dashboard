@@ -260,7 +260,6 @@ export async function generateDevisPDF(devis: Devis) {
     "• Annulation < 30 jours avant l'événement : la totalité du devis reste due.",
     "• Solde exigible au plus tard 7 jours avant la date de la prestation.",
     "• Tout litige fera l'objet d'une tentative de résolution amiable préalable.",
-    "• Pénalité de retard : 3× le taux légal en vigueur sur toute somme impayée à l'échéance.",
   ];
   cg.forEach((line, i) => doc.text(line, L, cgY + 5 + i * 4.5, { maxWidth: R - L }));
 
