@@ -250,5 +250,5 @@ export async function generateDevisPDF(devis: Devis) {
     doc.text(`Devis ${devisNum} · Page ${i}/${pageCount}`, W - 14, footerY, { align: "right" });
   }
 
-  doc.save(`devis-${devisNum}-${devis.clientName.replace(/\s+/g, "-").toLowerCase()}.pdf`);
+  doc.save(`${devisNum} - ${devis.clientName}.pdf`);
 }
