@@ -19,7 +19,7 @@ export const DISHES: Dish[] = [
     price: 15,
     image: "/dishes/ndole.jpg",
     description: "Feuilles de ndolé aux arachides et crevettes fumées",
-    unit: "personne",
+    unit: "assiette",
   },
   {
     id: 2,
@@ -28,7 +28,7 @@ export const DISHES: Dish[] = [
     price: 14,
     image: "/dishes/eru.png",
     description: "Légumes eru au waterleaf, huile de palme et crevettes",
-    unit: "personne",
+    unit: "assiette",
   },
   {
     id: 3,
@@ -37,7 +37,7 @@ export const DISHES: Dish[] = [
     price: 16,
     image: "/dishes/mbongo.jpg",
     description: "Poisson en sauce noire épicée aux épices camerounaises",
-    unit: "personne",
+    unit: "assiette",
   },
   {
     id: 4,
@@ -46,7 +46,7 @@ export const DISHES: Dish[] = [
     price: 16,
     image: "/dishes/poulet-dg.jpg",
     description: "Poulet sauté au directeur général, plantains et légumes",
-    unit: "personne",
+    unit: "assiette",
   },
   {
     id: 5,
@@ -55,7 +55,7 @@ export const DISHES: Dish[] = [
     price: 13,
     image: "/dishes/okok.png",
     description: "Feuilles d'okok aux graines de melon et huile de palme",
-    unit: "personne",
+    unit: "assiette",
   },
   {
     id: 6,
@@ -64,7 +64,7 @@ export const DISHES: Dish[] = [
     price: 18,
     image: "/dishes/porc-braise.png",
     description: "Porc mariné aux épices, braisé sur feu de bois",
-    unit: "personne",
+    unit: "portion",
   },
   {
     id: 7,
@@ -73,7 +73,7 @@ export const DISHES: Dish[] = [
     price: 17,
     image: "/dishes/poulet-braise.jpg",
     description: "Poulet entier braisé, marinade secrète C.LC.",
-    unit: "personne",
+    unit: "demi-poulet",
   },
   {
     id: 8,
@@ -82,7 +82,7 @@ export const DISHES: Dish[] = [
     price: 19,
     image: "/dishes/boeuf-braise.png",
     description: "Côtes de boeuf braisées aux herbes aromatiques",
-    unit: "personne",
+    unit: "portion",
   },
   {
     id: 9,
@@ -91,7 +91,7 @@ export const DISHES: Dish[] = [
     price: 17,
     image: "/dishes/poisson-braise.png",
     description: "Tilapia frais braisé, sauce tomate pimentée",
-    unit: "personne",
+    unit: "pièce",
   },
   {
     id: 10,
@@ -100,7 +100,7 @@ export const DISHES: Dish[] = [
     price: 14,
     image: "/dishes/poisson-fume.jpg",
     description: "Poisson fumé au bois, servi avec plantain et sauce",
-    unit: "personne",
+    unit: "portion",
   },
   {
     id: 11,
@@ -109,7 +109,7 @@ export const DISHES: Dish[] = [
     price: 8,
     image: "/dishes/koki.jpg",
     description: "Gâteau de haricots blancs vapeur aux feuilles de bananier",
-    unit: "personne",
+    unit: "portion",
   },
   {
     id: 12,
@@ -118,7 +118,7 @@ export const DISHES: Dish[] = [
     price: 6,
     image: "/dishes/beignets.jpg",
     description: "Beignets croustillants de haricots à la poudre de piment",
-    unit: "personne",
+    unit: "5 pièces",
   },
   {
     id: 13,
@@ -127,7 +127,7 @@ export const DISHES: Dish[] = [
     price: 9,
     image: "/dishes/sanga.jpg",
     description: "Maïs et haricots cuits ensemble, saison de sel et poivre",
-    unit: "personne",
+    unit: "portion",
   },
   {
     id: 14,
@@ -136,7 +136,7 @@ export const DISHES: Dish[] = [
     price: 10,
     image: "/dishes/riz-saute.png",
     description: "Riz sauté aux légumes colorés et poulet effiloché",
-    unit: "personne",
+    unit: "portion",
   },
   {
     id: 15,
@@ -145,7 +145,7 @@ export const DISHES: Dish[] = [
     price: 7,
     image: "/dishes/plantain-frit.png",
     description: "Plantain mûr braisé, légèrement caramélisé",
-    unit: "personne",
+    unit: "portion",
   },
   {
     id: 16,
@@ -154,7 +154,7 @@ export const DISHES: Dish[] = [
     price: 6,
     image: "/dishes/couscous.png",
     description: "Couscous de manioc, léger et moelleux",
-    unit: "personne",
+    unit: "portion",
   },
   {
     id: 17,
@@ -163,7 +163,7 @@ export const DISHES: Dish[] = [
     price: 5,
     image: "/dishes/chinchin.png",
     description: "Biscuits frits sucrés à la noix de muscade",
-    unit: "personne",
+    unit: "100g",
   },
   {
     id: 18,
@@ -172,7 +172,7 @@ export const DISHES: Dish[] = [
     price: 5,
     image: "/dishes/jus-gingembre.jpg",
     description: "Jus artisanal gingembre frais, citron et miel",
-    unit: "personne",
+    unit: "verre 25cl",
   },
   {
     id: 19,
@@ -181,6 +181,6 @@ export const DISHES: Dish[] = [
     price: 5,
     image: "/dishes/bissap.png",
     description: "Fleurs d'hibiscus infusées, gingembre et vanille",
-    unit: "personne",
+    unit: "verre 25cl",
   },
 ];
