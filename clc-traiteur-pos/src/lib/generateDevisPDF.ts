@@ -60,6 +60,8 @@ export async function generateDevisPDF(devis: Devis) {
   const { pct, montant, deadlineStr, monthsBefore } = getAcompteInfo(devis.totalTTC, devis.eventDate);
 
   const logo = await loadLogo();
+  const pageH = doc.internal.pageSize.getHeight();
+  const footerReserve = 14;
 
   // ── EN-TÊTE ──────────────────────────────────────────────────────────────
   doc.setFillColor(...AMBER);
@@ -223,6 +225,12 @@ export async function generateDevisPDF(devis: Devis) {
   }
 
   // ── ACOMPTE ──────────────────────────────────────────────────────────────
+  // Nouvelle page si pas assez de place pour acompte + CGV + signatures
+  const neededBelow = 28 + 34 + 52 + 55 + footerReserve;
+  if (currentY + neededBelow > pageH) {
+    doc.addPage();
+    currentY = 14;
+  }
   const aY = currentY + 5;
   doc.setFillColor(255, 248, 230);
   doc.roundedRect(L, aY, R - L, 28, 2, 2, "F");
@@ -260,7 +268,8 @@ export async function generateDevisPDF(devis: Devis) {
 
   // ── SIGNATURES ───────────────────────────────────────────────────────────
   const sigY = cgY + 52;
-  const needNewPage = sigY + 55 > 280;
+  const sigBlockH = 55;     // hauteur du bloc signatures
+  const needNewPage = sigY + sigBlockH > pageH - footerReserve;
   if (needNewPage) doc.addPage();
   const sY = needNewPage ? 24 : sigY;
 
