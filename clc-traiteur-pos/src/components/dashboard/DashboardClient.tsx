@@ -4,7 +4,7 @@ import { useState, useMemo, memo, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MagnifyingGlass, ShoppingCart, SquaresFour, Rows,
-  SortAscending,
+  SortAscending, Plus, X,
 } from "@phosphor-icons/react";
 import { CATEGORIES, DISHES } from "@/lib/data/dishes";
 import { useStore } from "@/lib/store";
@@ -31,6 +31,10 @@ export default function DashboardClient() {
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [sortMode, setSortMode] = useState<SortMode>("default");
   const [sortOpen, setSortOpen] = useState(false);
+  const [addCatOpen, setAddCatOpen] = useState(false);
+  const [addDishOpen, setAddDishOpen] = useState(false);
+  const [newCatName, setNewCatName] = useState("");
+  const [newDish, setNewDish] = useState({ name: "", price: "", unit: "portion", description: "", category: "" });
   const sortRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -42,12 +46,14 @@ export default function DashboardClient() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [sortOpen]);
 
-  const cart = useStore((s) => s.cart);
-  const cartTotal = useStore((s) => s.cartTotal);
+  const { cart, cartTotal, customDishes, customCategories, addCustomDish, addCustomCategory } = useStore();
   const cartCount = cart.length;
 
+  const allCategories = useMemo(() => [...CATEGORIES, ...customCategories], [customCategories]);
+  const allDishes = useMemo(() => [...DISHES, ...customDishes], [customDishes]);
+
   const filtered = useMemo(() => {
-    let list = DISHES.filter((d) => {
+    let list = allDishes.filter((d) => {
       const matchCat = activeCategory === "Tous" || d.category === activeCategory;
       const matchSearch = d.name.toLowerCase().includes(search.toLowerCase());
       return matchCat && matchSearch;
@@ -55,7 +61,31 @@ export default function DashboardClient() {
     if (sortMode === "alpha-asc") list = [...list].sort((a, b) => a.name.localeCompare(b.name, "fr"));
     if (sortMode === "alpha-desc") list = [...list].sort((a, b) => b.name.localeCompare(a.name, "fr"));
     return list;
-  }, [activeCategory, search, sortMode]);
+  }, [activeCategory, search, sortMode, allDishes]);
+
+  const handleAddCategory = () => {
+    const name = newCatName.trim();
+    if (!name) return;
+    addCustomCategory(name);
+    setActiveCategory(name);
+    setNewCatName("");
+    setAddCatOpen(false);
+  };
+
+  const handleAddDish = () => {
+    const price = parseFloat(newDish.price.replace(",", "."));
+    if (!newDish.name.trim() || isNaN(price) || price <= 0 || !newDish.category) return;
+    addCustomDish({
+      name: newDish.name.trim(),
+      price,
+      unit: newDish.unit || "portion",
+      description: newDish.description.trim() || newDish.name.trim(),
+      category: newDish.category,
+      image: "/dishes/ndole.jpg", // image par défaut
+    });
+    setNewDish({ name: "", price: "", unit: "portion", description: "", category: newDish.category });
+    setAddDishOpen(false);
+  };
 
   return (
     <div className="flex flex-col min-h-[100dvh]">
@@ -182,7 +212,7 @@ export default function DashboardClient() {
 
       {/* ── Category bar ───────────────────────────────────────── */}
       <div className="px-4 lg:px-8 py-2.5 flex items-center gap-2 overflow-x-auto scrollbar-hide border-b border-[var(--border)]">
-        {CATEGORIES.map((cat) => (
+        {allCategories.map((cat) => (
           <button
             key={cat}
             onClick={() => setActiveCategory(cat)}
@@ -196,17 +226,63 @@ export default function DashboardClient() {
             {cat}
           </button>
         ))}
+
+        {/* Bouton + Catégorie */}
+        {!addCatOpen ? (
+          <button
+            onClick={() => setAddCatOpen(true)}
+            title="Nouvelle catégorie"
+            className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--amber)] hover:border-[var(--amber)]/40 transition-all"
+          >
+            <Plus size={13} weight="bold" />
+          </button>
+        ) : (
+          <div className="shrink-0 flex items-center gap-1.5">
+            <input
+              autoFocus
+              value={newCatName}
+              onChange={(e) => setNewCatName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleAddCategory(); if (e.key === "Escape") setAddCatOpen(false); }}
+              placeholder="Nom catégorie…"
+              className="h-7 px-2.5 rounded-xl text-xs bg-[var(--surface-2)] border border-[var(--amber)]/50 text-[var(--text-primary)] outline-none w-36"
+            />
+            <button onClick={handleAddCategory} className="h-7 px-2.5 rounded-xl bg-[var(--amber)] text-[var(--surface)] text-xs font-semibold">OK</button>
+            <button onClick={() => setAddCatOpen(false)} className="h-7 w-7 rounded-xl bg-[var(--surface-2)] text-[var(--text-muted)] flex items-center justify-center">
+              <X size={12} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── Dishes grid ────────────────────────────────────────── */}
       <div className="flex-1 px-3 lg:px-5 py-4 pb-24 lg:pb-5">
-        {filtered.length === 0 ? (
-          <EmptyDishes search={search} />
+        {filtered.length === 0 && !addDishOpen ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <EmptyDishes search={search} />
+            {activeCategory !== "Tous" && (
+              <button
+                onClick={() => { setNewDish(d => ({ ...d, category: activeCategory })); setAddDishOpen(true); }}
+                className="flex items-center gap-2 h-9 px-4 rounded-xl bg-[var(--amber)]/10 border border-[var(--amber)]/30 text-[var(--amber)] text-sm font-medium hover:bg-[var(--amber)]/20 transition-all"
+              >
+                <Plus size={14} weight="bold" /> Ajouter un plat dans « {activeCategory} »
+              </button>
+            )}
+          </div>
         ) : (
           <>
-            <p className="text-xs text-[var(--text-muted)] mb-3">
-              {filtered.length} plat{filtered.length > 1 ? "s" : ""}
-            </p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-[var(--text-muted)]">
+                {filtered.length} plat{filtered.length > 1 ? "s" : ""}
+              </p>
+              {activeCategory !== "Tous" && (
+                <button
+                  onClick={() => { setNewDish(d => ({ ...d, category: activeCategory })); setAddDishOpen(true); }}
+                  className="flex items-center gap-1.5 h-7 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--amber)] hover:border-[var(--amber)]/40 text-xs font-medium transition-all"
+                >
+                  <Plus size={11} weight="bold" /> Ajouter un plat
+                </button>
+              )}
+            </div>
 
             {viewMode === "grid" ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
@@ -281,6 +357,78 @@ export default function DashboardClient() {
 
       <AnimatePresence>
         {devisModalOpen && <DevisModal onClose={() => setDevisModalOpen(false)} />}
+      </AnimatePresence>
+
+      {/* ── Modal ajout plat ───────────────────────────────────── */}
+      <AnimatePresence>
+        {addDishOpen && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setAddDishOpen(false)} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" />
+            <motion.div
+              initial={{ scale: 0.93, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 28 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-full max-w-sm bg-[var(--surface-1)] rounded-2xl border border-[var(--border)] p-6 shadow-2xl">
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="font-bold text-[var(--text-primary)]">Nouveau plat</h3>
+                  <button onClick={() => setAddDishOpen(false)} className="w-8 h-8 rounded-xl bg-[var(--surface-2)] flex items-center justify-center text-[var(--text-muted)]">
+                    <X size={15} />
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs text-[var(--text-muted)] mb-1 block">Nom du plat *</label>
+                    <input autoFocus value={newDish.name} onChange={(e) => setNewDish(d => ({ ...d, name: e.target.value }))}
+                      placeholder="Ex: Taro braisé"
+                      className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-[var(--text-muted)] mb-1 block">Prix (€) *</label>
+                      <input value={newDish.price} onChange={(e) => setNewDish(d => ({ ...d, price: e.target.value }))}
+                        type="number" min="0" step="0.5" placeholder="0.00"
+                        className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-[var(--text-muted)] mb-1 block">Unité</label>
+                      <select value={newDish.unit} onChange={(e) => setNewDish(d => ({ ...d, unit: e.target.value }))}
+                        className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all">
+                        {["portion", "pièce", "assiette", "verre", "100g", "litre"].map(u => <option key={u} value={u}>{u}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-[var(--text-muted)] mb-1 block">Catégorie *</label>
+                    <select value={newDish.category} onChange={(e) => setNewDish(d => ({ ...d, category: e.target.value }))}
+                      className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all">
+                      <option value="">Choisir…</option>
+                      {allCategories.filter(c => c !== "Tous").map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-[var(--text-muted)] mb-1 block">Description (optionnel)</label>
+                    <input value={newDish.description} onChange={(e) => setNewDish(d => ({ ...d, description: e.target.value }))}
+                      placeholder="Brève description…"
+                      className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all" />
+                  </div>
+                </div>
+                <div className="flex gap-3 mt-5">
+                  <button onClick={() => setAddDishOpen(false)} className="flex-1 h-10 rounded-xl border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-2)] transition-colors">Annuler</button>
+                  <button onClick={handleAddDish}
+                    disabled={!newDish.name.trim() || !newDish.price || !newDish.category}
+                    className="flex-1 h-10 rounded-xl bg-[var(--amber)] hover:bg-[var(--amber-light)] text-[var(--surface)] font-semibold text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                    Ajouter
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
       </AnimatePresence>
     </div>
   );

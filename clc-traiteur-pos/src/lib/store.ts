@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { CartItem, Devis, User } from "@/lib/types";
+import { CartItem, Devis, Dish, User } from "@/lib/types";
 import { MOCK_DEVIS } from "@/lib/data/mock-events";
 import { generateId } from "@/lib/utils";
 
@@ -19,6 +19,14 @@ interface AppState {
 
   customPrices: Record<number, number>;
   setCustomPrice: (dishId: number, price: number) => void;
+
+  customDishes: Dish[];
+  addCustomDish: (dish: Omit<Dish, "id">) => void;
+  removeCustomDish: (id: number) => void;
+
+  customCategories: string[];
+  addCustomCategory: (name: string) => void;
+  removeCustomCategory: (name: string) => void;
 
   cart: CartItem[];
   addToCart: (item: CartItem) => void;
@@ -60,6 +68,24 @@ export const useStore = create<AppState>()(
       customPrices: {},
       setCustomPrice: (dishId, price) =>
         set((s) => ({ customPrices: { ...s.customPrices, [dishId]: price } })),
+
+      customDishes: [],
+      addCustomDish: (dish) =>
+        set((s) => ({
+          customDishes: [...s.customDishes, { ...dish, id: Date.now() }],
+        })),
+      removeCustomDish: (id) =>
+        set((s) => ({ customDishes: s.customDishes.filter((d) => d.id !== id) })),
+
+      customCategories: [],
+      addCustomCategory: (name) =>
+        set((s) => ({
+          customCategories: s.customCategories.includes(name)
+            ? s.customCategories
+            : [...s.customCategories, name],
+        })),
+      removeCustomCategory: (name) =>
+        set((s) => ({ customCategories: s.customCategories.filter((c) => c !== name) })),
 
       appMode: "pro",
       setAppMode: (m) => {
@@ -133,6 +159,8 @@ export const useStore = create<AppState>()(
         theme: state.theme,
         appMode: state.appMode,
         customPrices: state.customPrices,
+        customDishes: state.customDishes,
+        customCategories: state.customCategories,
       }),
     }
   )
