@@ -196,8 +196,9 @@ export default function DashboardClient() {
         )}
       </header>
 
-      {/* ── MOBILE search bar ──────────────────────────────────── */}
-      <div className="lg:hidden px-4 pt-3 pb-2">
+      {/* ── MOBILE search + tri + vue ──────────────────────────── */}
+      <div className="lg:hidden px-4 pt-3 pb-2 space-y-2">
+        {/* Recherche */}
         <div className="relative">
           <MagnifyingGlass size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
           <input
@@ -207,6 +208,68 @@ export default function DashboardClient() {
             placeholder="Rechercher un plat..."
             className="w-full h-10 pl-9 pr-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--amber)]/50 transition-all"
           />
+        </div>
+        {/* Tri + toggle vue */}
+        <div className="flex items-center gap-2">
+          {/* Sort dropdown mobile */}
+          <div className="relative flex-1" ref={sortRef}>
+            <button
+              onClick={() => setSortOpen((v) => !v)}
+              className={cn(
+                "w-full flex items-center justify-center gap-1.5 h-9 px-3 rounded-xl text-sm transition-all border",
+                sortMode !== "default"
+                  ? "bg-[var(--amber)]/10 border-[var(--amber)]/30 text-[var(--amber)]"
+                  : "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)]"
+              )}
+            >
+              <SortAscending size={15} />
+              <span>{SORT_OPTIONS.find(s => s.value === sortMode)?.label}</span>
+            </button>
+            <AnimatePresence>
+              {sortOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -4, scale: 0.97 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute left-0 top-11 w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl shadow-xl z-[100] overflow-hidden"
+                >
+                  {SORT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => { setSortMode(opt.value); setSortOpen(false); }}
+                      className={cn(
+                        "w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between",
+                        sortMode === opt.value
+                          ? "text-[var(--amber)] bg-[var(--amber)]/8"
+                          : "text-[var(--text-secondary)] hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)]"
+                      )}
+                    >
+                      {opt.label}
+                      {sortMode === opt.value && <div className="w-1.5 h-1.5 rounded-full bg-[var(--amber)]" />}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+          {/* Toggle grille / liste */}
+          <div className="flex items-center bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-0.5 shrink-0">
+            {(["grid", "list"] as ViewMode[]).map((v) => (
+              <button
+                key={v}
+                onClick={() => setViewMode(v)}
+                className={cn(
+                  "w-9 h-8 rounded-lg flex items-center justify-center transition-all",
+                  viewMode === v ? "bg-[var(--amber)] text-[var(--surface)]" : "text-[var(--text-muted)]"
+                )}
+              >
+                {v === "grid"
+                  ? <SquaresFour size={16} weight={viewMode === "grid" ? "fill" : "regular"} />
+                  : <Rows size={16} weight={viewMode === "list" ? "fill" : "regular"} />}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
