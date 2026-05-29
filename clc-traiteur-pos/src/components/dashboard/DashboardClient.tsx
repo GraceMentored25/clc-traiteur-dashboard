@@ -223,7 +223,7 @@ export default function DashboardClient() {
               )}
             >
               <SortAscending size={15} />
-              <span>{SORT_OPTIONS.find(s => s.value === sortMode)?.label}</span>
+              <span className="text-xs">{SORT_OPTIONS.find(s => s.value === sortMode)?.label ?? "Tri"}</span>
             </button>
             <AnimatePresence>
               {sortOpen && (
@@ -255,20 +255,26 @@ export default function DashboardClient() {
           </div>
           {/* Toggle grille / liste */}
           <div className="flex items-center bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-0.5 shrink-0">
-            {(["grid", "list"] as ViewMode[]).map((v) => (
-              <button
-                key={v}
-                onClick={() => setViewMode(v)}
-                className={cn(
-                  "w-9 h-8 rounded-lg flex items-center justify-center transition-all",
-                  viewMode === v ? "bg-[var(--amber)] text-[var(--surface)]" : "text-[var(--text-muted)]"
-                )}
-              >
-                {v === "grid"
-                  ? <SquaresFour size={16} weight={viewMode === "grid" ? "fill" : "regular"} />
-                  : <Rows size={16} weight={viewMode === "list" ? "fill" : "regular"} />}
-              </button>
-            ))}
+            <button
+              onClick={() => setViewMode("grid")}
+              className={cn(
+                "flex items-center gap-1 px-2.5 h-8 rounded-lg text-xs font-medium transition-all",
+                viewMode === "grid" ? "bg-[var(--amber)] text-[var(--surface)]" : "text-[var(--text-muted)]"
+              )}
+            >
+              <SquaresFour size={14} weight={viewMode === "grid" ? "fill" : "regular"} />
+              <span>Grille</span>
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={cn(
+                "flex items-center gap-1 px-2.5 h-8 rounded-lg text-xs font-medium transition-all",
+                viewMode === "list" ? "bg-[var(--amber)] text-[var(--surface)]" : "text-[var(--text-muted)]"
+              )}
+            >
+              <Rows size={14} weight={viewMode === "list" ? "fill" : "regular"} />
+              <span>Liste</span>
+            </button>
           </div>
         </div>
       </div>
