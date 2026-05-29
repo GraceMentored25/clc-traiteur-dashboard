@@ -224,13 +224,9 @@ export async function generateDevisPDF(devis: Devis) {
     currentY += 6 + noteLines.length * 6 + 4;
   }
 
-  // ── ACOMPTE ──────────────────────────────────────────────────────────────
-  // Nouvelle page si pas assez de place pour acompte + CGV + signatures
-  const neededBelow = 28 + 34 + 52 + 55 + footerReserve;
-  if (currentY + neededBelow > pageH) {
-    doc.addPage();
-    currentY = 14;
-  }
+  // ── ACOMPTE + CGV + SIGNATURES → toujours sur la page 2 ─────────────────
+  doc.addPage();
+  currentY = 14;
   const aY = currentY + 5;
   doc.setFillColor(255, 248, 230);
   doc.roundedRect(L, aY, R - L, 28, 2, 2, "F");
@@ -268,7 +264,7 @@ export async function generateDevisPDF(devis: Devis) {
 
   // ── SIGNATURES ───────────────────────────────────────────────────────────
   const sigY = cgY + 52;
-  const sigBlockH = 55;     // hauteur du bloc signatures
+  const sigBlockH = 55;
   const needNewPage = sigY + sigBlockH > pageH - footerReserve;
   if (needNewPage) doc.addPage();
   const sY = needNewPage ? 24 : sigY;
