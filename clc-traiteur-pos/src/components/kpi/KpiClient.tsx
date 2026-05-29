@@ -189,38 +189,38 @@ export default function KpiClient() {
         <div className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] p-4 lg:p-6">
           <h3 className="font-bold text-[var(--text-primary)] text-sm mb-1">Répartition catégories</h3>
           <p className="text-xs text-[var(--text-muted)] mb-4">En % des commandes</p>
-          <PieChart width={240} height={180} style={{ margin: "0 auto" }}>
-            <Pie
-              data={CATEGORY_DATA}
-              cx={120}
-              cy={90}
-              innerRadius={50}
-              outerRadius={76}
-              paddingAngle={3}
-              dataKey="value"
-            >
-              {CATEGORY_DATA.map((entry, index) => (
-                <Cell key={index} fill={entry.color} strokeWidth={0} />
-              ))}
-            </Pie>
-            <Tooltip
-              formatter={(v) => [`${v}%`, ""]}
-              contentStyle={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 12, fontSize: 12 }}
-              labelStyle={{ color: "var(--text-secondary)" }}
-              itemStyle={{ color: "var(--text-primary)" }}
-            />
-          </PieChart>
-          <div className="space-y-2 mt-2">
-            {CATEGORY_DATA.map((c) => (
-              <div key={c.name} className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full shrink-0" style={{ background: c.color }} />
-                  <span className="text-[var(--text-secondary)]">{c.name}</span>
-                </div>
-                <span className="font-mono font-medium text-[var(--text-primary)]">{c.value}%</span>
+          {isPro ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <p className="text-xs text-[var(--text-muted)]">Aucune donnée — ajoutez des devis confirmés</p>
+            </div>
+          ) : (
+            <>
+              <PieChart width={240} height={180} style={{ margin: "0 auto" }}>
+                <Pie data={CATEGORY_DATA} cx={120} cy={90} innerRadius={50} outerRadius={76} paddingAngle={3} dataKey="value">
+                  {CATEGORY_DATA.map((entry, index) => (
+                    <Cell key={index} fill={entry.color} strokeWidth={0} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(v) => [`${v}%`, ""]}
+                  contentStyle={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 12, fontSize: 12 }}
+                  labelStyle={{ color: "var(--text-secondary)" }}
+                  itemStyle={{ color: "var(--text-primary)" }}
+                />
+              </PieChart>
+              <div className="space-y-2 mt-2">
+                {CATEGORY_DATA.map((c) => (
+                  <div key={c.name} className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full shrink-0" style={{ background: c.color }} />
+                      <span className="text-[var(--text-secondary)]">{c.name}</span>
+                    </div>
+                    <span className="font-mono font-medium text-[var(--text-primary)]">{c.value}%</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -249,6 +249,11 @@ export default function KpiClient() {
         <div className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] p-4 lg:p-6">
           <h3 className="font-bold text-[var(--text-primary)] text-sm mb-1">Top plats</h3>
           <p className="text-xs text-[var(--text-muted)] mb-5">Commandes cumulées</p>
+          {isPro ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <p className="text-xs text-[var(--text-muted)]">Aucune donnée — ajoutez des devis confirmés</p>
+            </div>
+          ) : (
           <div className="space-y-3">
             {TOP_DISHES.map((dish, i) => {
               const positive = dish.trend.startsWith("+");
@@ -279,6 +284,7 @@ export default function KpiClient() {
               );
             })}
           </div>
+          )}
         </div>
       </div>
     </div>

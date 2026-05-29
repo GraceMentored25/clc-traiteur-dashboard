@@ -61,7 +61,7 @@ export const useStore = create<AppState>()(
       setCustomPrice: (dishId, price) =>
         set((s) => ({ customPrices: { ...s.customPrices, [dishId]: price } })),
 
-      appMode: "lab",
+      appMode: "pro",
       setAppMode: (m) => {
         if (m === "pro") {
           set({ appMode: "pro", devisList: [] });
@@ -120,10 +120,10 @@ export const useStore = create<AppState>()(
       migrate: (persisted: unknown, version: number) => {
         const state = persisted as Partial<AppState>;
         if (version < 2) {
-          return { ...state, devisList: MOCK_DEVIS, theme: "dark", appMode: "lab" };
+          return { ...state, devisList: [], theme: "dark", appMode: "pro" };
         }
         if (version < 3) {
-          return { ...state, theme: state.theme ?? "dark", appMode: state.appMode ?? "lab" };
+          return { ...state, theme: state.theme ?? "dark", appMode: state.appMode ?? "pro" };
         }
         return state as AppState;
       },
