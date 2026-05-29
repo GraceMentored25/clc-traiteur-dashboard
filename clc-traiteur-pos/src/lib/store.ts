@@ -17,6 +17,9 @@ interface AppState {
   appMode: "lab" | "pro";
   setAppMode: (m: "lab" | "pro") => void;
 
+  customPrices: Record<number, number>;
+  setCustomPrice: (dishId: number, price: number) => void;
+
   cart: CartItem[];
   addToCart: (item: CartItem) => void;
   updateQuantity: (dishId: number, quantity: number) => void;
@@ -53,6 +56,10 @@ export const useStore = create<AppState>()(
 
       theme: "dark",
       setTheme: (t) => set({ theme: t }),
+
+      customPrices: {},
+      setCustomPrice: (dishId, price) =>
+        set((s) => ({ customPrices: { ...s.customPrices, [dishId]: price } })),
 
       appMode: "lab",
       setAppMode: (m) => {
@@ -125,6 +132,7 @@ export const useStore = create<AppState>()(
         devisList: state.devisList,
         theme: state.theme,
         appMode: state.appMode,
+        customPrices: state.customPrices,
       }),
     }
   )

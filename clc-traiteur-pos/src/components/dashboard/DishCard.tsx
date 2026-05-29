@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, memo, useCallback } from "react";
+import { useState, memo, useCallback, useRef } from "react";
 import Image from "next/image";
-import { motion } from "framer-motion";
-import { Plus, Minus, ShoppingCartSimple } from "@phosphor-icons/react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Plus, Minus, ShoppingCartSimple, PencilSimple, Check } from "@phosphor-icons/react";
 import { Dish } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { formatCurrency, cn } from "@/lib/utils";
@@ -14,11 +14,41 @@ interface Props {
 
 const DishCard = memo(function DishCard({ dish }: Props) {
   const [quantity, setQuantity] = useState(0);
-  const { addToCart, updateQuantity, removeFromCart, cart } = useStore();
+  const [editingPrice, setEditingPrice] = useState(false);
+  const [priceInput, setPriceInput] = useState("");
+  const priceRef = useRef<HTMLInputElement>(null);
+
+  const { addToCart, updateQuantity, removeFromCart, cart, customPrices, setCustomPrice } = useStore();
+
+  const effectivePrice = customPrices[dish.id] ?? dish.price;
 
   const cartItem = cart.find((c) => c.dish.id === dish.id);
   const inCart = !!cartItem;
   const displayQty = inCart ? cartItem!.quantity : quantity;
+
+  const handlePriceBadgeClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setPriceInput(String(effectivePrice));
+    setEditingPrice(true);
+    setTimeout(() => priceRef.current?.select(), 10);
+  }, [effectivePrice]);
+
+  const confirmPrice = useCallback(() => {
+    const val = parseFloat(priceInput.replace(",", "."));
+    if (!isNaN(val) && val > 0) {
+      setCustomPrice(dish.id, val);
+      // Si le plat est dans le panier, mettre à jour son prix
+      if (inCart && cartItem) {
+        updateQuantity(dish.id, cartItem.quantity);
+      }
+    }
+    setEditingPrice(false);
+  }, [priceInput, dish.id, setCustomPrice, inCart, cartItem, updateQuantity]);
+
+  const handlePriceKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Enter") confirmPrice();
+    if (e.key === "Escape") setEditingPrice(false);
+  }, [confirmPrice]);
 
   const handleInput = useCallback(
     (raw: string) => {
@@ -40,10 +70,9 @@ const DishCard = memo(function DishCard({ dish }: Props) {
     } else {
       const next = quantity + 1;
       setQuantity(next);
-      // Auto-add to cart on first increment
-      addToCart({ dish, quantity: next });
+      addToCart({ dish: { ...dish, price: effectivePrice }, quantity: next });
     }
-  }, [inCart, quantity, dish, cartItem, addToCart, updateQuantity]);
+  }, [inCart, quantity, dish, cartItem, effectivePrice, addToCart, updateQuantity]);
 
   const decrement = useCallback(() => {
     if (inCart) {
@@ -65,12 +94,13 @@ const DishCard = memo(function DishCard({ dish }: Props) {
       }
       setQuantity(n);
       if (inCart) updateQuantity(dish.id, n);
-      else addToCart({ dish, quantity: n });
+      else addToCart({ dish: { ...dish, price: effectivePrice }, quantity: n });
     },
-    [inCart, dish, addToCart, updateQuantity, removeFromCart]
+    [inCart, dish, effectivePrice, addToCart, updateQuantity, removeFromCart]
   );
 
-  const total = displayQty * dish.price;
+  const total = displayQty * effectivePrice;
+  const isPriceCustom = customPrices[dish.id] !== undefined && customPrices[dish.id] !== dish.price;
 
   return (
     <motion.div
@@ -93,12 +123,59 @@ const DishCard = memo(function DishCard({ dish }: Props) {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
 
-        {/* Price badge on image */}
-        <div className="absolute bottom-2 left-2.5 flex items-center gap-1">
-          <span className="text-xs font-bold text-white bg-black/50 backdrop-blur-sm px-2 py-0.5 rounded-lg">
-            {formatCurrency(dish.price)}
-            <span className="text-white/60 font-normal text-[10px]"> / {dish.unit}</span>
-          </span>
+        {/* Price badge — cliquable pour éditer */}
+        <div className="absolute bottom-2 left-2.5">
+          <AnimatePresence mode="wait">
+            {editingPrice ? (
+              <motion.div
+                key="editing"
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="flex items-center gap-1 bg-[var(--surface-1)] rounded-lg px-1.5 py-0.5 border border-[var(--amber)]/50"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <input
+                  ref={priceRef}
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={priceInput}
+                  onChange={(e) => setPriceInput(e.target.value)}
+                  onKeyDown={handlePriceKeyDown}
+                  onBlur={confirmPrice}
+                  className="w-14 text-xs font-bold text-[var(--text-primary)] bg-transparent outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  autoFocus
+                />
+                <span className="text-[10px] text-[var(--text-muted)]">€</span>
+                <button
+                  onMouseDown={(e) => { e.preventDefault(); confirmPrice(); }}
+                  className="w-4 h-4 rounded flex items-center justify-center bg-[var(--amber)] text-white"
+                >
+                  <Check size={9} weight="bold" />
+                </button>
+              </motion.div>
+            ) : (
+              <motion.button
+                key="display"
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                onClick={handlePriceBadgeClick}
+                title="Cliquer pour modifier le prix"
+                className={cn(
+                  "flex items-center gap-1 text-xs font-bold text-white backdrop-blur-sm px-2 py-0.5 rounded-lg transition-all group/price",
+                  isPriceCustom
+                    ? "bg-[var(--amber)]/80 hover:bg-[var(--amber)]"
+                    : "bg-black/50 hover:bg-black/70"
+                )}
+              >
+                {formatCurrency(effectivePrice)}
+                <span className="text-white/60 font-normal text-[10px]"> / {dish.unit}</span>
+                <PencilSimple size={9} className="opacity-0 group-hover/price:opacity-100 transition-opacity" />
+              </motion.button>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* In-cart dot */}
@@ -109,7 +186,6 @@ const DishCard = memo(function DishCard({ dish }: Props) {
 
       {/* Body */}
       <div className="p-3 flex flex-col gap-2.5 flex-1">
-        {/* Name + description */}
         <div>
           <h3 className="font-semibold text-sm text-[var(--text-primary)] leading-tight truncate">
             {dish.name}
@@ -119,7 +195,7 @@ const DishCard = memo(function DishCard({ dish }: Props) {
           </p>
         </div>
 
-        {/* Quantity controls — always visible */}
+        {/* Quantity controls */}
         <div className="grid grid-cols-[28px_1fr_28px] items-center gap-1.5">
           <button
             onClick={decrement}
@@ -134,7 +210,6 @@ const DishCard = memo(function DishCard({ dish }: Props) {
             <Minus size={11} weight="bold" />
           </button>
 
-          {/* Editable quantity input */}
           <input
             type="number"
             min="0"
@@ -159,7 +234,7 @@ const DishCard = memo(function DishCard({ dish }: Props) {
             <>
               <div className="flex items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
                 <ShoppingCartSimple size={12} className="text-[var(--amber)]" />
-                <span>{displayQty} × {formatCurrency(dish.price)}</span>
+                <span>{displayQty} × {formatCurrency(effectivePrice)}</span>
               </div>
               <span className="text-sm font-bold font-mono text-[var(--amber)]">
                 {formatCurrency(total)}
