@@ -2,7 +2,8 @@
 
 import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
-import { X, Phone, Calendar, Users, FileText, CaretDown, Check } from "@phosphor-icons/react";
+import { X, Phone, Calendar, Users, FileText, CaretDown, Check, FilePdf } from "@phosphor-icons/react";
+import { generateDevisPDF } from "@/lib/generateDevisPDF";
 import { Devis, DevisItem, DevisStatus } from "@/lib/types";
 import { formatCurrency, formatDate, STATUS_COLORS } from "@/lib/utils";
 import { useStore } from "@/lib/store";
@@ -68,9 +69,19 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
               <p className="text-[11px] text-[var(--text-muted)] mt-0.5">Créé le {formatDate(devis.createdAt.split("T")[0])}</p>
             </div>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-xl bg-[var(--surface-2)] hover:bg-[var(--surface-3)] flex items-center justify-center text-[var(--text-secondary)] transition-colors">
-            <X size={16} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => generateDevisPDF(devis)}
+              title="Générer PDF"
+              className="flex items-center gap-1.5 h-8 px-3 rounded-xl bg-[var(--amber)]/10 text-[var(--amber)] text-xs font-semibold hover:bg-[var(--amber)]/20 transition-all"
+            >
+              <FilePdf size={14} weight="fill" />
+              PDF
+            </button>
+            <button onClick={onClose} className="w-8 h-8 rounded-xl bg-[var(--surface-2)] hover:bg-[var(--surface-3)] flex items-center justify-center text-[var(--text-secondary)] transition-colors">
+              <X size={16} />
+            </button>
+          </div>
         </div>
 
         <div className="px-6 py-5 space-y-6">
