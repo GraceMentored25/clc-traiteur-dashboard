@@ -6,7 +6,6 @@ const DARK: [number, number, number] = [26, 30, 36];
 const GRAY: [number, number, number] = [87, 96, 106];
 const LIGHT_BG: [number, number, number] = [246, 248, 250];
 
-// Infos société — à remplacer par les vraies coordonnées CLC
 const CLC = {
   nom: "C.LC. Traiteur",
   sousTitre: "Chez La Camerounaise — Traiteur événementiel",
@@ -29,39 +28,53 @@ function getAcompteInfo(totalTTC: number, eventDate: string) {
   return { pct, montant, deadlineStr: deadline.toLocaleDateString("fr-FR"), monthsBefore };
 }
 
+async function loadLogoBase64(): Promise<string | null> {
+  try {
+    const res = await fetch("/logo.png");
+    const blob = await res.blob();
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
 export async function generateDevisPDF(devis: Devis) {
   const { jsPDF } = await import("jspdf");
   const autoTable = (await import("jspdf-autotable")).default;
 
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const W = doc.internal.pageSize.getWidth();
-  const L = 14; // marge gauche
-  const R = W - 14; // marge droite
+  const L = 14;
+  const R = W - 14;
   const now = new Date().toLocaleDateString("fr-FR");
   const { pct, montant, deadlineStr, monthsBefore } = getAcompteInfo(devis.totalTTC, devis.eventDate);
 
+  // Charger le logo
+  const logoData = await loadLogoBase64();
+
   // ── EN-TÊTE ──────────────────────────────────────────────────────────────
-  // Bande amber haute
   doc.setFillColor(...AMBER);
-  doc.rect(0, 0, W, 32, "F");
+  doc.rect(0, 0, W, 34, "F");
 
-  // Logo (cercle placeholder amber foncé + initiales)
-  doc.setFillColor(180, 110, 0);
-  doc.circle(L + 9, 16, 9, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "bold");
-  doc.text("CLC", L + 9, 17.5, { align: "center" });
+  // Logo
+  if (logoData) {
+    doc.addImage(logoData, "PNG", L, 4, 22, 22);
+  }
 
-  // Nom société
+  // Nom société (décalé pour laisser place au logo)
+  const textX = logoData ? L + 26 : L;
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(16);
+  doc.setFontSize(15);
   doc.setFont("helvetica", "bold");
-  doc.text(CLC.nom, L + 22, 12);
+  doc.text(CLC.nom, textX, 13);
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
-  doc.text(CLC.sousTitre, L + 22, 18);
-  doc.text(`${CLC.adresse} · ${CLC.tel} · ${CLC.email}`, L + 22, 23);
+  doc.text(CLC.sousTitre, textX, 19);
+  doc.text(`${CLC.adresse} · ${CLC.tel} · ${CLC.email}`, textX, 25);
 
   // Numéro de devis (droite)
   doc.setFontSize(13);
@@ -72,10 +85,9 @@ export async function generateDevisPDF(devis: Devis) {
   doc.text(`Émis le ${now}`, R, 20, { align: "right" });
   doc.text(`Statut : ${devis.status}`, R, 26, { align: "right" });
 
-  // ── BLOC CLIENT / ÉVÉNEMENT ──────────────────────────────────────────────
-  const infoY = 40;
+  // ── CLIENT / ÉVÉNEMENT ───────────────────────────────────────────────────
+  const infoY = 42;
 
-  // Colonne client
   doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...GRAY);
@@ -93,7 +105,6 @@ export async function generateDevisPDF(devis: Devis) {
   doc.setTextColor(...GRAY);
   doc.text(devis.clientPhone, L, infoY + 13);
 
-  // Colonne événement
   const evX = W / 2;
   doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
@@ -102,35 +113,33 @@ export async function generateDevisPDF(devis: Devis) {
   doc.setDrawColor(...AMBER);
   doc.line(evX, infoY + 1.5, evX + 36, infoY + 1.5);
 
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(...DARK);
-  const evRows = [
-    [`Type :`, devis.eventType],
-    [`Date :`, formatDate(devis.eventDate)],
-    [`Convives :`, `${devis.guestCount} personnes`],
+  const evRows: [string, string][] = [
+    ["Type :", devis.eventType],
+    ["Date :", formatDate(devis.eventDate)],
+    ["Convives :", `${devis.guestCount} personnes`],
   ];
   evRows.forEach(([label, val], i) => {
+    doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
+    doc.setTextColor(...DARK);
     doc.text(label, evX, infoY + 7 + i * 6);
     doc.setFont("helvetica", "normal");
-    doc.text(val, evX + 20, infoY + 7 + i * 6);
+    doc.text(val, evX + 22, infoY + 7 + i * 6);
   });
 
-  // Séparateur
   doc.setDrawColor(220, 220, 220);
   doc.setLineWidth(0.3);
-  doc.line(L, infoY + 26, R, infoY + 26);
+  doc.line(L, infoY + 27, R, infoY + 27);
 
   // ── TABLEAU PRESTATIONS ──────────────────────────────────────────────────
-  const tableStartY = infoY + 32;
+  const tableY = infoY + 33;
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...DARK);
-  doc.text("Détail des prestations", L, tableStartY - 3);
+  doc.text("Détail des prestations", L, tableY - 3);
 
   autoTable(doc, {
-    startY: tableStartY,
+    startY: tableY,
     head: [["Prestation", "Quantité", "Prix unit.", "Sous-total"]],
     body: devis.items.map(item => [
       item.dishName,
@@ -157,50 +166,42 @@ export async function generateDevisPDF(devis: Devis) {
   });
 
   const afterTable = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
-
-  // ── TOTAUX (alignés sur la colonne Sous-total) ───────────────────────────
-  // On récupère la position X de la colonne Sous-total depuis autoTable
   const lastTable = (doc as unknown as { lastAutoTable: { columns: Array<{ x: number; width: number }> } }).lastAutoTable;
   const colSousTotal = lastTable.columns[3];
-  const totalsLeft = colSousTotal?.x ?? (W - 80);
-  const totalsRight = R;
+  const totalsLeft = colSousTotal?.x ?? (W - 70);
 
+  // ── TOTAUX ───────────────────────────────────────────────────────────────
   const tY = afterTable + 3;
   const rowH = 6.5;
 
-  // Fond léger
   doc.setFillColor(...LIGHT_BG);
-  doc.roundedRect(totalsLeft, tY, totalsRight - totalsLeft, rowH * 3 + 4, 1.5, 1.5, "F");
+  doc.roundedRect(totalsLeft, tY, R - totalsLeft, rowH * 3 + 4, 1.5, 1.5, "F");
 
-  // Sous-total HT
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...GRAY);
   doc.text("Sous-total HT :", totalsLeft + 3, tY + rowH - 1);
   doc.setTextColor(...DARK);
-  doc.text(`${devis.totalHT.toFixed(2)} €`, totalsRight - 3, tY + rowH - 1, { align: "right" });
+  doc.text(`${devis.totalHT.toFixed(2)} €`, R - 3, tY + rowH - 1, { align: "right" });
 
-  // TVA
   doc.setTextColor(...GRAY);
   doc.text("TVA (20%) :", totalsLeft + 3, tY + rowH * 2 - 1);
   doc.setTextColor(...DARK);
-  doc.text(`${(devis.totalTTC - devis.totalHT).toFixed(2)} €`, totalsRight - 3, tY + rowH * 2 - 1, { align: "right" });
+  doc.text(`${(devis.totalTTC - devis.totalHT).toFixed(2)} €`, R - 3, tY + rowH * 2 - 1, { align: "right" });
 
-  // Séparateur
   doc.setDrawColor(...AMBER);
   doc.setLineWidth(0.4);
-  doc.line(totalsLeft + 3, tY + rowH * 2 + 1, totalsRight - 3, tY + rowH * 2 + 1);
+  doc.line(totalsLeft + 3, tY + rowH * 2 + 1, R - 3, tY + rowH * 2 + 1);
 
-  // Total TTC
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...DARK);
   doc.text("TOTAL TTC :", totalsLeft + 3, tY + rowH * 3 + 1);
   doc.setTextColor(AMBER[0], AMBER[1], AMBER[2]);
-  doc.text(`${devis.totalTTC.toFixed(2)} €`, totalsRight - 3, tY + rowH * 3 + 1, { align: "right" });
+  doc.text(`${devis.totalTTC.toFixed(2)} €`, R - 3, tY + rowH * 3 + 1, { align: "right" });
 
   // Notes
-  let currentY = afterTable + rowH * 3 + 12;
+  let currentY = tY + rowH * 3 + 10;
   if (devis.notes) {
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
@@ -228,14 +229,8 @@ export async function generateDevisPDF(devis: Devis) {
   doc.setFontSize(8.5);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...GRAY);
-  doc.text(
-    `Date limite de versement : ${deadlineStr} (${monthsBefore} mois avant l'événement)`,
-    L + 4, aY + 13
-  );
-  doc.text(
-    "En cas de rétractation après versement de l'acompte, celui-ci ne sera pas remboursé.",
-    L + 4, aY + 19
-  );
+  doc.text(`Date limite de versement : ${deadlineStr} (${monthsBefore} mois avant l'événement)`, L + 4, aY + 13);
+  doc.text("En cas de rétractation après versement de l'acompte, celui-ci ne sera pas remboursé.", L + 4, aY + 19);
 
   // ── CONDITIONS GÉNÉRALES ─────────────────────────────────────────────────
   const cgY = aY + 30;
@@ -256,43 +251,75 @@ export async function generateDevisPDF(devis: Devis) {
   ];
   cg.forEach((line, i) => doc.text(line, L, cgY + 5 + i * 4.5, { maxWidth: R - L }));
 
-  // ── SIGNATURES ───────────────────────────────────────────────────────────
+  // ── SIGNATURES ÉLECTRONIQUES ─────────────────────────────────────────────
   const sigY = cgY + 42;
-  const needNewPage = sigY + 40 > 280;
+  const needNewPage = sigY + 55 > 280;
   if (needNewPage) doc.addPage();
   const sY = needNewPage ? 24 : sigY;
 
+  const sigW = (R - L - 8) / 2;
+  const sigH = 40;
+
+  // Cadre signature client
+  doc.setFillColor(...LIGHT_BG);
+  doc.roundedRect(L, sY, sigW, sigH, 2, 2, "F");
   doc.setDrawColor(200, 200, 200);
   doc.setLineWidth(0.3);
+  doc.roundedRect(L, sY, sigW, sigH, 2, 2, "D");
 
-  // Client
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...DARK);
-  doc.text("Signature du client", L, sY);
-  doc.setFontSize(8);
+  doc.text("Signature du client", L + 3, sY + 6);
+  doc.setFontSize(7);
   doc.setFont("helvetica", "italic");
   doc.setTextColor(...GRAY);
-  doc.text("Précédée de la mention « Bon pour accord »", L, sY + 5);
-  doc.line(L, sY + 22, L + 72, sY + 22);
-  doc.setFont("helvetica", "normal");
-  doc.text(devis.clientName, L, sY + 27);
-  doc.text("Date : _____ / _____ / _______", L, sY + 33);
+  doc.text("Précédée de « Bon pour accord »", L + 3, sY + 11);
 
-  // CLC
-  const sigR = W / 2 + 12;
-  doc.setFontSize(9);
+  // Zone de signature client (rectangle amber)
+  doc.setDrawColor(...AMBER);
+  doc.setLineWidth(0.4);
+  doc.roundedRect(L + 3, sY + 14, sigW - 6, 18, 1, 1, "D");
+
+  doc.setFontSize(7);
+  doc.setTextColor(200, 200, 200);
+  doc.text("Signer ici", L + 3 + (sigW - 6) / 2, sY + 24, { align: "center" });
+
+  doc.setFontSize(7.5);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...GRAY);
+  doc.text(devis.clientName, L + 3, sY + 36);
+
+  // Cadre signature CLC
+  const sig2X = L + sigW + 8;
+  doc.setFillColor(...LIGHT_BG);
+  doc.roundedRect(sig2X, sY, sigW, sigH, 2, 2, "F");
+  doc.setDrawColor(200, 200, 200);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(sig2X, sY, sigW, sigH, 2, 2, "D");
+
+  doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...DARK);
-  doc.text("Signature C.LC. Traiteur", sigR, sY);
-  doc.setFontSize(8);
+  doc.text("Signature C.LC. Traiteur", sig2X + 3, sY + 6);
+  doc.setFontSize(7);
   doc.setFont("helvetica", "italic");
   doc.setTextColor(...GRAY);
-  doc.text("Représentant(e) autorisé(e)", sigR, sY + 5);
-  doc.line(sigR, sY + 22, R, sY + 22);
+  doc.text("Représentant(e) autorisé(e)", sig2X + 3, sY + 11);
+
+  // Zone de signature CLC
+  doc.setDrawColor(...AMBER);
+  doc.setLineWidth(0.4);
+  doc.roundedRect(sig2X + 3, sY + 14, sigW - 6, 18, 1, 1, "D");
+
+  doc.setFontSize(7);
+  doc.setTextColor(200, 200, 200);
+  doc.text("Signer ici", sig2X + 3 + (sigW - 6) / 2, sY + 24, { align: "center" });
+
+  doc.setFontSize(7.5);
   doc.setFont("helvetica", "normal");
-  doc.text("Chez La Camerounaise", sigR, sY + 27);
-  doc.text("Date : _____ / _____ / _______", sigR, sY + 33);
+  doc.setTextColor(...GRAY);
+  doc.text("Chez La Camerounaise", sig2X + 3, sY + 36);
 
   // ── PIED DE PAGE ─────────────────────────────────────────────────────────
   const pages = doc.getNumberOfPages();
@@ -302,10 +329,7 @@ export async function generateDevisPDF(devis: Devis) {
     doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...GRAY);
-    doc.text(
-      `${CLC.nom} — SIRET : ${CLC.siret} — TVA : ${CLC.tva} — ${CLC.adresse}`,
-      L, fY
-    );
+    doc.text(`${CLC.nom} — SIRET : ${CLC.siret} — TVA : ${CLC.tva} — ${CLC.adresse}`, L, fY);
     doc.text(`Devis ${devis.id} · Page ${i}/${pages}`, R, fY, { align: "right" });
   }
 
