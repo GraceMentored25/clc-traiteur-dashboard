@@ -11,6 +11,12 @@ interface AppState {
   login: (username: string, password: string) => boolean;
   logout: () => void;
 
+  theme: "dark" | "light";
+  setTheme: (t: "dark" | "light") => void;
+
+  appMode: "lab" | "pro";
+  setAppMode: (m: "lab" | "pro") => void;
+
   cart: CartItem[];
   addToCart: (item: CartItem) => void;
   updateQuantity: (dishId: number, quantity: number) => void;
@@ -44,6 +50,18 @@ export const useStore = create<AppState>()(
         return false;
       },
       logout: () => set({ user: null }),
+
+      theme: "dark",
+      setTheme: (t) => set({ theme: t }),
+
+      appMode: "lab",
+      setAppMode: (m) => {
+        if (m === "pro") {
+          set({ appMode: "pro", devisList: [] });
+        } else {
+          set({ appMode: "lab", devisList: MOCK_DEVIS });
+        }
+      },
 
       cart: [],
       addToCart: (item) => {
@@ -91,15 +109,23 @@ export const useStore = create<AppState>()(
     }),
     {
       name: "clc-traiteur-storage",
-      version: 2,
+      version: 3,
       migrate: (persisted: unknown, version: number) => {
-        // v2 : reset devisList to updated mock data
+        const state = persisted as Partial<AppState>;
         if (version < 2) {
-          return { ...(persisted as object), devisList: MOCK_DEVIS };
+          return { ...state, devisList: MOCK_DEVIS, theme: "dark", appMode: "lab" };
         }
-        return persisted as AppState;
+        if (version < 3) {
+          return { ...state, theme: state.theme ?? "dark", appMode: state.appMode ?? "lab" };
+        }
+        return state as AppState;
       },
-      partialize: (state) => ({ user: state.user, devisList: state.devisList }),
+      partialize: (state) => ({
+        user: state.user,
+        devisList: state.devisList,
+        theme: state.theme,
+        appMode: state.appMode,
+      }),
     }
   )
 );

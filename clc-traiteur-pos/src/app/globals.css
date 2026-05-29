@@ -37,6 +37,36 @@
   --color-surface-3: var(--surface-3);
 }
 
+/* ── Thème clair ────────────────────────────────── */
+html.light {
+  color-scheme: light;
+  --surface: #F6F8FA;
+  --surface-1: #FFFFFF;
+  --surface-2: #F0F2F5;
+  --surface-3: #E4E7EC;
+  --border: rgba(0,0,0,0.08);
+  --border-accent: rgba(232,150,12,0.4);
+  --text-primary: #1A1E24;
+  --text-secondary: #57606A;
+  --text-muted: #8C959F;
+  --shadow-card: 0 1px 0 rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.08);
+}
+
+html.light body {
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+html.light .glass {
+  background: rgba(255,255,255,0.85);
+  border: 1px solid var(--border);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
+}
+
+html.light ::-webkit-scrollbar-thumb {
+  background: var(--surface-3);
+}
+
 * {
   box-sizing: border-box;
 }

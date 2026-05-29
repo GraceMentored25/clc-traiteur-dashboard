@@ -12,6 +12,10 @@ import {
   User,
   Wallet,
   X,
+  Sun,
+  Moon,
+  Flask,
+  Briefcase,
 } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -26,7 +30,7 @@ const NAV_ITEMS = [
 export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout } = useStore();
+  const { user, logout, theme, setTheme, appMode, setAppMode } = useStore();
 
   const handleLogout = () => {
     logout();
@@ -37,9 +41,7 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
     <aside
       className={cn(
         "fixed left-0 top-0 h-full w-64 flex flex-col bg-[var(--surface-1)] border-r border-[var(--border)] z-40",
-        // Desktop: always visible, no transition to avoid layout shift
         "lg:translate-x-0 lg:transition-none",
-        // Mobile: slide in/out with transition
         open ? "translate-x-0 transition-transform duration-300" : "-translate-x-full transition-transform duration-300 lg:translate-x-0"
       )}
     >
@@ -59,7 +61,6 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
             </p>
             <p className="text-xs text-[var(--text-muted)] mt-0.5">Système POS</p>
           </div>
-          {/* Close button — mobile only */}
           {onClose && (
             <button
               onClick={onClose}
@@ -109,6 +110,48 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
           );
         })}
       </nav>
+
+      {/* Toggles */}
+      <div className="px-3 pb-3 space-y-2">
+        {/* Row: Thème + Mode */}
+        <div className="flex items-center gap-2">
+          {/* Toggle thème */}
+          <button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            title={theme === "dark" ? "Passer en mode clair" : "Passer en mode sombre"}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 h-8 rounded-xl text-xs font-semibold transition-all border",
+              theme === "light"
+                ? "bg-[var(--amber)]/10 border-[var(--amber)]/30 text-[var(--amber)]"
+                : "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-3)]"
+            )}
+          >
+            {theme === "dark"
+              ? <Moon size={13} weight="fill" />
+              : <Sun size={13} weight="fill" />
+            }
+            <span>{theme === "dark" ? "Sombre" : "Clair"}</span>
+          </button>
+
+          {/* Toggle mode Lab/Pro */}
+          <button
+            onClick={() => setAppMode(appMode === "lab" ? "pro" : "lab")}
+            title={appMode === "lab" ? "Passer en mode Pro (données réelles)" : "Passer en mode Lab (données démo)"}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 h-8 rounded-xl text-xs font-semibold transition-all border",
+              appMode === "pro"
+                ? "bg-[var(--amber)]/10 border-[var(--amber)]/30 text-[var(--amber)]"
+                : "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-3)]"
+            )}
+          >
+            {appMode === "lab"
+              ? <Flask size={13} weight="fill" />
+              : <Briefcase size={13} weight="fill" />
+            }
+            <span>{appMode === "lab" ? "Lab" : "Pro"}</span>
+          </button>
+        </div>
+      </div>
 
       {/* User + logout */}
       <div className="px-3 pb-5 border-t border-[var(--border)] pt-4 space-y-1">

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import ThemeApplier from "@/components/ThemeApplier";
 
 export const metadata: Metadata = {
   title: "C.LC. Traiteur — POS",
@@ -21,7 +22,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="fr" className="h-full">
-      <body className="min-h-[100dvh] flex flex-col">{children}</body>
+      <body className="min-h-[100dvh] flex flex-col">
+        <ThemeApplier />
+        {children}
+      </body>
     </html>
   );
 }
