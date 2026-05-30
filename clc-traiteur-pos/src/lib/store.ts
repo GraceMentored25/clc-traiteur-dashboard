@@ -233,7 +233,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: "clc-traiteur-storage",
-      version: 3,
+      version: 4,
       migrate: (persisted: unknown, version: number) => {
         const state = persisted as Partial<AppState>;
         if (version < 2) {
@@ -241,6 +241,14 @@ export const useStore = create<AppState>()(
         }
         if (version < 3) {
           return { ...state, theme: state.theme ?? "dark", appMode: state.appMode ?? "pro" };
+        }
+        if (version < 4) {
+          // Injecter les prix par défaut dans le matériel existant
+          const mat = (state.materiel ?? DEFAULT_MATERIEL).map((m) => {
+            const def = DEFAULT_MATERIEL.find((d) => d.id === m.id);
+            return m.pricePerUnit !== undefined ? m : { ...m, pricePerUnit: def?.pricePerUnit ?? 0 };
+          });
+          return { ...state, materiel: mat };
         }
         return state as AppState;
       },

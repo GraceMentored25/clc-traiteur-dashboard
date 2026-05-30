@@ -8,7 +8,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 
 type Rubrique = "repas" | "logistique";
 
-function QtyEdit({ value, unit, onSave }: { value: number; unit: string; onSave: (n: number) => void }) {
+function QtyEdit({ value, onSave }: { value: number; onSave: (n: number) => void }) {
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(String(value));
   const commit = () => {
@@ -24,7 +24,6 @@ function QtyEdit({ value, unit, onSave }: { value: number; unit: string; onSave:
         onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") { setVal(String(value)); setEditing(false); } }}
         onBlur={commit}
         className="w-16 h-6 px-1 text-xs font-mono text-right bg-[var(--surface-3)] border border-[var(--amber)]/50 rounded-lg text-[var(--text-primary)] outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-      <span className="text-xs text-[var(--text-muted)]">{unit}</span>
       <button onMouseDown={(e) => { e.preventDefault(); commit(); }} className="w-5 h-5 rounded flex items-center justify-center bg-[var(--amber)] text-white shrink-0"><Check size={9} weight="bold" /></button>
     </div>
   );
@@ -32,7 +31,7 @@ function QtyEdit({ value, unit, onSave }: { value: number; unit: string; onSave:
     <button onClick={() => { setVal(String(value)); setEditing(true); }}
       className="text-sm font-mono font-semibold text-[var(--text-secondary)] hover:text-[var(--amber)] transition-colors shrink-0"
       title="Modifier la quantité">
-      {value} <span className="text-xs font-normal">{unit}</span>
+      {value}
     </button>
   );
 }
@@ -92,15 +91,15 @@ export default function TabCourses() {
                     exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
                     className="overflow-hidden border-t border-[var(--border)]">
                     {/* Header */}
-                    <div className="grid grid-cols-[1fr_80px_80px_90px] gap-2 px-4 py-2 bg-[var(--surface-2)]">
+                    <div className="grid grid-cols-[2fr_70px_60px_80px] gap-2 px-4 py-2 bg-[var(--surface-2)]">
                       {["Ingrédient", "Quantité", "Unité", "Total"].map((h) => (
                         <p key={h} className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">{h}</p>
                       ))}
                     </div>
                     {d.items.map((item) => (
-                      <div key={item.ingredientId} className="grid grid-cols-[1fr_80px_80px_90px] items-center gap-2 px-4 py-2.5 border-t border-[var(--border)] first:border-0">
+                      <div key={item.ingredientId} className="grid grid-cols-[2fr_70px_60px_80px] items-center gap-2 px-4 py-2.5 border-t border-[var(--border)] first:border-0">
                         <p className="text-sm text-[var(--text-primary)] truncate">{item.ingredientName}</p>
-                        <QtyEdit value={item.qty} unit={item.unit}
+                        <QtyEdit value={item.qty}
                           onSave={(n) => updateShoppingItem(d.id, item.ingredientId, n)} />
                         <p className="text-xs text-[var(--text-muted)]">{item.unit}</p>
                         <p className="text-sm font-mono font-bold text-[var(--amber)]">{formatCurrency(item.total)}</p>
@@ -169,7 +168,7 @@ export default function TabCourses() {
                             <p className="text-sm text-[var(--text-primary)]">{item.name}</p>
                             {item.note && <p className="text-xs text-[var(--text-muted)] italic">{item.note}</p>}
                           </div>
-                          <QtyEdit value={item.qty} unit={item.unit}
+                          <QtyEdit value={item.qty}
                             onSave={(n) => updateLogistiqueItem(d.id, i, n)} />
                           <p className="text-sm font-mono font-bold text-[var(--amber)]">
                             {total > 0 ? formatCurrency(total) : <span className="text-xs text-[var(--text-muted)]">—</span>}
