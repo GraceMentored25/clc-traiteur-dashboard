@@ -70,6 +70,7 @@ export interface Materiel {
   name: string;
   unit: string;
   stockQty: number;
+  pricePerUnit?: number;
 }
 
 export interface ShoppingItem {

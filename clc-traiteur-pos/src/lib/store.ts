@@ -40,6 +40,7 @@ interface AppState {
   materiel: Materiel[];
   setMaterielStock: (id: string, qty: number) => void;
   setMaterielName: (id: string, name: string) => void;
+  setMaterielPrice: (id: string, price: number) => void;
   addMateriel: (mat: Materiel) => void;
 
   // ── Recettes custom ─────────────────────────────────────────
@@ -49,10 +50,12 @@ interface AppState {
   demandesCourses: DemandeCoursesRepas[];
   addDemandeCoursesRepas: (d: DemandeCoursesRepas) => void;
   removeDemandeCoursesRepas: (id: string) => void;
+  updateShoppingItem: (demandeId: string, ingredientId: string, qty: number) => void;
 
   demandesLogistique: DemandeLogistique[];
   addDemandeLogistique: (d: DemandeLogistique) => void;
   removeDemandeLogistique: (id: string) => void;
+  updateLogistiqueItem: (demandeId: string, index: number, qty: number) => void;
 
   cart: CartItem[];
   addToCart: (item: CartItem) => void;
@@ -130,6 +133,8 @@ export const useStore = create<AppState>()(
         set((s) => ({ materiel: s.materiel.map((m) => m.id === id ? { ...m, stockQty: qty } : m) })),
       setMaterielName: (id, name) =>
         set((s) => ({ materiel: s.materiel.map((m) => m.id === id ? { ...m, name } : m) })),
+      setMaterielPrice: (id, price) =>
+        set((s) => ({ materiel: s.materiel.map((m) => m.id === id ? { ...m, pricePerUnit: price } : m) })),
       addMateriel: (mat) =>
         set((s) => ({ materiel: [...s.materiel, mat] })),
 
@@ -146,10 +151,32 @@ export const useStore = create<AppState>()(
       demandesCourses: [],
       addDemandeCoursesRepas: (d) => set((s) => ({ demandesCourses: [d, ...s.demandesCourses] })),
       removeDemandeCoursesRepas: (id) => set((s) => ({ demandesCourses: s.demandesCourses.filter((d) => d.id !== id) })),
+      updateShoppingItem: (demandeId, ingredientId, qty) =>
+        set((s) => ({
+          demandesCourses: s.demandesCourses.map((d) =>
+            d.id !== demandeId ? d : {
+              ...d,
+              items: d.items.map((i) => i.ingredientId === ingredientId
+                ? { ...i, qty, total: Math.round(qty * i.pricePerUnit * 100) / 100 }
+                : i),
+              totalEstime: d.items.map((i) => i.ingredientId === ingredientId
+                ? qty * i.pricePerUnit : i.total).reduce((a, b) => a + b, 0),
+            }
+          ),
+        })),
 
       demandesLogistique: [],
       addDemandeLogistique: (d) => set((s) => ({ demandesLogistique: [d, ...s.demandesLogistique] })),
       removeDemandeLogistique: (id) => set((s) => ({ demandesLogistique: s.demandesLogistique.filter((d) => d.id !== id) })),
+      updateLogistiqueItem: (demandeId, index, qty) =>
+        set((s) => ({
+          demandesLogistique: s.demandesLogistique.map((d) =>
+            d.id !== demandeId ? d : {
+              ...d,
+              items: d.items.map((item, i) => i === index ? { ...item, qty } : item),
+            }
+          ),
+        })),
 
       appMode: "pro",
       setAppMode: (m) => {
