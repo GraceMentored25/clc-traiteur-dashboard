@@ -65,13 +65,13 @@ export async function generateDevisPDF(devis: Devis) {
 
   // ── EN-TÊTE ──────────────────────────────────────────────────────────────
   doc.setFillColor(...AMBER);
-  doc.rect(0, 0, W, 38, "F");
+  doc.rect(0, 0, W, 42, "F");
 
   let logoW = 0;
   if (logo) {
-    const logoH = 28;
+    const logoH = 30;
     logoW = (logo.w / logo.h) * logoH;
-    doc.addImage(logo.data, "PNG", L, 5, logoW, logoH);
+    doc.addImage(logo.data, "PNG", L, 6, logoW, logoH);
   }
 
   const textX = logoW > 0 ? L + logoW + 5 : L;
@@ -82,7 +82,8 @@ export async function generateDevisPDF(devis: Devis) {
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   doc.text(CLC.sousTitre, textX, 21);
-  doc.text(`${CLC.adresse} · ${CLC.tel} · ${CLC.email}`, textX, 28);
+  doc.text(CLC.adresse, textX, 27);
+  doc.text(`${CLC.tel} · ${CLC.email}`, textX, 33);
 
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
@@ -93,7 +94,7 @@ export async function generateDevisPDF(devis: Devis) {
   doc.text(`Statut : ${devis.status}`, R, 30, { align: "right" });
 
   // ── CLIENT / ÉVÉNEMENT ───────────────────────────────────────────────────
-  const infoY = 46;
+  const infoY = 50;
 
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
