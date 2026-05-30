@@ -33,9 +33,18 @@ interface AppState {
   ingredients: Ingredient[];
   setIngredientStock: (id: string, qty: number) => void;
   setIngredientPrice: (id: string, price: number) => void;
+  setIngredientUnit: (id: string, unit: string) => void;
+  setIngredientName: (id: string, name: string) => void;
+  addIngredient: (ing: Ingredient) => void;
 
   materiel: Materiel[];
   setMaterielStock: (id: string, qty: number) => void;
+  setMaterielName: (id: string, name: string) => void;
+  addMateriel: (mat: Materiel) => void;
+
+  // ── Recettes custom ─────────────────────────────────────────
+  customRecipes: import("@/lib/types").Recipe[];
+  setRecipeIngredients: (dishId: number, ingredients: import("@/lib/types").RecipeIngredient[]) => void;
 
   demandesCourses: DemandeCoursesRepas[];
   addDemandeCoursesRepas: (d: DemandeCoursesRepas) => void;
@@ -109,10 +118,30 @@ export const useStore = create<AppState>()(
         set((s) => ({ ingredients: s.ingredients.map((i) => i.id === id ? { ...i, stockQty: qty } : i) })),
       setIngredientPrice: (id, price) =>
         set((s) => ({ ingredients: s.ingredients.map((i) => i.id === id ? { ...i, pricePerUnit: price } : i) })),
+      setIngredientUnit: (id, unit) =>
+        set((s) => ({ ingredients: s.ingredients.map((i) => i.id === id ? { ...i, unit } : i) })),
+      setIngredientName: (id, name) =>
+        set((s) => ({ ingredients: s.ingredients.map((i) => i.id === id ? { ...i, name } : i) })),
+      addIngredient: (ing) =>
+        set((s) => ({ ingredients: [...s.ingredients, ing] })),
 
       materiel: DEFAULT_MATERIEL,
       setMaterielStock: (id, qty) =>
         set((s) => ({ materiel: s.materiel.map((m) => m.id === id ? { ...m, stockQty: qty } : m) })),
+      setMaterielName: (id, name) =>
+        set((s) => ({ materiel: s.materiel.map((m) => m.id === id ? { ...m, name } : m) })),
+      addMateriel: (mat) =>
+        set((s) => ({ materiel: [...s.materiel, mat] })),
+
+      customRecipes: [],
+      setRecipeIngredients: (dishId, ingredients) =>
+        set((s) => {
+          const existing = s.customRecipes.find((r) => r.dishId === dishId);
+          if (existing) {
+            return { customRecipes: s.customRecipes.map((r) => r.dishId === dishId ? { ...r, ingredients } : r) };
+          }
+          return { customRecipes: [...s.customRecipes, { dishId, dishName: "", ingredients }] };
+        }),
 
       demandesCourses: [],
       addDemandeCoursesRepas: (d) => set((s) => ({ demandesCourses: [d, ...s.demandesCourses] })),
@@ -198,6 +227,7 @@ export const useStore = create<AppState>()(
         customCategories: state.customCategories,
         ingredients: state.ingredients,
         materiel: state.materiel,
+        customRecipes: state.customRecipes,
         demandesCourses: state.demandesCourses,
         demandesLogistique: state.demandesLogistique,
       }),
