@@ -1,0 +1,161 @@
+"use client";
+
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Play, Receipt, Calendar, Users, Check } from "@phosphor-icons/react";
+import { useStore } from "@/lib/store";
+import { formatCurrency, formatDate } from "@/lib/utils";
+import { RECIPES, LOGISTIQUE_PAR_EVENEMENT, DEFAULT_INGREDIENTS } from "@/lib/data/stocks";
+import { DemandeCoursesRepas, DemandeLogistique, ShoppingItem, LogistiqueItem } from "@/lib/types";
+
+export default function TabCommandes() {
+  const { devisList, addDemandeCoursesRepas, addDemandeLogistique, demandesCourses, demandesLogistique } = useStore();
+  const [started, setStarted] = useState<Set<string>>(new Set());
+
+  const confirmed = devisList.filter((d) => d.status === "Confirmé");
+
+  const alreadyStarted = (devisId: string) =>
+    demandesCourses.some((d) => d.devisId === devisId) ||
+    demandesLogistique.some((d) => d.devisId === devisId);
+
+  const handleCommencer = (devisId: string) => {
+    const devis = devisList.find((d) => d.id === devisId);
+    if (!devis) return;
+
+    // ── Calcul des courses repas ──────────────────────────────
+    const totaux: Record<string, { qty: number; ingredientId: string }> = {};
+
+    devis.items.forEach((item) => {
+      const recipe = RECIPES.find((r) => r.dishId === item.dishId);
+      if (!recipe) return;
+      recipe.ingredients.forEach((ri) => {
+        if (!totaux[ri.ingredientId]) totaux[ri.ingredientId] = { qty: 0, ingredientId: ri.ingredientId };
+        totaux[ri.ingredientId].qty += ri.qtyPerPerson * item.quantity;
+      });
+    });
+
+    const ingredients = useStore.getState().ingredients;
+    const shoppingItems: ShoppingItem[] = Object.values(totaux).map(({ ingredientId, qty }) => {
+      const ing = ingredients.find((i) => i.id === ingredientId) ??
+        DEFAULT_INGREDIENTS.find((i) => i.id === ingredientId);
+      return {
+        ingredientId,
+        ingredientName: ing?.name ?? ingredientId,
+        unit: ing?.unit ?? "kg",
+        qty: Math.ceil(qty * 10) / 10,
+        pricePerUnit: ing?.pricePerUnit ?? 0,
+        total: Math.round((qty * (ing?.pricePerUnit ?? 0)) * 100) / 100,
+      };
+    });
+
+    const totalEstime = shoppingItems.reduce((s, i) => s + i.total, 0);
+
+    const demandeRepas: DemandeCoursesRepas = {
+      id: `CR-${Date.now()}`,
+      devisId: devis.id,
+      clientName: devis.clientName,
+      eventDate: devis.eventDate,
+      guestCount: devis.guestCount,
+      createdAt: new Date().toISOString(),
+      items: shoppingItems,
+      totalEstime,
+    };
+    addDemandeCoursesRepas(demandeRepas);
+
+    // ── Calcul logistique ─────────────────────────────────────
+    const baseItems = LOGISTIQUE_PAR_EVENEMENT["default"] ?? [];
+    const eventItems = LOGISTIQUE_PAR_EVENEMENT[devis.eventType] ?? [];
+    const allLogItems = [...baseItems, ...eventItems];
+
+    const logItems: LogistiqueItem[] = allLogItems.map((item) => ({
+      name: item.name,
+      qty: item.unit === "par convive" ? devis.guestCount : item.qtyBase,
+      unit: item.unit === "par convive" ? "unité" : item.unit,
+      note: item.note,
+    }));
+
+    const demandeLog: DemandeLogistique = {
+      id: `LOG-${Date.now()}`,
+      devisId: devis.id,
+      clientName: devis.clientName,
+      eventType: devis.eventType,
+      eventDate: devis.eventDate,
+      createdAt: new Date().toISOString(),
+      items: logItems,
+    };
+    addDemandeLogistique(demandeLog);
+
+    setStarted((prev) => new Set([...prev, devisId]));
+  };
+
+  if (confirmed.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <Receipt size={36} className="text-[var(--text-muted)] mb-3" />
+        <p className="text-sm font-medium text-[var(--text-secondary)]">Aucun devis confirmé</p>
+        <p className="text-xs text-[var(--text-muted)] mt-1">Les devis confirmés apparaîtront ici</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-[var(--text-muted)] mb-4">
+        {confirmed.length} devis confirmé{confirmed.length > 1 ? "s" : ""} — appuyez sur « Commencer » pour générer les listes de courses et de logistique
+      </p>
+      {confirmed.map((devis) => {
+        const done = alreadyStarted(devis.id) || started.has(devis.id);
+        return (
+          <motion.div
+            key={devis.id}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-4 p-4 rounded-2xl bg-[var(--surface-1)] border border-[var(--border)]"
+          >
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-mono font-medium text-[var(--amber)]">{devis.id}</span>
+                <span className="text-xs text-[var(--text-muted)]">·</span>
+                <span className="text-xs text-[var(--text-secondary)]">{devis.eventType}</span>
+              </div>
+              <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{devis.clientName}</p>
+              <div className="flex items-center gap-3 mt-1">
+                <div className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
+                  <Calendar size={11} />{formatDate(devis.eventDate)}
+                </div>
+                <div className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
+                  <Users size={11} />{devis.guestCount} convives
+                </div>
+                <span className="text-xs font-mono text-[var(--amber)]">{formatCurrency(devis.totalTTC)}</span>
+              </div>
+            </div>
+
+            <AnimatePresence mode="wait">
+              {done ? (
+                <motion.div
+                  key="done"
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-green-500/10 border border-green-500/20 text-[var(--success)] text-sm font-semibold shrink-0"
+                >
+                  <Check size={14} weight="bold" />
+                  <span className="hidden sm:inline">Généré</span>
+                </motion.div>
+              ) : (
+                <motion.button
+                  key="start"
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => handleCommencer(devis.id)}
+                  className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-[var(--amber)] hover:bg-[var(--amber-light)] text-[var(--surface)] text-sm font-semibold shrink-0 transition-all"
+                >
+                  <Play size={13} weight="fill" />
+                  Commencer
+                </motion.button>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+}

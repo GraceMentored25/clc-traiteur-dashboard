@@ -222,7 +222,7 @@ export default function DashboardClient() {
                   : "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)]"
               )}
             >
-              <SortAscending size={15} />
+              <SortAscending size={12} />
               <span className="text-xs">{SORT_OPTIONS.find(s => s.value === sortMode)?.label ?? "Tri"}</span>
             </button>
             <AnimatePresence>

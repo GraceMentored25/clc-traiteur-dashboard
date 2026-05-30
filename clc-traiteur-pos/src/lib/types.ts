@@ -43,3 +43,68 @@ export interface User {
   role: "admin" | "staff";
   displayName: string;
 }
+
+// ── Stocks & Gestion ──────────────────────────────────────────────────────
+
+export interface Ingredient {
+  id: string;
+  name: string;
+  unit: string;       // kg, L, pièce, etc.
+  pricePerUnit: number;
+  stockQty: number;
+}
+
+export interface RecipeIngredient {
+  ingredientId: string;
+  qtyPerPerson: number; // quantité par convive
+}
+
+export interface Recipe {
+  dishId: number;
+  dishName: string;
+  ingredients: RecipeIngredient[];
+}
+
+export interface Materiel {
+  id: string;
+  name: string;
+  unit: string;
+  stockQty: number;
+}
+
+export interface ShoppingItem {
+  ingredientId: string;
+  ingredientName: string;
+  unit: string;
+  qty: number;
+  pricePerUnit: number;
+  total: number;
+}
+
+export interface LogistiqueItem {
+  name: string;
+  qty: number;
+  unit: string;
+  note?: string;
+}
+
+export interface DemandeCoursesRepas {
+  id: string;
+  devisId: string;
+  clientName: string;
+  eventDate: string;
+  guestCount: number;
+  createdAt: string;
+  items: ShoppingItem[];
+  totalEstime: number;
+}
+
+export interface DemandeLogistique {
+  id: string;
+  devisId: string;
+  clientName: string;
+  eventType: string;
+  eventDate: string;
+  createdAt: string;
+  items: LogistiqueItem[];
+}

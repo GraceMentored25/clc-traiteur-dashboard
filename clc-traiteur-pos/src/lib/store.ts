@@ -2,8 +2,9 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { CartItem, Devis, Dish, User } from "@/lib/types";
+import { CartItem, Devis, Dish, Ingredient, Materiel, DemandeCoursesRepas, DemandeLogistique, User } from "@/lib/types";
 import { MOCK_DEVIS } from "@/lib/data/mock-events";
+import { DEFAULT_INGREDIENTS, DEFAULT_MATERIEL } from "@/lib/data/stocks";
 import { generateId } from "@/lib/utils";
 
 interface AppState {
@@ -27,6 +28,22 @@ interface AppState {
   customCategories: string[];
   addCustomCategory: (name: string) => void;
   removeCustomCategory: (name: string) => void;
+
+  // ── Stocks ──────────────────────────────────────────────────
+  ingredients: Ingredient[];
+  setIngredientStock: (id: string, qty: number) => void;
+  setIngredientPrice: (id: string, price: number) => void;
+
+  materiel: Materiel[];
+  setMaterielStock: (id: string, qty: number) => void;
+
+  demandesCourses: DemandeCoursesRepas[];
+  addDemandeCoursesRepas: (d: DemandeCoursesRepas) => void;
+  removeDemandeCoursesRepas: (id: string) => void;
+
+  demandesLogistique: DemandeLogistique[];
+  addDemandeLogistique: (d: DemandeLogistique) => void;
+  removeDemandeLogistique: (id: string) => void;
 
   cart: CartItem[];
   addToCart: (item: CartItem) => void;
@@ -86,6 +103,24 @@ export const useStore = create<AppState>()(
         })),
       removeCustomCategory: (name) =>
         set((s) => ({ customCategories: s.customCategories.filter((c) => c !== name) })),
+
+      ingredients: DEFAULT_INGREDIENTS,
+      setIngredientStock: (id, qty) =>
+        set((s) => ({ ingredients: s.ingredients.map((i) => i.id === id ? { ...i, stockQty: qty } : i) })),
+      setIngredientPrice: (id, price) =>
+        set((s) => ({ ingredients: s.ingredients.map((i) => i.id === id ? { ...i, pricePerUnit: price } : i) })),
+
+      materiel: DEFAULT_MATERIEL,
+      setMaterielStock: (id, qty) =>
+        set((s) => ({ materiel: s.materiel.map((m) => m.id === id ? { ...m, stockQty: qty } : m) })),
+
+      demandesCourses: [],
+      addDemandeCoursesRepas: (d) => set((s) => ({ demandesCourses: [d, ...s.demandesCourses] })),
+      removeDemandeCoursesRepas: (id) => set((s) => ({ demandesCourses: s.demandesCourses.filter((d) => d.id !== id) })),
+
+      demandesLogistique: [],
+      addDemandeLogistique: (d) => set((s) => ({ demandesLogistique: [d, ...s.demandesLogistique] })),
+      removeDemandeLogistique: (id) => set((s) => ({ demandesLogistique: s.demandesLogistique.filter((d) => d.id !== id) })),
 
       appMode: "pro",
       setAppMode: (m) => {
@@ -161,6 +196,10 @@ export const useStore = create<AppState>()(
         customPrices: state.customPrices,
         customDishes: state.customDishes,
         customCategories: state.customCategories,
+        ingredients: state.ingredients,
+        materiel: state.materiel,
+        demandesCourses: state.demandesCourses,
+        demandesLogistique: state.demandesLogistique,
       }),
     }
   )

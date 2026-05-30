@@ -16,6 +16,7 @@ import {
   Moon,
   Flask,
   Briefcase,
+  Package,
 } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -24,6 +25,7 @@ const NAV_ITEMS = [
   { href: "/dashboard", label: "Création de devis", icon: House },
   { href: "/devis", label: "Gestion de devis", icon: Clipboard },
   { href: "/comptabilite", label: "Gestion comptable", icon: Wallet },
+  { href: "/stocks", label: "Gestion des stocks", icon: Package },
   { href: "/kpi", label: "KPI & Métriques", icon: ChartBar },
 ];
 
