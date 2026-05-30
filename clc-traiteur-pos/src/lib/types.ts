@@ -44,6 +44,14 @@ export interface User {
   displayName: string;
 }
 
+export interface EntreeCapital {
+  id: string;
+  libelle: string;
+  montant: number;
+  date: string; // ISO
+  source: "vente" | "apport" | "subvention" | "autre";
+}
+
 // ── Stocks & Gestion ──────────────────────────────────────────────────────
 
 export interface Ingredient {

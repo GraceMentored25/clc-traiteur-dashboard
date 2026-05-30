@@ -11,19 +11,31 @@ import {
   Download,
   Calendar,
   X,
+  Plus,
+  Trash,
+  PiggyBank,
 } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
-import { Devis } from "@/lib/types";
+import { Devis, EntreeCapital } from "@/lib/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 type Period = "all" | "month" | "quarter" | "year";
 
+const SOURCES: { value: EntreeCapital["source"]; label: string }[] = [
+  { value: "vente", label: "Vente" },
+  { value: "apport", label: "Apport personnel" },
+  { value: "subvention", label: "Subvention" },
+  { value: "autre", label: "Autre" },
+];
+
 const TVA_RATE = 0.20;
 
 export default function ComptabiliteClient() {
-  const { devisList } = useStore();
+  const { devisList, entreesCapital, addEntreeCapital, removeEntreeCapital } = useStore();
   const [period, setPeriod] = useState<Period>("all");
   const [docModal, setDocModal] = useState<"summary" | "invoices" | "tva" | null>(null);
+  const [capitalModal, setCapitalModal] = useState(false);
+  const [capitalForm, setCapitalForm] = useState({ libelle: "", montant: "", date: new Date().toISOString().split("T")[0], source: "vente" as EntreeCapital["source"] });
 
   const confirmed = useMemo(() => {
     const now = new Date();
@@ -46,8 +58,23 @@ export default function ComptabiliteClient() {
     const totalTVA = confirmed.reduce((s, d) => s + (d.totalTTC - d.totalHT), 0);
     const totalTTC = confirmed.reduce((s, d) => s + d.totalTTC, 0);
     const avgDevis = confirmed.length ? totalTTC / confirmed.length : 0;
-    return { totalHT, totalTVA, totalTTC, avgDevis, count: confirmed.length };
-  }, [confirmed]);
+    const totalCapital = entreesCapital.reduce((s, e) => s + e.montant, 0);
+    return { totalHT, totalTVA, totalTTC, avgDevis, count: confirmed.length, totalCapital };
+  }, [confirmed, entreesCapital]);
+
+  const handleAddCapital = () => {
+    const montant = parseFloat(capitalForm.montant.replace(",", "."));
+    if (!capitalForm.libelle.trim() || isNaN(montant) || montant <= 0) return;
+    addEntreeCapital({
+      id: `CAP-${Date.now()}`,
+      libelle: capitalForm.libelle.trim(),
+      montant,
+      date: capitalForm.date,
+      source: capitalForm.source,
+    });
+    setCapitalForm({ libelle: "", montant: "", date: new Date().toISOString().split("T")[0], source: "vente" });
+    setCapitalModal(false);
+  };
 
   const PERIOD_OPTIONS: { value: Period; label: string }[] = [
     { value: "all", label: "Tout" },
@@ -64,15 +91,25 @@ export default function ComptabiliteClient() {
           <h1 className="text-xl lg:text-2xl font-bold text-[var(--text-primary)] tracking-tight">Gestion comptable</h1>
           <p className="text-sm text-[var(--text-muted)] mt-1">Suivi financier des devis confirmés</p>
         </div>
-        <motion.button
-          whileTap={{ scale: 0.97 }}
-          onClick={() => setDocModal("summary")}
-          className="flex items-center gap-2 h-9 px-3 lg:px-4 rounded-xl bg-[var(--amber)] hover:bg-[var(--amber-light)] text-[var(--surface)] text-xs lg:text-sm font-semibold transition-colors shrink-0"
-        >
-          <FilePdf size={15} weight="fill" />
-          <span className="hidden sm:inline">Générer la documentation</span>
-          <span className="sm:hidden">Générer</span>
-        </motion.button>
+        <div className="flex items-center gap-2 shrink-0">
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => setCapitalModal(true)}
+            className="flex items-center gap-2 h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--amber)] hover:border-[var(--amber)]/40 text-xs font-semibold transition-colors"
+          >
+            <Plus size={14} weight="bold" />
+            <span className="hidden sm:inline">Entrée de capital</span>
+            <span className="sm:hidden">Capital</span>
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => setDocModal("summary")}
+            className="flex items-center gap-2 h-9 px-3 lg:px-4 rounded-xl bg-[var(--amber)] hover:bg-[var(--amber-light)] text-[var(--surface)] text-xs lg:text-sm font-semibold transition-colors"
+          >
+            <FilePdf size={15} weight="fill" />
+            <span className="hidden sm:inline">Générer</span>
+          </motion.button>
+        </div>
       </div>
 
       {/* Period filter */}
@@ -201,6 +238,125 @@ export default function ComptabiliteClient() {
           </>
         )}
       </div>
+
+      {/* ── Entrées de capital ─────────────────────────────────── */}
+      {entreesCapital.length > 0 && (
+        <div className="rounded-2xl border border-[var(--border)] overflow-hidden bg-[var(--surface-1)] mb-6">
+          <div className="px-4 lg:px-6 py-4 border-b border-[var(--border)] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <PiggyBank size={16} className="text-[var(--amber)]" />
+              <h2 className="font-bold text-[var(--text-primary)] text-sm">Entrées de capital</h2>
+            </div>
+            <span className="text-xs text-[var(--text-muted)]">
+              Total : <span className="font-mono font-bold text-[var(--amber)]">{formatCurrency(metrics.totalCapital)}</span>
+            </span>
+          </div>
+          {/* Desktop header */}
+          <div className="hidden md:grid grid-cols-[1fr_100px_120px_90px_40px] gap-0 px-6 py-3 border-b border-[var(--border)]">
+            {["Libellé", "Source", "Date", "Montant", ""].map((h) => (
+              <p key={h} className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">{h}</p>
+            ))}
+          </div>
+          {entreesCapital.map((e) => (
+            <div key={e.id}>
+              {/* Desktop */}
+              <div className="hidden md:grid grid-cols-[1fr_100px_120px_90px_40px] items-center gap-0 px-6 py-3 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors">
+                <p className="text-sm font-medium text-[var(--text-primary)] truncate">{e.libelle}</p>
+                <p className="text-xs text-[var(--text-secondary)] capitalize">{SOURCES.find(s => s.value === e.source)?.label}</p>
+                <div className="flex items-center gap-1 text-xs text-[var(--text-muted)]"><Calendar size={11}/>{formatDate(e.date)}</div>
+                <p className="text-sm font-mono font-bold text-[var(--amber)]">{formatCurrency(e.montant)}</p>
+                <button onClick={() => removeEntreeCapital(e.id)} className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition-all">
+                  <Trash size={13} />
+                </button>
+              </div>
+              {/* Mobile */}
+              <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-[var(--border)] last:border-0">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-[var(--text-primary)] truncate">{e.libelle}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-[var(--text-secondary)]">{SOURCES.find(s => s.value === e.source)?.label}</span>
+                    <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Calendar size={10}/>{formatDate(e.date)}</span>
+                  </div>
+                </div>
+                <p className="text-sm font-mono font-bold text-[var(--amber)] shrink-0">{formatCurrency(e.montant)}</p>
+                <button onClick={() => removeEntreeCapital(e.id)} className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition-all shrink-0">
+                  <Trash size={13} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Modal entrée de capital ─────────────────────────────── */}
+      <AnimatePresence>
+        {capitalModal && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setCapitalModal(false)} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" />
+            <motion.div
+              initial={{ scale: 0.93, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 28 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-full max-w-sm bg-[var(--surface-1)] rounded-2xl border border-[var(--border)] p-6 shadow-2xl">
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-2">
+                    <PiggyBank size={18} className="text-[var(--amber)]" />
+                    <h3 className="font-bold text-[var(--text-primary)]">Nouvelle entrée de capital</h3>
+                  </div>
+                  <button onClick={() => setCapitalModal(false)} className="w-8 h-8 rounded-xl bg-[var(--surface-2)] flex items-center justify-center text-[var(--text-muted)]">
+                    <X size={15} />
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs text-[var(--text-muted)] mb-1 block">Libellé *</label>
+                    <input autoFocus value={capitalForm.libelle}
+                      onChange={(e) => setCapitalForm(f => ({ ...f, libelle: e.target.value }))}
+                      placeholder="Ex: Apport initial, Vente événement..."
+                      className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-[var(--text-muted)] mb-1 block">Montant (€) *</label>
+                      <input type="number" min="0" step="0.01" value={capitalForm.montant}
+                        onChange={(e) => setCapitalForm(f => ({ ...f, montant: e.target.value }))}
+                        placeholder="0.00"
+                        className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-[var(--text-muted)] mb-1 block">Date</label>
+                      <input type="date" value={capitalForm.date}
+                        onChange={(e) => setCapitalForm(f => ({ ...f, date: e.target.value }))}
+                        className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-[var(--text-muted)] mb-1 block">Source</label>
+                    <select value={capitalForm.source}
+                      onChange={(e) => setCapitalForm(f => ({ ...f, source: e.target.value as EntreeCapital["source"] }))}
+                      className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all">
+                      {SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="flex gap-3 mt-5">
+                  <button onClick={() => setCapitalModal(false)} className="flex-1 h-10 rounded-xl border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-2)] transition-colors">Annuler</button>
+                  <button onClick={handleAddCapital}
+                    disabled={!capitalForm.libelle.trim() || !capitalForm.montant}
+                    className="flex-1 h-10 rounded-xl bg-[var(--amber)] hover:bg-[var(--amber-light)] text-[var(--surface)] font-semibold text-sm transition-colors disabled:opacity-40">
+                    Ajouter
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Doc generation modal */}
       <AnimatePresence>

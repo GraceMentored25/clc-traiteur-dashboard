@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { CartItem, Devis, Dish, Ingredient, Materiel, DemandeCoursesRepas, DemandeLogistique, User } from "@/lib/types";
+import { CartItem, Devis, Dish, EntreeCapital, Ingredient, Materiel, DemandeCoursesRepas, DemandeLogistique, User } from "@/lib/types";
 import { MOCK_DEVIS } from "@/lib/data/mock-events";
 import { DEFAULT_INGREDIENTS, DEFAULT_MATERIEL } from "@/lib/data/stocks";
 import { generateId } from "@/lib/utils";
@@ -28,6 +28,11 @@ interface AppState {
   customCategories: string[];
   addCustomCategory: (name: string) => void;
   removeCustomCategory: (name: string) => void;
+
+  // ── Capital ─────────────────────────────────────────────────
+  entreesCapital: EntreeCapital[];
+  addEntreeCapital: (e: EntreeCapital) => void;
+  removeEntreeCapital: (id: string) => void;
 
   // ── Stocks ──────────────────────────────────────────────────
   ingredients: Ingredient[];
@@ -115,6 +120,10 @@ export const useStore = create<AppState>()(
         })),
       removeCustomCategory: (name) =>
         set((s) => ({ customCategories: s.customCategories.filter((c) => c !== name) })),
+
+      entreesCapital: [],
+      addEntreeCapital: (e) => set((s) => ({ entreesCapital: [e, ...s.entreesCapital] })),
+      removeEntreeCapital: (id) => set((s) => ({ entreesCapital: s.entreesCapital.filter((e) => e.id !== id) })),
 
       ingredients: DEFAULT_INGREDIENTS,
       setIngredientStock: (id, qty) =>
@@ -260,6 +269,7 @@ export const useStore = create<AppState>()(
         customPrices: state.customPrices,
         customDishes: state.customDishes,
         customCategories: state.customCategories,
+        entreesCapital: state.entreesCapital,
         ingredients: state.ingredients,
         materiel: state.materiel,
         customRecipes: state.customRecipes,
