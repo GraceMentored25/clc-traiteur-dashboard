@@ -10,41 +10,43 @@ import { DEFAULT_INGREDIENTS, DEFAULT_MATERIEL } from "@/lib/data/stocks";
 import type { AppState } from "@/lib/store";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
-  const store = useStore();
-  const user = store.user;
+  const user = useStore((s) => s.user);
   const router = useRouter();
   const [hydrated, setHydrated] = useState(false);
-  const [cloudLoaded, setCloudLoaded] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const cloudLoadedRef = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { setHydrated(true); }, []);
 
   // ── Charger depuis Supabase au login (une seule fois) ──────────────────
   useEffect(() => {
-    if (!hydrated || !user || cloudLoaded) return;
+    if (!hydrated || !user || cloudLoadedRef.current) return;
+    cloudLoadedRef.current = true;
 
     loadFromSupabase().then((data) => {
-      if (data) {
-        const mapped = mapSupabaseToStore(data as Record<string, unknown>);
-        useStore.setState({
-          ...mapped,
-          ingredients: (mapped.ingredients && (mapped.ingredients as unknown[]).length > 0)
-            ? mapped.ingredients as typeof DEFAULT_INGREDIENTS
-            : DEFAULT_INGREDIENTS,
-          materiel: (mapped.materiel && (mapped.materiel as unknown[]).length > 0)
-            ? mapped.materiel as typeof DEFAULT_MATERIEL
-            : DEFAULT_MATERIEL,
-        } as Partial<AppState>);
-      }
-      setCloudLoaded(true); // permettre la sauvegarde maintenant
-    });
-  }, [hydrated, user, cloudLoaded]);
+      if (!data) return;
+      const mapped = mapSupabaseToStore(data as Record<string, unknown>);
 
-  // ── Sauvegarder vers Supabase à chaque changement du store ────────────
-  // Ne sauvegarde qu'après le chargement initial (évite d'écraser les données cloud)
+      // NE PAS écraser user — on ne met à jour que les données métier
+      const { user: _ignore, ...rest } = mapped;
+      void _ignore;
+
+      useStore.setState({
+        ...rest,
+        ingredients: (rest.ingredients && (rest.ingredients as unknown[]).length > 0)
+          ? rest.ingredients as typeof DEFAULT_INGREDIENTS
+          : DEFAULT_INGREDIENTS,
+        materiel: (rest.materiel && (rest.materiel as unknown[]).length > 0)
+          ? rest.materiel as typeof DEFAULT_MATERIEL
+          : DEFAULT_MATERIEL,
+      } as Partial<AppState>);
+    });
+  }, [hydrated, user]);
+
+  // ── Sauvegarder vers Supabase (debounce 2s, après chargement initial) ──
   useEffect(() => {
-    if (!cloudLoaded || !user) return;
+    if (!cloudLoadedRef.current || !user) return;
 
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
@@ -69,13 +71,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }, 2000);
 
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }); // sans dépendances = se déclenche à chaque render post-cloudLoaded
+  });
 
   useEffect(() => {
     if (hydrated && !user) router.replace("/auth");
   }, [hydrated, user, router]);
 
-  if (!hydrated || !user) return null;
+  if (!hydrated) return null;
+  if (!user) return null;
 
   return (
     <div className="min-h-[100dvh] bg-[var(--surface)]">
