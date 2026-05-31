@@ -158,11 +158,11 @@ export async function generateDevisPDF(devis: Devis) {
     alternateRowStyles: { fillColor: LIGHT_BG },
     columnStyles: {
       0: { halign: "left", cellWidth: "auto" },
-      1: { halign: "right", cellWidth: 28 },
-      2: { halign: "right", cellWidth: 32 },
-      3: { halign: "right", cellWidth: 34, fontStyle: "bold" },
+      1: { halign: "right", cellWidth: 22 },
+      2: { halign: "right", cellWidth: 30 },
+      3: { halign: "right", cellWidth: 30, fontStyle: "bold" },
     },
-    styles: { fontSize: 11, cellPadding: { top: 4, bottom: 4, left: 5, right: 5 } },
+    styles: { fontSize: 10, cellPadding: { top: 3.5, bottom: 3.5, left: 4, right: 4 } },
     margin: { left: L, right: 14 },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     didParseCell: (data: any) => {
@@ -170,7 +170,7 @@ export async function generateDevisPDF(devis: Devis) {
         data.cell.styles.fillColor = [...DARK];
         data.cell.styles.textColor = [255, 255, 255];
         data.cell.styles.fontStyle = "bold";
-        data.cell.styles.fontSize = 11;
+        data.cell.styles.fontSize = 10;
         data.cell.styles.halign = data.column.index === 0 ? "left" : "right";
       }
     },

@@ -178,8 +178,8 @@ export default function ComptabiliteClient() {
           <>
             {/* Desktop table header */}
             <div className="hidden md:grid grid-cols-[80px_1fr_130px_110px_110px_120px] gap-0 px-6 py-3 border-b border-[var(--border)]">
-              {["Réf.", "Client", "Événement", "Montant HT", "TVA 20%", "Total TTC"].map((h) => (
-                <p key={h} className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">{h}</p>
+              {["Réf.", "Client", "Événement", "Montant HT", "TVA 20%", "Total TTC"].map((h, i) => (
+                <p key={h} className={`text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide ${i >= 3 ? "text-right pr-4" : ""}`}>{h}</p>
               ))}
             </div>
 
@@ -195,9 +195,9 @@ export default function ComptabiliteClient() {
                     </div>
                   </div>
                   <p className="text-xs text-[var(--text-secondary)] self-center truncate">{devis.eventType}</p>
-                  <p className="text-sm font-mono text-[var(--text-primary)] self-center">{formatCurrency(devis.totalHT)}</p>
-                  <p className="text-sm font-mono text-[var(--text-secondary)] self-center">{formatCurrency(devis.totalTTC - devis.totalHT)}</p>
-                  <p className="text-sm font-mono font-bold text-[var(--amber)] self-center">{formatCurrency(devis.totalTTC)}</p>
+                  <p className="text-sm font-mono text-[var(--text-primary)] self-center text-right pr-4">{formatCurrency(devis.totalHT)}</p>
+                  <p className="text-sm font-mono text-[var(--text-secondary)] self-center text-right pr-4">{formatCurrency(devis.totalTTC - devis.totalHT)}</p>
+                  <p className="text-sm font-mono font-bold text-[var(--amber)] self-center text-right pr-2">{formatCurrency(devis.totalTTC)}</p>
                 </div>
 
                 {/* Mobile card */}
@@ -225,9 +225,9 @@ export default function ComptabiliteClient() {
                 <div className="col-span-3 self-center">
                   <p className="text-sm font-bold text-[var(--text-primary)]">TOTAL</p>
                 </div>
-                <p className="text-sm font-mono font-bold text-[var(--text-primary)] self-center">{formatCurrency(metrics.totalHT)}</p>
-                <p className="text-sm font-mono font-bold text-[var(--text-secondary)] self-center">{formatCurrency(metrics.totalTVA)}</p>
-                <p className="text-sm font-mono font-bold text-[var(--amber)] self-center">{formatCurrency(metrics.totalTTC)}</p>
+                <p className="text-sm font-mono font-bold text-[var(--text-primary)] self-center text-right pr-4">{formatCurrency(metrics.totalHT)}</p>
+                <p className="text-sm font-mono font-bold text-[var(--text-secondary)] self-center text-right pr-4">{formatCurrency(metrics.totalTVA)}</p>
+                <p className="text-sm font-mono font-bold text-[var(--amber)] self-center text-right pr-2">{formatCurrency(metrics.totalTTC)}</p>
               </div>
               {/* Mobile */}
               <div className="lg:hidden flex items-center justify-between">
