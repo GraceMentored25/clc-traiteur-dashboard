@@ -42,6 +42,30 @@ export async function saveToSupabase(state: Record<string, unknown>) {
   if (error) console.error("Supabase save error:", error);
 }
 
+// Helper : sauvegarde immédiate de l'état courant du store
+export async function syncStoreNow() {
+  // Import dynamique pour éviter les dépendances circulaires
+  const { useStore } = await import("@/lib/store");
+  const s = useStore.getState();
+  await saveToSupabase({
+    user: s.user,
+    devisListPro: s.devisListPro,
+    devisListLab: s.devisListLab,
+    devisList: s.devisList,
+    appMode: s.appMode,
+    theme: s.theme,
+    customPrices: s.customPrices,
+    customDishes: s.customDishes,
+    customCategories: s.customCategories,
+    entreesCapital: s.entreesCapital,
+    ingredients: s.ingredients,
+    materiel: s.materiel,
+    customRecipes: s.customRecipes,
+    demandesCourses: s.demandesCourses,
+    demandesLogistique: s.demandesLogistique,
+  });
+}
+
 // Mapper les colonnes Supabase vers le format store
 export function mapSupabaseToStore(data: Record<string, unknown>) {
   return {
