@@ -7,7 +7,7 @@ import { MOCK_DEVIS } from "@/lib/data/mock-events";
 import { DEFAULT_INGREDIENTS, DEFAULT_MATERIEL } from "@/lib/data/stocks";
 import { generateId } from "@/lib/utils";
 
-interface AppState {
+export interface AppState {
   user: User | null;
   login: (username: string, password: string) => boolean;
   logout: () => void;

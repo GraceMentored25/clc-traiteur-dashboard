@@ -1,18 +1,77 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useStore } from "@/lib/store";
 import Sidebar from "./Sidebar";
 import { List } from "@phosphor-icons/react";
+import { loadFromSupabase, saveToSupabase, mapSupabaseToStore } from "@/lib/supabase";
+import { DEFAULT_INGREDIENTS, DEFAULT_MATERIEL } from "@/lib/data/stocks";
+import type { AppState } from "@/lib/store";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
-  const user = useStore((s) => s.user);
+  const store = useStore();
+  const user = store.user;
   const router = useRouter();
   const [hydrated, setHydrated] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFirstLoad = useRef(true);
 
   useEffect(() => { setHydrated(true); }, []);
+
+  // Charger depuis Supabase au login
+  useEffect(() => {
+    if (!hydrated || !user) return;
+    if (!isFirstLoad.current) return;
+    isFirstLoad.current = false;
+
+    loadFromSupabase().then((data) => {
+      if (!data) return; // Pas encore de données cloud → garder localStorage
+      const mapped = mapSupabaseToStore(data as Record<string, unknown>);
+
+      // Fusionner : utiliser les données cloud si elles existent
+      useStore.setState({
+        ...mapped,
+        ingredients: (mapped.ingredients && (mapped.ingredients as unknown[]).length > 0)
+          ? mapped.ingredients as typeof DEFAULT_INGREDIENTS
+          : DEFAULT_INGREDIENTS,
+        materiel: (mapped.materiel && (mapped.materiel as unknown[]).length > 0)
+          ? mapped.materiel as typeof DEFAULT_MATERIEL
+          : DEFAULT_MATERIEL,
+      } as Partial<AppState>);
+    });
+  }, [hydrated, user]);
+
+  // Sauvegarder vers Supabase à chaque changement (debounce 2s)
+  useEffect(() => {
+    if (!hydrated || !user || isFirstLoad.current) return;
+
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      const s = useStore.getState();
+      saveToSupabase({
+        user: s.user,
+        devisListPro: s.devisListPro,
+        devisListLab: s.devisListLab,
+        devisList: s.devisList,
+        appMode: s.appMode,
+        theme: s.theme,
+        customPrices: s.customPrices,
+        customDishes: s.customDishes,
+        customCategories: s.customCategories,
+        entreesCapital: s.entreesCapital,
+        ingredients: s.ingredients,
+        materiel: s.materiel,
+        customRecipes: s.customRecipes,
+        demandesCourses: s.demandesCourses,
+        demandesLogistique: s.demandesLogistique,
+      });
+    }, 2000);
+
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  });
+
   useEffect(() => {
     if (hydrated && !user) router.replace("/auth");
   }, [hydrated, user, router]);
@@ -21,7 +80,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-[100dvh] bg-[var(--surface)]">
-      {/* Mobile overlay */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/60 z-30 lg:hidden"
