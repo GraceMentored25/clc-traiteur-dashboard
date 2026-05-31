@@ -9,76 +9,112 @@ import { loadFromSupabase, saveToSupabase, mapSupabaseToStore } from "@/lib/supa
 import { DEFAULT_INGREDIENTS, DEFAULT_MATERIEL } from "@/lib/data/stocks";
 import type { AppState } from "@/lib/store";
 
+function buildPayload(s: AppState) {
+  return {
+    user: s.user,
+    devisListPro: s.devisListPro,
+    devisListLab: s.devisListLab,
+    devisList: s.devisList,
+    appMode: s.appMode,
+    theme: s.theme,
+    customPrices: s.customPrices,
+    customDishes: s.customDishes,
+    customCategories: s.customCategories,
+    entreesCapital: s.entreesCapital,
+    ingredients: s.ingredients,
+    materiel: s.materiel,
+    customRecipes: s.customRecipes,
+    demandesCourses: s.demandesCourses,
+    demandesLogistique: s.demandesLogistique,
+  };
+}
+
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const user = useStore((s) => s.user);
   const router = useRouter();
   const [hydrated, setHydrated] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const cloudLoadedRef = useRef(false);
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cloudReadyRef = useRef(false); // true une fois le chargement Supabase terminé
 
   useEffect(() => { setHydrated(true); }, []);
 
-  // ── Charger depuis Supabase au login (une seule fois) ──────────────────
+  // ── 1. Charger depuis Supabase au login ────────────────────────────────
   useEffect(() => {
-    if (!hydrated || !user || cloudLoadedRef.current) return;
-    cloudLoadedRef.current = true;
+    if (!hydrated || !user || cloudReadyRef.current) return;
 
     loadFromSupabase().then((data) => {
-      if (!data) return;
-      const mapped = mapSupabaseToStore(data as Record<string, unknown>);
-
-      // NE PAS écraser user — on ne met à jour que les données métier
-      const { user: _ignore, ...rest } = mapped;
-      void _ignore;
-
-      useStore.setState({
-        ...rest,
-        ingredients: (rest.ingredients && (rest.ingredients as unknown[]).length > 0)
-          ? rest.ingredients as typeof DEFAULT_INGREDIENTS
-          : DEFAULT_INGREDIENTS,
-        materiel: (rest.materiel && (rest.materiel as unknown[]).length > 0)
-          ? rest.materiel as typeof DEFAULT_MATERIEL
-          : DEFAULT_MATERIEL,
-      } as Partial<AppState>);
+      if (data) {
+        const mapped = mapSupabaseToStore(data as Record<string, unknown>);
+        // Ne jamais écraser user
+        const { user: _u, ...rest } = mapped;
+        void _u;
+        useStore.setState({
+          ...rest,
+          ingredients: rest.ingredients && (rest.ingredients as unknown[]).length > 0
+            ? rest.ingredients as typeof DEFAULT_INGREDIENTS
+            : DEFAULT_INGREDIENTS,
+          materiel: rest.materiel && (rest.materiel as unknown[]).length > 0
+            ? rest.materiel as typeof DEFAULT_MATERIEL
+            : DEFAULT_MATERIEL,
+        } as Partial<AppState>);
+      }
+      cloudReadyRef.current = true;
     });
   }, [hydrated, user]);
 
-  // ── Sauvegarder vers Supabase (debounce 2s, après chargement initial) ──
+  // ── 2. Subscriber Zustand → sauvegarde immédiate dès que les devis changent
   useEffect(() => {
-    if (!cloudLoadedRef.current || !user) return;
+    if (!cloudReadyRef.current) return;
 
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      const s = useStore.getState();
-      saveToSupabase({
-        user: s.user,
-        devisListPro: s.devisListPro,
-        devisListLab: s.devisListLab,
-        devisList: s.devisList,
-        appMode: s.appMode,
-        theme: s.theme,
-        customPrices: s.customPrices,
-        customDishes: s.customDishes,
-        customCategories: s.customCategories,
-        entreesCapital: s.entreesCapital,
-        ingredients: s.ingredients,
-        materiel: s.materiel,
-        customRecipes: s.customRecipes,
-        demandesCourses: s.demandesCourses,
-        demandesLogistique: s.demandesLogistique,
-      });
-    }, 2000);
+    const unsub = useStore.subscribe((state, prev) => {
+      if (
+        state.devisListPro !== prev.devisListPro ||
+        state.devisListLab !== prev.devisListLab ||
+        state.entreesCapital !== prev.entreesCapital
+      ) {
+        saveToSupabase(buildPayload(state));
+      }
+    });
 
-    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  });
+    return () => unsub();
+  }, [cloudReadyRef.current]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── 3. Sauvegarde générale debounce 3s pour les autres changements ─────
+  useEffect(() => {
+    if (!hydrated || !user) return;
+
+    let timer: ReturnType<typeof setTimeout>;
+    const unsub = useStore.subscribe(() => {
+      if (!cloudReadyRef.current) return;
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        saveToSupabase(buildPayload(useStore.getState()));
+      }, 3000);
+    });
+
+    return () => {
+      clearTimeout(timer);
+      unsub();
+    };
+  }, [hydrated, user]);
+
+  // ── 4. Sauvegarde avant fermeture de page (beforeunload) ──────────────
+  useEffect(() => {
+    if (!user) return;
+    const handleBeforeUnload = () => {
+      if (cloudReadyRef.current) {
+        saveToSupabase(buildPayload(useStore.getState()));
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [user]);
 
   useEffect(() => {
     if (hydrated && !user) router.replace("/auth");
   }, [hydrated, user, router]);
 
-  if (!hydrated) return null;
-  if (!user) return null;
+  if (!hydrated || !user) return null;
 
   return (
     <div className="min-h-[100dvh] bg-[var(--surface)]">

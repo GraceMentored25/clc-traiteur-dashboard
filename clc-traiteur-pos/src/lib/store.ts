@@ -6,7 +6,6 @@ import { CartItem, Devis, Dish, EntreeCapital, Ingredient, Materiel, DemandeCour
 import { MOCK_DEVIS } from "@/lib/data/mock-events";
 import { DEFAULT_INGREDIENTS, DEFAULT_MATERIEL } from "@/lib/data/stocks";
 import { generateId } from "@/lib/utils";
-import { syncStoreNow } from "@/lib/supabase";
 
 export interface AppState {
   user: User | null;
@@ -98,10 +97,7 @@ export const useStore = create<AppState>()(
         }
         return false;
       },
-      logout: () => {
-        syncStoreNow(); // sauvegarde avant déconnexion
-        set({ user: null });
-      },
+      logout: () => set({ user: null }),
 
       theme: "dark",
       setTheme: (t) => set({ theme: t }),
@@ -245,7 +241,6 @@ export const useStore = create<AppState>()(
           devisList: [newDevis, ...s.devisList],
           ...(mode === "pro" ? { devisListPro: [newDevis, ...s.devisListPro] } : { devisListLab: [newDevis, ...s.devisListLab] }),
         }));
-        syncStoreNow(); // sauvegarde immédiate
       },
       updateDevisStatus: (id, status) => {
         const mode = get().appMode;
@@ -255,7 +250,6 @@ export const useStore = create<AppState>()(
             ? { devisListPro: s.devisListPro.map((d) => d.id === id ? { ...d, status } : d) }
             : { devisListLab: s.devisListLab.map((d) => d.id === id ? { ...d, status } : d) }),
         }));
-        syncStoreNow();
       },
       updateDevis: (id, updates) => {
         const mode = get().appMode;
@@ -265,7 +259,6 @@ export const useStore = create<AppState>()(
             ? { devisListPro: s.devisListPro.map((d) => d.id === id ? { ...d, ...updates } : d) }
             : { devisListLab: s.devisListLab.map((d) => d.id === id ? { ...d, ...updates } : d) }),
         }));
-        syncStoreNow();
       },
       deleteDevis: (id) => {
         const mode = get().appMode;
@@ -275,7 +268,6 @@ export const useStore = create<AppState>()(
             ? { devisListPro: s.devisListPro.filter((d) => d.id !== id) }
             : { devisListLab: s.devisListLab.filter((d) => d.id !== id) }),
         }));
-        syncStoreNow();
       },
     }),
     {
