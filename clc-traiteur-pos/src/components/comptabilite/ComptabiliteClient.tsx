@@ -237,33 +237,36 @@ export default function ComptabiliteClient() {
 
             {/* Total row */}
             <div className="px-4 lg:px-6 py-4 bg-[var(--surface-2)] border-t-2 border-[var(--amber)]/20">
-              {/* Desktop */}
-              <div className="hidden md:grid grid-cols-[80px_1fr_130px_110px_110px_120px] gap-0">
-                <div className="col-span-3 self-center">
-                  <p className="text-sm font-bold text-[var(--text-primary)]">TOTAL devis</p>
+              {/* Desktop — lignes totaux */}
+              <div className="hidden md:block space-y-0">
+                {/* Total devis */}
+                <div className="grid grid-cols-[1fr_110px_110px_120px] gap-0">
+                  <p className="text-sm font-bold text-[var(--text-primary)] self-center py-1">Total devis</p>
+                  <p className="text-sm font-mono font-bold text-[var(--text-primary)] self-center text-right pr-4 py-1">{formatCurrency(metrics.totalHT)}</p>
+                  <p className="text-sm font-mono font-bold text-[var(--text-secondary)] self-center text-right pr-4 py-1">{formatCurrency(metrics.totalTVA)}</p>
+                  <p className="text-sm font-mono font-bold text-[var(--amber)] self-center text-right pr-2 py-1">{formatCurrency(metrics.totalTTC)}</p>
                 </div>
-                <p className="text-sm font-mono font-bold text-[var(--text-primary)] self-center text-right pr-4">{formatCurrency(metrics.totalHT)}</p>
-                <p className="text-sm font-mono font-bold text-[var(--text-secondary)] self-center text-right pr-4">{formatCurrency(metrics.totalTVA)}</p>
-                <p className="text-sm font-mono font-bold text-[var(--amber)] self-center text-right pr-2">{formatCurrency(metrics.totalTTC)}</p>
+                {metrics.totalCapital > 0 && (
+                  <>
+                    {/* Entrées capital */}
+                    <div className="grid grid-cols-[1fr_110px_110px_120px] gap-0">
+                      <p className="text-sm text-[var(--text-secondary)] self-center py-1">+ Entrées capital</p>
+                      <p className="text-sm font-mono text-[var(--text-muted)] self-center text-right pr-4 py-1">—</p>
+                      <p className="text-sm font-mono text-[var(--text-muted)] self-center text-right pr-4 py-1">—</p>
+                      <p className="text-sm font-mono font-semibold text-[var(--amber)] self-center text-right pr-2 py-1">{formatCurrency(metrics.totalCapital)}</p>
+                    </div>
+                    {/* Total général */}
+                    <div className="grid grid-cols-[1fr_110px_110px_120px] gap-0 pt-2 border-t border-[var(--amber)]/30 mt-1">
+                      <p className="text-base font-bold text-[var(--text-primary)] self-center">TOTAL GÉNÉRAL</p>
+                      <p className="text-sm font-mono font-bold text-[var(--text-primary)] self-center text-right pr-4">{formatCurrency(metrics.totalHT)}</p>
+                      <p className="text-sm font-mono font-bold text-[var(--text-secondary)] self-center text-right pr-4">{formatCurrency(metrics.totalTVA)}</p>
+                      <p className="text-base font-mono font-bold text-[var(--amber)] self-center text-right pr-2">{formatCurrency(metrics.totalEntrees)}</p>
+                    </div>
+                  </>
+                )}
               </div>
-              {metrics.totalCapital > 0 && (
-                <div className="hidden md:grid grid-cols-[80px_1fr_130px_110px_110px_120px] gap-0 mt-1">
-                  <div className="col-span-5 self-center">
-                    <p className="text-sm font-bold text-[var(--text-primary)]">+ Entrées capital</p>
-                  </div>
-                  <p className="text-sm font-mono font-bold text-[var(--amber)] self-center text-right pr-2">{formatCurrency(metrics.totalCapital)}</p>
-                </div>
-              )}
-              {metrics.totalCapital > 0 && (
-                <div className="hidden md:grid grid-cols-[80px_1fr_130px_110px_110px_120px] gap-0 pt-2 mt-1 border-t border-[var(--amber)]/30">
-                  <div className="col-span-5 self-center">
-                    <p className="text-base font-bold text-[var(--text-primary)]">TOTAL GÉNÉRAL</p>
-                  </div>
-                  <p className="text-base font-mono font-bold text-[var(--amber)] self-center text-right pr-2">{formatCurrency(metrics.totalEntrees)}</p>
-                </div>
-              )}
               {/* Mobile */}
-              <div className="md:hidden space-y-1">
+              <div className="md:hidden space-y-1.5">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-bold text-[var(--text-primary)]">Total devis</p>
                   <p className="text-sm font-mono font-bold text-[var(--amber)]">{formatCurrency(metrics.totalTTC)}</p>
@@ -274,7 +277,7 @@ export default function ComptabiliteClient() {
                       <p className="text-sm text-[var(--text-secondary)]">+ Capital</p>
                       <p className="text-sm font-mono text-[var(--amber)]">{formatCurrency(metrics.totalCapital)}</p>
                     </div>
-                    <div className="flex items-center justify-between pt-1 border-t border-[var(--amber)]/30">
+                    <div className="flex items-center justify-between pt-1.5 border-t border-[var(--amber)]/30">
                       <p className="text-base font-bold text-[var(--text-primary)]">TOTAL GÉNÉRAL</p>
                       <p className="text-base font-mono font-bold text-[var(--amber)]">{formatCurrency(metrics.totalEntrees)}</p>
                     </div>
