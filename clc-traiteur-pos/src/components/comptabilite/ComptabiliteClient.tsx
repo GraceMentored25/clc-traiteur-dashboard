@@ -250,7 +250,7 @@ export default function ComptabiliteClient() {
                   <>
                     {/* Entrées capital */}
                     <div className="grid grid-cols-[1fr_110px_110px_120px] gap-0">
-                      <p className="text-sm text-[var(--text-secondary)] self-center py-1">+ Entrées capital</p>
+                      <p className="text-sm text-[var(--text-secondary)] self-center py-1">Total Entrées</p>
                       <p className="text-sm font-mono text-[var(--text-muted)] self-center text-right pr-4 py-1">—</p>
                       <p className="text-sm font-mono text-[var(--text-muted)] self-center text-right pr-4 py-1">—</p>
                       <p className="text-sm font-mono font-semibold text-[var(--amber)] self-center text-right pr-2 py-1">{formatCurrency(metrics.totalCapital)}</p>
@@ -274,7 +274,7 @@ export default function ComptabiliteClient() {
                 {metrics.totalCapital > 0 && (
                   <>
                     <div className="flex items-center justify-between">
-                      <p className="text-sm text-[var(--text-secondary)]">+ Capital</p>
+                      <p className="text-sm text-[var(--text-secondary)]">Total Entrées</p>
                       <p className="text-sm font-mono text-[var(--amber)]">{formatCurrency(metrics.totalCapital)}</p>
                     </div>
                     <div className="flex items-center justify-between pt-1.5 border-t border-[var(--amber)]/30">
