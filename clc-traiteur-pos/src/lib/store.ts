@@ -69,7 +69,10 @@ interface AppState {
   clearCart: () => void;
   cartTotal: () => number;
 
-  devisList: Devis[];
+  // Deux listes séparées — Pro et Lab ne se mélangent jamais
+  devisListPro: Devis[];
+  devisListLab: Devis[];
+  devisList: Devis[]; // vue calculée selon appMode
   addDevis: (devis: Omit<Devis, "id" | "createdAt">) => void;
   updateDevisStatus: (id: string, status: Devis["status"]) => void;
   updateDevis: (id: string, updates: Partial<Devis>) => void;
@@ -98,6 +101,18 @@ export const useStore = create<AppState>()(
 
       theme: "dark",
       setTheme: (t) => set({ theme: t }),
+
+      appMode: "pro",
+      setAppMode: (m) => {
+        const s = get();
+        if (m === "pro") {
+          // Sauvegarder les devis lab, charger les devis pro
+          set({ appMode: "pro", devisListLab: s.devisList, devisList: s.devisListPro });
+        } else {
+          // Sauvegarder les devis pro, charger les devis lab (mock)
+          set({ appMode: "lab", devisListPro: s.devisList, devisList: s.devisListLab.length ? s.devisListLab : MOCK_DEVIS });
+        }
+      },
 
       customPrices: {},
       setCustomPrice: (dishId, price) =>
@@ -187,15 +202,6 @@ export const useStore = create<AppState>()(
           ),
         })),
 
-      appMode: "pro",
-      setAppMode: (m) => {
-        if (m === "pro") {
-          set({ appMode: "pro", devisList: [] });
-        } else {
-          set({ appMode: "lab", devisList: MOCK_DEVIS });
-        }
-      },
-
       cart: [],
       addToCart: (item) => {
         const current = get().cart;
@@ -225,44 +231,77 @@ export const useStore = create<AppState>()(
       clearCart: () => set({ cart: [] }),
       cartTotal: () => get().cart.reduce((sum, c) => sum + c.dish.price * c.quantity, 0),
 
-      devisList: MOCK_DEVIS,
+      devisListPro: [],
+      devisListLab: MOCK_DEVIS,
+      devisList: [],  // initialisé par appMode au démarrage
       addDevis: (devisData) => {
         const newDevis: Devis = { ...devisData, id: generateId(), createdAt: new Date().toISOString() };
-        set({ devisList: [newDevis, ...get().devisList] });
+        const mode = get().appMode;
+        set((s) => ({
+          devisList: [newDevis, ...s.devisList],
+          ...(mode === "pro" ? { devisListPro: [newDevis, ...s.devisListPro] } : { devisListLab: [newDevis, ...s.devisListLab] }),
+        }));
       },
       updateDevisStatus: (id, status) => {
-        set({ devisList: get().devisList.map((d) => d.id === id ? { ...d, status } : d) });
+        const mode = get().appMode;
+        set((s) => ({
+          devisList: s.devisList.map((d) => d.id === id ? { ...d, status } : d),
+          ...(mode === "pro"
+            ? { devisListPro: s.devisListPro.map((d) => d.id === id ? { ...d, status } : d) }
+            : { devisListLab: s.devisListLab.map((d) => d.id === id ? { ...d, status } : d) }),
+        }));
       },
       updateDevis: (id, updates) => {
-        set({ devisList: get().devisList.map((d) => d.id === id ? { ...d, ...updates } : d) });
+        const mode = get().appMode;
+        set((s) => ({
+          devisList: s.devisList.map((d) => d.id === id ? { ...d, ...updates } : d),
+          ...(mode === "pro"
+            ? { devisListPro: s.devisListPro.map((d) => d.id === id ? { ...d, ...updates } : d) }
+            : { devisListLab: s.devisListLab.map((d) => d.id === id ? { ...d, ...updates } : d) }),
+        }));
       },
       deleteDevis: (id) => {
-        set({ devisList: get().devisList.filter((d) => d.id !== id) });
+        const mode = get().appMode;
+        set((s) => ({
+          devisList: s.devisList.filter((d) => d.id !== id),
+          ...(mode === "pro"
+            ? { devisListPro: s.devisListPro.filter((d) => d.id !== id) }
+            : { devisListLab: s.devisListLab.filter((d) => d.id !== id) }),
+        }));
       },
     }),
     {
       name: "clc-traiteur-storage",
-      version: 4,
+      version: 5,
       migrate: (persisted: unknown, version: number) => {
-        const state = persisted as Partial<AppState>;
+        const state = persisted as Partial<AppState> & { devisList?: Devis[] };
         if (version < 2) {
-          return { ...state, devisList: [], theme: "dark", appMode: "pro" };
+          return { ...state, devisListPro: [], devisListLab: MOCK_DEVIS, devisList: [], theme: "dark", appMode: "pro" };
         }
         if (version < 3) {
           return { ...state, theme: state.theme ?? "dark", appMode: state.appMode ?? "pro" };
         }
         if (version < 4) {
-          // Injecter les prix par défaut dans le matériel existant
           const mat = (state.materiel ?? DEFAULT_MATERIEL).map((m) => {
             const def = DEFAULT_MATERIEL.find((d) => d.id === m.id);
             return m.pricePerUnit !== undefined ? m : { ...m, pricePerUnit: def?.pricePerUnit ?? 0 };
           });
           return { ...state, materiel: mat };
         }
+        if (version < 5) {
+          // Migrer l'ancienne devisList vers les deux nouvelles listes
+          const oldList: Devis[] = state.devisList ?? [];
+          const mode = state.appMode ?? "pro";
+          const proList = mode === "pro" ? oldList : [];
+          const labList = mode === "lab" ? oldList : MOCK_DEVIS;
+          return { ...state, devisListPro: proList, devisListLab: labList, devisList: mode === "pro" ? proList : labList };
+        }
         return state as AppState;
       },
       partialize: (state) => ({
         user: state.user,
+        devisListPro: state.devisListPro,
+        devisListLab: state.devisListLab,
         devisList: state.devisList,
         theme: state.theme,
         appMode: state.appMode,
