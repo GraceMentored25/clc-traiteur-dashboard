@@ -53,14 +53,31 @@ export default function ComptabiliteClient() {
     });
   }, [devisList, period]);
 
+  // Filtrer les entrées capital par période
+  const confirmedCapital = useMemo(() => {
+    const now = new Date();
+    return entreesCapital.filter((e) => {
+      if (period === "all") return true;
+      const date = new Date(e.date);
+      if (period === "month") return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+      if (period === "quarter") {
+        const q = Math.floor(now.getMonth() / 3);
+        return Math.floor(date.getMonth() / 3) === q && date.getFullYear() === now.getFullYear();
+      }
+      if (period === "year") return date.getFullYear() === now.getFullYear();
+      return true;
+    });
+  }, [entreesCapital, period]);
+
   const metrics = useMemo(() => {
     const totalHT = confirmed.reduce((s, d) => s + d.totalHT, 0);
     const totalTVA = confirmed.reduce((s, d) => s + (d.totalTTC - d.totalHT), 0);
     const totalTTC = confirmed.reduce((s, d) => s + d.totalTTC, 0);
     const avgDevis = confirmed.length ? totalTTC / confirmed.length : 0;
-    const totalCapital = entreesCapital.reduce((s, e) => s + e.montant, 0);
-    return { totalHT, totalTVA, totalTTC, avgDevis, count: confirmed.length, totalCapital };
-  }, [confirmed, entreesCapital]);
+    const totalCapital = confirmedCapital.reduce((s, e) => s + e.montant, 0);
+    const totalEntrees = totalTTC + totalCapital;
+    return { totalHT, totalTVA, totalTTC, avgDevis, count: confirmed.length, totalCapital, totalEntrees };
+  }, [confirmed, confirmedCapital]);
 
   const handleAddCapital = () => {
     const montant = parseFloat(capitalForm.montant.replace(",", "."));
@@ -132,10 +149,10 @@ export default function ComptabiliteClient() {
       {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
-          { label: "CA Total TTC", value: formatCurrency(metrics.totalTTC), icon: <CurrencyEur size={18} weight="fill" />, accent: true },
-          { label: "CA Hors Taxes", value: formatCurrency(metrics.totalHT), icon: <TrendUp size={18} weight="fill" />, accent: false },
+          { label: "Total encaissé TTC", value: formatCurrency(metrics.totalEntrees), icon: <CurrencyEur size={18} weight="fill" />, accent: true },
+          { label: "CA devis TTC", value: formatCurrency(metrics.totalTTC), icon: <TrendUp size={18} weight="fill" />, accent: false },
+          { label: "Entrées de capital", value: formatCurrency(metrics.totalCapital), icon: <PiggyBank size={18} weight="fill" />, accent: false },
           { label: "TVA collectée (20%)", value: formatCurrency(metrics.totalTVA), icon: <Receipt size={18} weight="fill" />, accent: false },
-          { label: "Devis confirmés", value: String(metrics.count), icon: <CheckCircle size={18} weight="fill" />, accent: false },
         ].map((card, i) => (
           <motion.div
             key={card.label}
@@ -223,16 +240,46 @@ export default function ComptabiliteClient() {
               {/* Desktop */}
               <div className="hidden md:grid grid-cols-[80px_1fr_130px_110px_110px_120px] gap-0">
                 <div className="col-span-3 self-center">
-                  <p className="text-sm font-bold text-[var(--text-primary)]">TOTAL</p>
+                  <p className="text-sm font-bold text-[var(--text-primary)]">TOTAL devis</p>
                 </div>
                 <p className="text-sm font-mono font-bold text-[var(--text-primary)] self-center text-right pr-4">{formatCurrency(metrics.totalHT)}</p>
                 <p className="text-sm font-mono font-bold text-[var(--text-secondary)] self-center text-right pr-4">{formatCurrency(metrics.totalTVA)}</p>
                 <p className="text-sm font-mono font-bold text-[var(--amber)] self-center text-right pr-2">{formatCurrency(metrics.totalTTC)}</p>
               </div>
+              {metrics.totalCapital > 0 && (
+                <div className="hidden md:grid grid-cols-[80px_1fr_130px_110px_110px_120px] gap-0 mt-1">
+                  <div className="col-span-5 self-center">
+                    <p className="text-sm font-bold text-[var(--text-primary)]">+ Entrées capital</p>
+                  </div>
+                  <p className="text-sm font-mono font-bold text-[var(--amber)] self-center text-right pr-2">{formatCurrency(metrics.totalCapital)}</p>
+                </div>
+              )}
+              {metrics.totalCapital > 0 && (
+                <div className="hidden md:grid grid-cols-[80px_1fr_130px_110px_110px_120px] gap-0 pt-2 mt-1 border-t border-[var(--amber)]/30">
+                  <div className="col-span-5 self-center">
+                    <p className="text-base font-bold text-[var(--text-primary)]">TOTAL GÉNÉRAL</p>
+                  </div>
+                  <p className="text-base font-mono font-bold text-[var(--amber)] self-center text-right pr-2">{formatCurrency(metrics.totalEntrees)}</p>
+                </div>
+              )}
               {/* Mobile */}
-              <div className="lg:hidden flex items-center justify-between">
-                <p className="text-sm font-bold text-[var(--text-primary)]">TOTAL</p>
-                <p className="text-base font-mono font-bold text-[var(--amber)]">{formatCurrency(metrics.totalTTC)}</p>
+              <div className="md:hidden space-y-1">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-bold text-[var(--text-primary)]">Total devis</p>
+                  <p className="text-sm font-mono font-bold text-[var(--amber)]">{formatCurrency(metrics.totalTTC)}</p>
+                </div>
+                {metrics.totalCapital > 0 && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-[var(--text-secondary)]">+ Capital</p>
+                      <p className="text-sm font-mono text-[var(--amber)]">{formatCurrency(metrics.totalCapital)}</p>
+                    </div>
+                    <div className="flex items-center justify-between pt-1 border-t border-[var(--amber)]/30">
+                      <p className="text-base font-bold text-[var(--text-primary)]">TOTAL GÉNÉRAL</p>
+                      <p className="text-base font-mono font-bold text-[var(--amber)]">{formatCurrency(metrics.totalEntrees)}</p>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </>
@@ -240,7 +287,7 @@ export default function ComptabiliteClient() {
       </div>
 
       {/* ── Entrées de capital ─────────────────────────────────── */}
-      {entreesCapital.length > 0 && (
+      {confirmedCapital.length > 0 && (
         <div className="rounded-2xl border border-[var(--border)] overflow-hidden bg-[var(--surface-1)] mb-6">
           <div className="px-4 lg:px-6 py-4 border-b border-[var(--border)] flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -248,7 +295,7 @@ export default function ComptabiliteClient() {
               <h2 className="font-bold text-[var(--text-primary)] text-sm">Entrées de capital</h2>
             </div>
             <span className="text-xs text-[var(--text-muted)]">
-              Total : <span className="font-mono font-bold text-[var(--amber)]">{formatCurrency(metrics.totalCapital)}</span>
+              {confirmedCapital.length} entrée{confirmedCapital.length > 1 ? "s" : ""} · Total : <span className="font-mono font-bold text-[var(--amber)]">{formatCurrency(metrics.totalCapital)}</span>
             </span>
           </div>
           {/* Desktop header */}
@@ -257,7 +304,7 @@ export default function ComptabiliteClient() {
               <p key={h} className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">{h}</p>
             ))}
           </div>
-          {entreesCapital.map((e) => (
+          {confirmedCapital.map((e) => (
             <div key={e.id}>
               {/* Desktop */}
               <div className="hidden md:grid grid-cols-[1fr_100px_120px_90px_40px] items-center gap-0 px-6 py-3 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors">
