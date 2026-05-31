@@ -14,38 +14,37 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const user = store.user;
   const router = useRouter();
   const [hydrated, setHydrated] = useState(false);
+  const [cloudLoaded, setCloudLoaded] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isFirstLoad = useRef(true);
 
   useEffect(() => { setHydrated(true); }, []);
 
-  // Charger depuis Supabase au login
+  // ── Charger depuis Supabase au login (une seule fois) ──────────────────
   useEffect(() => {
-    if (!hydrated || !user) return;
-    if (!isFirstLoad.current) return;
-    isFirstLoad.current = false;
+    if (!hydrated || !user || cloudLoaded) return;
 
     loadFromSupabase().then((data) => {
-      if (!data) return; // Pas encore de données cloud → garder localStorage
-      const mapped = mapSupabaseToStore(data as Record<string, unknown>);
-
-      // Fusionner : utiliser les données cloud si elles existent
-      useStore.setState({
-        ...mapped,
-        ingredients: (mapped.ingredients && (mapped.ingredients as unknown[]).length > 0)
-          ? mapped.ingredients as typeof DEFAULT_INGREDIENTS
-          : DEFAULT_INGREDIENTS,
-        materiel: (mapped.materiel && (mapped.materiel as unknown[]).length > 0)
-          ? mapped.materiel as typeof DEFAULT_MATERIEL
-          : DEFAULT_MATERIEL,
-      } as Partial<AppState>);
+      if (data) {
+        const mapped = mapSupabaseToStore(data as Record<string, unknown>);
+        useStore.setState({
+          ...mapped,
+          ingredients: (mapped.ingredients && (mapped.ingredients as unknown[]).length > 0)
+            ? mapped.ingredients as typeof DEFAULT_INGREDIENTS
+            : DEFAULT_INGREDIENTS,
+          materiel: (mapped.materiel && (mapped.materiel as unknown[]).length > 0)
+            ? mapped.materiel as typeof DEFAULT_MATERIEL
+            : DEFAULT_MATERIEL,
+        } as Partial<AppState>);
+      }
+      setCloudLoaded(true); // permettre la sauvegarde maintenant
     });
-  }, [hydrated, user]);
+  }, [hydrated, user, cloudLoaded]);
 
-  // Sauvegarder vers Supabase à chaque changement (debounce 2s)
+  // ── Sauvegarder vers Supabase à chaque changement du store ────────────
+  // Ne sauvegarde qu'après le chargement initial (évite d'écraser les données cloud)
   useEffect(() => {
-    if (!hydrated || !user || isFirstLoad.current) return;
+    if (!cloudLoaded || !user) return;
 
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
@@ -70,7 +69,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }, 2000);
 
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  });
+  }); // sans dépendances = se déclenche à chaque render post-cloudLoaded
 
   useEffect(() => {
     if (hydrated && !user) router.replace("/auth");
@@ -81,21 +80,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-[100dvh] bg-[var(--surface)]">
       {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/60 z-30 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
+        <div className="fixed inset-0 bg-black/60 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
-
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
       <main className="lg:ml-64 min-h-[100dvh] overflow-x-hidden">
-        {/* Mobile topbar */}
         <div className="lg:hidden flex items-center gap-3 px-4 py-3 border-b border-[var(--border)] bg-[var(--surface-1)] sticky top-0 z-20">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="w-9 h-9 flex items-center justify-center rounded-xl bg-[var(--surface-2)] text-[var(--text-secondary)]"
-          >
+          <button onClick={() => setSidebarOpen(true)}
+            className="w-9 h-9 flex items-center justify-center rounded-xl bg-[var(--surface-2)] text-[var(--text-secondary)]">
             <List size={20} />
           </button>
           <p className="text-sm font-bold text-[var(--text-primary)]">C.LC. Traiteur</p>
