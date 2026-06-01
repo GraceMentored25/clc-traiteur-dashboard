@@ -290,32 +290,38 @@ export default function ComptabiliteClient() {
               <PiggyBank size={16} className="text-[var(--amber)]" />
               <h2 className="font-bold text-[var(--text-primary)] text-sm">Entrées de capital</h2>
             </div>
-            <span className="text-xs text-[var(--text-muted)]">
-              Total entrées de capital : <span className="font-mono font-bold text-[var(--amber)]">{formatCurrency(metrics.totalCapital)}</span>
+            <div className="hidden md:grid grid-cols-[1fr_100px_120px_120px] gap-0 w-full">
+              <p className="text-xs text-[var(--text-muted)] col-span-3">Total entrées de capital</p>
+              <p className="text-sm font-mono font-bold text-[var(--amber)] text-right">{formatCurrency(metrics.totalCapital)}</p>
+            </div>
+            <span className="md:hidden text-xs text-[var(--text-muted)]">
+              Total : <span className="font-mono font-bold text-[var(--amber)]">{formatCurrency(metrics.totalCapital)}</span>
             </span>
           </div>
-          {/* Desktop header */}
-          <div className="hidden md:grid grid-cols-[1fr_100px_120px_120px_70px] gap-0 px-6 py-3 border-b border-[var(--border)]">
-            {["Libellé", "Source", "Date", "Montant", ""].map((h, i) => (
-              <p key={h} className={`text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide ${i === 3 ? "text-right pr-2" : ""}`}>{h}</p>
-            ))}
+          {/* Desktop header — Libellé | Source | Date | [actions] Montant */}
+          <div className="hidden md:grid grid-cols-[1fr_100px_120px_120px] gap-0 px-6 py-3 border-b border-[var(--border)]">
+            <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Libellé</p>
+            <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Source</p>
+            <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Date</p>
+            <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide text-right">Montant</p>
           </div>
           {confirmedCapital.map((e) => (
             <div key={e.id}>
               {/* Desktop */}
-              <div className="hidden md:grid grid-cols-[1fr_100px_120px_120px_70px] items-center gap-0 px-6 py-3 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors">
+              <div className="hidden md:grid grid-cols-[1fr_100px_120px_120px] items-center gap-0 px-6 py-3 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors group">
                 <p className="text-sm font-medium text-[var(--text-primary)] truncate">{e.libelle}</p>
                 <p className="text-xs text-[var(--text-secondary)] capitalize">{SOURCES.find(s => s.value === e.source)?.label}</p>
                 <div className="flex items-center gap-1 text-xs text-[var(--text-muted)]"><Calendar size={11}/>{formatDate(e.date)}</div>
-                <p className="text-sm font-mono font-bold text-[var(--amber)] text-right pr-2">{formatCurrency(e.montant)}</p>
-                <div className="flex items-center gap-1 justify-end">
+                {/* Montant + boutons alignés à droite */}
+                <div className="flex items-center justify-end gap-1">
                   <button onClick={() => { setCapitalForm({ libelle: e.libelle, montant: String(e.montant), date: e.date, source: e.source }); setEditingCapitalId(e.id); setCapitalModal(true); }}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 transition-all">
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 transition-all opacity-0 group-hover:opacity-100">
                     <PencilSimple size={13} />
                   </button>
-                  <button onClick={() => removeEntreeCapital(e.id)} className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition-all">
+                  <button onClick={() => removeEntreeCapital(e.id)} className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100">
                     <Trash size={13} />
                   </button>
+                  <p className="text-sm font-mono font-bold text-[var(--amber)] min-w-[80px] text-right">{formatCurrency(e.montant)}</p>
                 </div>
               </div>
               {/* Mobile */}
