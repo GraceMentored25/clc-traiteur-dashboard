@@ -97,6 +97,8 @@ export interface LogistiqueItem {
   note?: string;
 }
 
+export type CoursesStatut = "en_attente" | "confirmé";
+
 export interface DemandeCoursesRepas {
   id: string;
   devisId: string;
@@ -106,6 +108,7 @@ export interface DemandeCoursesRepas {
   createdAt: string;
   items: ShoppingItem[];
   totalEstime: number;
+  statut?: CoursesStatut;
 }
 
 export interface DemandeLogistique {
@@ -116,4 +119,6 @@ export interface DemandeLogistique {
   eventDate: string;
   createdAt: string;
   items: LogistiqueItem[];
+  totalEstime?: number;
+  statut?: CoursesStatut;
 }

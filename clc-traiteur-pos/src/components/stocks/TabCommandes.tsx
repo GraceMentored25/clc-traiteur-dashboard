@@ -74,6 +74,12 @@ export default function TabCommandes() {
       note: item.note,
     }));
 
+    const materiaux = useStore.getState().materiel;
+    const totalEstimeLog = logItems.reduce((sum, item) => {
+      const mat = materiaux.find((m) => m.name === item.name);
+      return sum + (mat?.pricePerUnit ?? 0) * item.qty;
+    }, 0);
+
     const demandeLog: DemandeLogistique = {
       id: `LOG-${Date.now()}`,
       devisId: devis.id,
@@ -82,6 +88,7 @@ export default function TabCommandes() {
       eventDate: devis.eventDate,
       createdAt: new Date().toISOString(),
       items: logItems,
+      totalEstime: totalEstimeLog,
     };
     addDemandeLogistique(demandeLog);
 

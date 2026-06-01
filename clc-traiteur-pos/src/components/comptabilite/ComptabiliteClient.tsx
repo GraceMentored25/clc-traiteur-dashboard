@@ -18,6 +18,7 @@ import {
 import { useStore } from "@/lib/store";
 import { Devis, EntreeCapital } from "@/lib/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { ArrowDown, ArrowUp, ShoppingCart, Truck } from "@phosphor-icons/react";
 
 type Period = "all" | "month" | "quarter" | "year";
 
@@ -31,7 +32,8 @@ const SOURCES: { value: EntreeCapital["source"]; label: string }[] = [
 const TVA_RATE = 0.20;
 
 export default function ComptabiliteClient() {
-  const { devisList, entreesCapital, addEntreeCapital, removeEntreeCapital } = useStore();
+  const { devisList, entreesCapital, addEntreeCapital, removeEntreeCapital,
+          demandesCourses, demandesLogistique } = useStore();
   const [period, setPeriod] = useState<Period>("all");
   const [docModal, setDocModal] = useState<"summary" | "invoices" | "tva" | null>(null);
   const [capitalModal, setCapitalModal] = useState(false);
@@ -69,6 +71,12 @@ export default function ComptabiliteClient() {
     });
   }, [entreesCapital, period]);
 
+  // Sorties confirmées (courses repas + logistique)
+  const sortiesRepas = useMemo(() =>
+    demandesCourses.filter((d) => d.statut === "confirmé"), [demandesCourses]);
+  const sortiesLogistique = useMemo(() =>
+    demandesLogistique.filter((d) => d.statut === "confirmé"), [demandesLogistique]);
+
   const metrics = useMemo(() => {
     const totalHT = confirmed.reduce((s, d) => s + d.totalHT, 0);
     const totalTVA = confirmed.reduce((s, d) => s + (d.totalTTC - d.totalHT), 0);
@@ -76,8 +84,12 @@ export default function ComptabiliteClient() {
     const avgDevis = confirmed.length ? totalTTC / confirmed.length : 0;
     const totalCapital = confirmedCapital.reduce((s, e) => s + e.montant, 0);
     const totalEntrees = totalTTC + totalCapital;
-    return { totalHT, totalTVA, totalTTC, avgDevis, count: confirmed.length, totalCapital, totalEntrees };
-  }, [confirmed, confirmedCapital]);
+    const totalSortiesRepas = sortiesRepas.reduce((s, d) => s + d.totalEstime, 0);
+    const totalSortiesLog = sortiesLogistique.reduce((s, d) => s + (d.totalEstime ?? 0), 0);
+    const totalSorties = totalSortiesRepas + totalSortiesLog;
+    const solde = totalEntrees - totalSorties;
+    return { totalHT, totalTVA, totalTTC, avgDevis, count: confirmed.length, totalCapital, totalEntrees, totalSorties, solde };
+  }, [confirmed, confirmedCapital, sortiesRepas, sortiesLogistique]);
 
   const handleAddCapital = () => {
     const montant = parseFloat(capitalForm.montant.replace(",", "."));
@@ -149,9 +161,9 @@ export default function ComptabiliteClient() {
       {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
-          { label: "Total encaissé TTC", value: formatCurrency(metrics.totalEntrees), icon: <CurrencyEur size={18} weight="fill" />, accent: true },
-          { label: "CA devis TTC", value: formatCurrency(metrics.totalTTC), icon: <TrendUp size={18} weight="fill" />, accent: false },
-          { label: "Entrées de capital", value: formatCurrency(metrics.totalCapital), icon: <PiggyBank size={18} weight="fill" />, accent: false },
+          { label: "Total encaissé", value: formatCurrency(metrics.totalEntrees), icon: <ArrowUp size={18} weight="fill" />, accent: true },
+          { label: "Sorties confirmées", value: formatCurrency(metrics.totalSorties), icon: <ArrowDown size={18} weight="fill" />, negative: true },
+          { label: "Solde net", value: formatCurrency(metrics.solde), icon: <CurrencyEur size={18} weight="fill" />, accent: false },
           { label: "TVA collectée (20%)", value: formatCurrency(metrics.totalTVA), icon: <Receipt size={18} weight="fill" />, accent: false },
         ].map((card, i) => (
           <motion.div
@@ -160,18 +172,30 @@ export default function ComptabiliteClient() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.06, type: "spring", stiffness: 200, damping: 25 }}
             className={`p-5 rounded-2xl border ${
-              card.accent
-                ? "bg-[var(--amber)]/8 border-[var(--amber)]/20"
-                : "bg-[var(--surface-1)] border-[var(--border)]"
+              (card as {negative?: boolean}).negative
+                ? "bg-red-500/5 border-red-500/20"
+                : card.accent
+                  ? "bg-[var(--amber)]/8 border-[var(--amber)]/20"
+                  : "bg-[var(--surface-1)] border-[var(--border)]"
             }`}
           >
             <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-4 ${
-              card.accent ? "bg-[var(--amber)]/20 text-[var(--amber)]" : "bg-[var(--surface-2)] text-[var(--text-secondary)]"
+              (card as {negative?: boolean}).negative
+                ? "bg-red-500/15 text-[var(--danger)]"
+                : card.accent
+                  ? "bg-[var(--amber)]/20 text-[var(--amber)]"
+                  : "bg-[var(--surface-2)] text-[var(--text-secondary)]"
             }`}>
               {card.icon}
             </div>
             <p className="text-[11px] text-[var(--text-muted)] mb-1">{card.label}</p>
-            <p className={`text-xl font-bold font-mono tracking-tight ${card.accent ? "text-[var(--amber)]" : "text-[var(--text-primary)]"}`}>
+            <p className={`text-xl font-bold font-mono tracking-tight ${
+              (card as {negative?: boolean}).negative
+                ? "text-[var(--danger)]"
+                : card.accent
+                  ? "text-[var(--amber)]"
+                  : "text-[var(--text-primary)]"
+            }`}>
               {card.value}
             </p>
           </motion.div>
@@ -408,6 +432,54 @@ export default function ComptabiliteClient() {
         )}
       </AnimatePresence>
 
+      {/* ── Sorties (courses confirmées) ───────────────────────── */}
+      {(sortiesRepas.length > 0 || sortiesLogistique.length > 0) && (
+        <div className="rounded-2xl border border-red-500/20 overflow-hidden bg-[var(--surface-1)] mb-6">
+          <div className="px-4 lg:px-6 py-4 border-b border-red-500/20 flex items-center justify-between bg-red-500/5">
+            <div className="flex items-center gap-2">
+              <ArrowDown size={16} className="text-[var(--danger)]" />
+              <h2 className="font-bold text-[var(--text-primary)] text-sm">Sorties confirmées</h2>
+            </div>
+            <span className="text-xs font-mono font-bold text-[var(--danger)]">{formatCurrency(metrics.totalSorties)}</span>
+          </div>
+
+          {sortiesRepas.map((d) => (
+            <div key={d.id} className="flex items-center justify-between px-4 lg:px-6 py-3 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <ShoppingCart size={13} className="text-[var(--text-muted)] shrink-0" />
+                  <p className="text-sm font-medium text-[var(--text-primary)] truncate">Courses repas — {d.clientName}</p>
+                </div>
+                <div className="flex items-center gap-2 mt-0.5 ml-5">
+                  <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Calendar size={10}/>{formatDate(d.eventDate)}</span>
+                  <span className="text-xs text-[var(--text-muted)]">{d.guestCount} convives</span>
+                </div>
+              </div>
+              <p className="text-sm font-mono font-bold text-[var(--danger)] shrink-0">{formatCurrency(d.totalEstime)}</p>
+            </div>
+          ))}
+
+          {sortiesLogistique.map((d) => {
+            const total = d.totalEstime ?? 0;
+            return (
+              <div key={d.id} className="flex items-center justify-between px-4 lg:px-6 py-3 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Truck size={13} className="text-[var(--text-muted)] shrink-0" />
+                    <p className="text-sm font-medium text-[var(--text-primary)] truncate">Logistique — {d.clientName}</p>
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5 ml-5">
+                    <span className="text-xs text-[var(--text-muted)]">{d.eventType}</span>
+                    <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Calendar size={10}/>{formatDate(d.eventDate)}</span>
+                  </div>
+                </div>
+                <p className="text-sm font-mono font-bold text-[var(--danger)] shrink-0">{total > 0 ? formatCurrency(total) : "—"}</p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Doc generation modal */}
       <AnimatePresence>
         {docModal && (
@@ -466,7 +538,7 @@ export default function ComptabiliteClient() {
                       icon={doc.icon}
                       title={doc.title}
                       desc={doc.desc}
-                      onGenerate={() => handleGenerate(doc.id, confirmed, metrics)}
+                      onGenerate={() => handleGenerate(doc.id, confirmed, metrics, confirmedCapital, sortiesRepas, sortiesLogistique)}
                     />
                   ))}
                 </div>
@@ -537,7 +609,10 @@ function DocButton({ icon, title, desc, onGenerate }: {
 async function handleGenerate(
   type: string,
   confirmed: Devis[],
-  metrics: { totalHT: number; totalTVA: number; totalTTC: number; count: number; avgDevis: number }
+  metrics: { totalHT: number; totalTVA: number; totalTTC: number; count: number; avgDevis: number; totalCapital?: number; totalEntrees?: number; totalSorties?: number; solde?: number },
+  entreesCapital: EntreeCapital[] = [],
+  sortiesRepas: import("@/lib/types").DemandeCoursesRepas[] = [],
+  sortiesLogistique: import("@/lib/types").DemandeLogistique[] = []
 ) {
   const { jsPDF } = await import("jspdf");
   const autoTable = (await import("jspdf-autotable")).default;
@@ -608,8 +683,11 @@ async function handleGenerate(
         ["Chiffre d'affaires Hors Taxes", `${metrics.totalHT.toFixed(2)} €`],
         ["TVA collectée (taux 20%)", `${metrics.totalTVA.toFixed(2)} €`],
         ["Chiffre d'affaires TTC", `${metrics.totalTTC.toFixed(2)} €`],
+        ["Entrées de capital", `${(metrics.totalCapital ?? 0).toFixed(2)} €`],
+        ["Total encaissé (CA + Capital)", `${(metrics.totalEntrees ?? metrics.totalTTC).toFixed(2)} €`],
+        ["Sorties confirmées (courses + logistique)", `${(metrics.totalSorties ?? 0).toFixed(2)} €`],
+        ["Solde net", `${(metrics.solde ?? metrics.totalTTC).toFixed(2)} €`],
         ["Nombre de prestations facturées", String(metrics.count)],
-        ["Valeur moyenne par devis TTC", `${metrics.count ? (metrics.totalTTC / metrics.count).toFixed(2) : "0.00"} €`],
       ],
       headStyles: { fillColor: AMBER, textColor: [255, 255, 255], fontStyle: "bold" },
       alternateRowStyles: { fillColor: [246, 248, 250] },

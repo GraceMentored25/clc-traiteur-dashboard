@@ -56,11 +56,13 @@ export interface AppState {
   addDemandeCoursesRepas: (d: DemandeCoursesRepas) => void;
   removeDemandeCoursesRepas: (id: string) => void;
   updateShoppingItem: (demandeId: string, ingredientId: string, qty: number) => void;
+  setCoursesStatut: (id: string, statut: import("@/lib/types").CoursesStatut) => void;
 
   demandesLogistique: DemandeLogistique[];
   addDemandeLogistique: (d: DemandeLogistique) => void;
   removeDemandeLogistique: (id: string) => void;
   updateLogistiqueItem: (demandeId: string, index: number, qty: number) => void;
+  setLogistiqueStatut: (id: string, statut: import("@/lib/types").CoursesStatut) => void;
 
   cart: CartItem[];
   addToCart: (item: CartItem) => void;
@@ -175,6 +177,8 @@ export const useStore = create<AppState>()(
       demandesCourses: [],
       addDemandeCoursesRepas: (d) => set((s) => ({ demandesCourses: [d, ...s.demandesCourses] })),
       removeDemandeCoursesRepas: (id) => set((s) => ({ demandesCourses: s.demandesCourses.filter((d) => d.id !== id) })),
+      setCoursesStatut: (id, statut) =>
+        set((s) => ({ demandesCourses: s.demandesCourses.map((d) => d.id === id ? { ...d, statut } : d) })),
       updateShoppingItem: (demandeId, ingredientId, qty) =>
         set((s) => ({
           demandesCourses: s.demandesCourses.map((d) =>
@@ -194,13 +198,19 @@ export const useStore = create<AppState>()(
       removeDemandeLogistique: (id) => set((s) => ({ demandesLogistique: s.demandesLogistique.filter((d) => d.id !== id) })),
       updateLogistiqueItem: (demandeId, index, qty) =>
         set((s) => ({
-          demandesLogistique: s.demandesLogistique.map((d) =>
-            d.id !== demandeId ? d : {
-              ...d,
-              items: d.items.map((item, i) => i === index ? { ...item, qty } : item),
-            }
-          ),
+          demandesLogistique: s.demandesLogistique.map((d) => {
+            if (d.id !== demandeId) return d;
+            const items = d.items.map((item, i) => i === index ? { ...item, qty } : item);
+            const mat = (s.materiel ?? []);
+            const totalEstime = items.reduce((sum, item) => {
+              const m = mat.find((m) => m.name === item.name);
+              return sum + (m?.pricePerUnit ?? 0) * item.qty;
+            }, 0);
+            return { ...d, items, totalEstime };
+          }),
         })),
+      setLogistiqueStatut: (id, statut) =>
+        set((s) => ({ demandesLogistique: s.demandesLogistique.map((d) => d.id === id ? { ...d, statut } : d) })),
 
       cart: [],
       addToCart: (item) => {

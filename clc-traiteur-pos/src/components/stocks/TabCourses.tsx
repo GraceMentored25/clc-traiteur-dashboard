@@ -2,11 +2,30 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingCart, Truck, CaretDown, CaretUp, Trash, Calendar, Users, Check } from "@phosphor-icons/react";
+import { ShoppingCart, Truck, CaretDown, CaretUp, Trash, Calendar, Users, Check, Clock } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import type { CoursesStatut } from "@/lib/types";
 
 type Rubrique = "repas" | "logistique";
+
+function StatutBadge({ statut, onToggle }: { statut?: CoursesStatut; onToggle: () => void }) {
+  const confirmed = statut === "confirmé";
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); onToggle(); }}
+      className={`flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-semibold transition-all shrink-0 ${
+        confirmed
+          ? "bg-green-500/15 text-[var(--success)] border border-green-500/20"
+          : "bg-[var(--surface-3)] text-[var(--text-muted)] border border-[var(--border)] hover:border-[var(--amber)]/30"
+      }`}
+      title={confirmed ? "Marquer en attente" : "Marquer confirmé"}
+    >
+      {confirmed ? <Check size={10} weight="bold" /> : <Clock size={10} />}
+      {confirmed ? "Confirmé" : "En attente"}
+    </button>
+  );
+}
 
 function QtyEdit({ value, onSave }: { value: number; onSave: (n: number) => void }) {
   const [editing, setEditing] = useState(false);
@@ -30,16 +49,15 @@ function QtyEdit({ value, onSave }: { value: number; onSave: (n: number) => void
   return (
     <button onClick={() => { setVal(String(value)); setEditing(true); }}
       className="text-sm font-mono font-semibold text-[var(--text-secondary)] hover:text-[var(--amber)] transition-colors shrink-0"
-      title="Modifier la quantité">
-      {value}
-    </button>
+      title="Modifier la quantité">{value}</button>
   );
 }
 
 export default function TabCourses() {
   const [rubrique, setRubrique] = useState<Rubrique>("repas");
   const { demandesCourses, demandesLogistique, removeDemandeCoursesRepas, removeDemandeLogistique,
-          updateShoppingItem, updateLogistiqueItem, materiel } = useStore();
+          updateShoppingItem, updateLogistiqueItem, materiel,
+          setCoursesStatut, setLogistiqueStatut } = useStore();
   const [expanded, setExpanded] = useState<string | null>(null);
   const toggle = (id: string) => setExpanded((prev) => (prev === id ? null : id));
 
@@ -77,6 +95,8 @@ export default function TabCourses() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
+                  <StatutBadge statut={d.statut}
+                    onToggle={() => setCoursesStatut(d.id, d.statut === "confirmé" ? "en_attente" : "confirmé")} />
                   <button onClick={(e) => { e.stopPropagation(); removeDemandeCoursesRepas(d.id); }}
                     className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition-all">
                     <Trash size={13} />
@@ -90,7 +110,6 @@ export default function TabCourses() {
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
                     className="overflow-hidden border-t border-[var(--border)]">
-                    {/* Header */}
                     <div className="grid grid-cols-[2fr_70px_60px_80px] gap-2 px-4 py-2 bg-[var(--surface-2)]">
                       {["Ingrédient", "Quantité", "Unité", "Total"].map((h) => (
                         <p key={h} className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">{h}</p>
@@ -99,8 +118,7 @@ export default function TabCourses() {
                     {d.items.map((item) => (
                       <div key={item.ingredientId} className="grid grid-cols-[2fr_70px_60px_80px] items-center gap-2 px-4 py-2.5 border-t border-[var(--border)] first:border-0">
                         <p className="text-sm text-[var(--text-primary)] truncate">{item.ingredientName}</p>
-                        <QtyEdit value={item.qty}
-                          onSave={(n) => updateShoppingItem(d.id, item.ingredientId, n)} />
+                        <QtyEdit value={item.qty} onSave={(n) => updateShoppingItem(d.id, item.ingredientId, n)} />
                         <p className="text-xs text-[var(--text-muted)]">{item.unit}</p>
                         <p className="text-sm font-mono font-bold text-[var(--amber)]">{formatCurrency(item.total)}</p>
                       </div>
@@ -126,73 +144,76 @@ export default function TabCourses() {
               <p className="text-sm text-[var(--text-secondary)]">Aucune demande logistique</p>
               <p className="text-xs text-[var(--text-muted)] mt-1">Appuyez sur « Commencer » dans l'onglet Commandes</p>
             </div>
-          ) : demandesLogistique.map((d) => (
-            <div key={d.id} className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] overflow-hidden">
-              <button onClick={() => toggle(d.id + "-log")}
-                className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-[var(--surface-2)] transition-colors text-left">
-                <Truck size={16} className="text-[var(--amber)] shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{d.clientName}</p>
-                  <div className="flex items-center gap-3 mt-0.5">
-                    <span className="text-xs text-[var(--text-muted)]">{d.eventType}</span>
-                    <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Calendar size={10}/>{formatDate(d.eventDate)}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button onClick={(e) => { e.stopPropagation(); removeDemandeLogistique(d.id); }}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition-all">
-                    <Trash size={13} />
-                  </button>
-                  {expanded === d.id + "-log" ? <CaretUp size={14} className="text-[var(--text-muted)]" /> : <CaretDown size={14} className="text-[var(--text-muted)]" />}
-                </div>
-              </button>
+          ) : demandesLogistique.map((d) => {
+            // Calculer le total logistique dynamiquement
+            const total = d.totalEstime ?? d.items.reduce((sum, item) => {
+              const mat = materiel.find((m) => m.name === item.name);
+              return sum + (mat?.pricePerUnit ?? 0) * item.qty;
+            }, 0);
 
-              <AnimatePresence>
-                {expanded === d.id + "-log" && (
-                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
-                    className="overflow-hidden border-t border-[var(--border)]">
-                    {/* Header */}
-                    <div className="grid grid-cols-[1fr_80px_90px] gap-2 px-4 py-2 bg-[var(--surface-2)]">
-                      {["Élément", "Quantité", "Prix est."].map((h) => (
-                        <p key={h} className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">{h}</p>
-                      ))}
+            return (
+              <div key={d.id} className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] overflow-hidden">
+                <button onClick={() => toggle(d.id + "-log")}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-[var(--surface-2)] transition-colors text-left">
+                  <Truck size={16} className="text-[var(--amber)] shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{d.clientName}</p>
+                    <div className="flex items-center gap-3 mt-0.5">
+                      <span className="text-xs text-[var(--text-muted)]">{d.eventType}</span>
+                      <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Calendar size={10}/>{formatDate(d.eventDate)}</span>
+                      {total > 0 && <span className="text-xs font-mono text-[var(--amber)]">{formatCurrency(total)}</span>}
                     </div>
-                    {d.items.map((item, i) => {
-                      const mat = materiel.find((m) => m.name === item.name);
-                      const prix = mat?.pricePerUnit ?? 0;
-                      const total = prix * item.qty;
-                      return (
-                        <div key={i} className="grid grid-cols-[1fr_80px_90px] items-center gap-2 px-4 py-2.5 border-t border-[var(--border)] first:border-0">
-                          <div>
-                            <p className="text-sm text-[var(--text-primary)]">{item.name}</p>
-                            {item.note && <p className="text-xs text-[var(--text-muted)] italic">{item.note}</p>}
-                          </div>
-                          <QtyEdit value={item.qty}
-                            onSave={(n) => updateLogistiqueItem(d.id, i, n)} />
-                          <p className="text-sm font-mono font-bold text-[var(--amber)]">
-                            {total > 0 ? formatCurrency(total) : <span className="text-xs text-[var(--text-muted)]">—</span>}
-                          </p>
-                        </div>
-                      );
-                    })}
-                    {/* Total logistique */}
-                    {d.items.some((item) => materiel.find((m) => m.name === item.name)?.pricePerUnit) && (
-                      <div className="flex items-center justify-between px-4 py-3 bg-[var(--surface-2)] border-t border-[var(--border)]">
-                        <span className="text-sm font-bold text-[var(--text-primary)]">TOTAL ESTIMÉ</span>
-                        <span className="text-base font-mono font-bold text-[var(--amber)]">
-                          {formatCurrency(d.items.reduce((sum, item) => {
-                            const mat = materiel.find((m) => m.name === item.name);
-                            return sum + (mat?.pricePerUnit ?? 0) * item.qty;
-                          }, 0))}
-                        </span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <StatutBadge statut={d.statut}
+                      onToggle={() => setLogistiqueStatut(d.id, d.statut === "confirmé" ? "en_attente" : "confirmé")} />
+                    <button onClick={(e) => { e.stopPropagation(); removeDemandeLogistique(d.id); }}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition-all">
+                      <Trash size={13} />
+                    </button>
+                    {expanded === d.id + "-log" ? <CaretUp size={14} className="text-[var(--text-muted)]" /> : <CaretDown size={14} className="text-[var(--text-muted)]" />}
+                  </div>
+                </button>
+
+                <AnimatePresence>
+                  {expanded === d.id + "-log" && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
+                      className="overflow-hidden border-t border-[var(--border)]">
+                      <div className="grid grid-cols-[1fr_80px_90px] gap-2 px-4 py-2 bg-[var(--surface-2)]">
+                        {["Élément", "Quantité", "Prix est."].map((h) => (
+                          <p key={h} className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">{h}</p>
+                        ))}
                       </div>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          ))}
+                      {d.items.map((item, i) => {
+                        const mat = materiel.find((m) => m.name === item.name);
+                        const prix = mat?.pricePerUnit ?? 0;
+                        const itemTotal = prix * item.qty;
+                        return (
+                          <div key={i} className="grid grid-cols-[1fr_80px_90px] items-center gap-2 px-4 py-2.5 border-t border-[var(--border)] first:border-0">
+                            <div>
+                              <p className="text-sm text-[var(--text-primary)]">{item.name}</p>
+                              {item.note && <p className="text-xs text-[var(--text-muted)] italic">{item.note}</p>}
+                            </div>
+                            <QtyEdit value={item.qty} onSave={(n) => updateLogistiqueItem(d.id, i, n)} />
+                            <p className="text-sm font-mono font-bold text-[var(--amber)]">
+                              {itemTotal > 0 ? formatCurrency(itemTotal) : <span className="text-xs text-[var(--text-muted)]">—</span>}
+                            </p>
+                          </div>
+                        );
+                      })}
+                      {total > 0 && (
+                        <div className="flex items-center justify-between px-4 py-3 bg-[var(--surface-2)] border-t border-[var(--border)]">
+                          <span className="text-sm font-bold text-[var(--text-primary)]">TOTAL ESTIMÉ</span>
+                          <span className="text-base font-mono font-bold text-[var(--amber)]">{formatCurrency(total)}</span>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
