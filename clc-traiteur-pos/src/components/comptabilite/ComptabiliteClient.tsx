@@ -398,42 +398,61 @@ export default function ComptabiliteClient() {
             <span className="text-xs font-mono font-bold text-[var(--amber)]">{formatCurrency(metrics.totalSorties)}</span>
           </div>
 
+          {/* Header desktop */}
+          <div className="hidden md:grid grid-cols-[80px_1fr_130px_120px] gap-0 px-6 py-3 border-b border-[var(--border)]">
+            {["Type", "Référence", "Date", "Montant"].map((h, i) => (
+              <p key={h} className={`text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide ${i === 3 ? "text-right pr-2" : ""}`}>{h}</p>
+            ))}
+          </div>
+
           {sortiesRepas.map((d) => (
-            <div key={d.id} className="flex items-center justify-between px-4 lg:px-6 py-3 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <ShoppingCart size={13} className="text-[var(--text-muted)] shrink-0" />
-                  <p className="text-sm font-medium text-[var(--text-primary)] truncate">Courses repas — {d.clientName}</p>
-                </div>
-                <div className="flex items-center gap-2 mt-0.5 ml-5">
-                  <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Calendar size={10}/>{formatDate(d.eventDate)}</span>
-                  <span className="text-xs text-[var(--text-muted)]">{d.guestCount} convives</span>
-                </div>
+            <div key={d.id} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors">
+              {/* Desktop */}
+              <div className="hidden md:grid grid-cols-[80px_1fr_130px_120px] items-center gap-0 px-6 py-3">
+                <div className="flex items-center gap-1.5"><ShoppingCart size={12} className="text-[var(--text-muted)]"/><span className="text-xs text-[var(--text-secondary)]">Repas</span></div>
+                <p className="text-sm font-medium text-[var(--text-primary)] truncate">{d.clientName}</p>
+                <div className="flex items-center gap-1 text-xs text-[var(--text-muted)]"><Calendar size={11}/>{formatDate(d.eventDate)}</div>
+                <p className="text-sm font-mono font-bold text-[var(--amber)] text-right pr-2">{formatCurrency(d.totalEstime)}</p>
               </div>
-              <p className="text-sm font-mono font-bold text-[var(--amber)] shrink-0">{formatCurrency(d.totalEstime)}</p>
+              {/* Mobile */}
+              <div className="md:hidden flex items-center justify-between px-4 py-3 gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-[var(--text-primary)] truncate">Courses repas — {d.clientName}</p>
+                  <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Calendar size={10}/>{formatDate(d.eventDate)}</span>
+                </div>
+                <p className="text-sm font-mono font-bold text-[var(--amber)] shrink-0">{formatCurrency(d.totalEstime)}</p>
+              </div>
             </div>
           ))}
 
           {sortiesLogistique.map((d) => {
             const total = d.totalEstime ?? 0;
             return (
-              <div key={d.id} className="flex items-center justify-between px-4 lg:px-6 py-3 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <Truck size={13} className="text-[var(--text-muted)] shrink-0" />
+              <div key={d.id} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors">
+                {/* Desktop */}
+                <div className="hidden md:grid grid-cols-[80px_1fr_130px_120px] items-center gap-0 px-6 py-3">
+                  <div className="flex items-center gap-1.5"><Truck size={12} className="text-[var(--text-muted)]"/><span className="text-xs text-[var(--text-secondary)]">Logistique</span></div>
+                  <p className="text-sm font-medium text-[var(--text-primary)] truncate">{d.clientName}</p>
+                  <div className="flex items-center gap-1 text-xs text-[var(--text-muted)]"><Calendar size={11}/>{formatDate(d.eventDate)}</div>
+                  <p className="text-sm font-mono font-bold text-[var(--amber)] text-right pr-2">{total > 0 ? formatCurrency(total) : "—"}</p>
+                </div>
+                {/* Mobile */}
+                <div className="md:hidden flex items-center justify-between px-4 py-3 gap-3">
+                  <div className="min-w-0">
                     <p className="text-sm font-medium text-[var(--text-primary)] truncate">Logistique — {d.clientName}</p>
-                  </div>
-                  <div className="flex items-center gap-2 mt-0.5 ml-5">
-                    <span className="text-xs text-[var(--text-muted)]">{d.eventType}</span>
                     <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Calendar size={10}/>{formatDate(d.eventDate)}</span>
                   </div>
+                  <p className="text-sm font-mono font-bold text-[var(--amber)] shrink-0">{total > 0 ? formatCurrency(total) : "—"}</p>
                 </div>
-                <p className="text-sm font-mono font-bold text-[var(--amber)] shrink-0">{total > 0 ? formatCurrency(total) : "—"}</p>
               </div>
             );
           })}
-          {/* Total sorties */}
-          <div className="flex items-center justify-between px-4 lg:px-6 py-3 bg-[var(--surface-2)] border-t-2 border-[var(--amber)]/20">
+          {/* Total sorties — aligné sur la colonne Montant */}
+          <div className="hidden md:grid grid-cols-[80px_1fr_130px_120px] gap-0 px-6 py-3 bg-[var(--surface-2)] border-t-2 border-[var(--amber)]/20">
+            <div className="col-span-3 self-center"><p className="text-sm font-bold text-[var(--text-primary)]">Total sorties confirmées</p></div>
+            <p className="text-sm font-mono font-bold text-[var(--amber)] text-right pr-2">{formatCurrency(metrics.totalSorties)}</p>
+          </div>
+          <div className="md:hidden flex items-center justify-between px-4 py-3 bg-[var(--surface-2)] border-t-2 border-[var(--amber)]/20">
             <p className="text-sm font-bold text-[var(--text-primary)]">Total sorties confirmées</p>
             <p className="text-sm font-mono font-bold text-[var(--amber)]">{formatCurrency(metrics.totalSorties)}</p>
           </div>
@@ -721,7 +740,7 @@ async function handleGenerate(
         body: toutesLesSorties,
         foot: [["", "", "Total sorties", `${(metrics.totalSorties ?? 0).toFixed(2)} €`]],
         headStyles: { fillColor: DARK, textColor: [255, 255, 255], fontStyle: "bold", fontSize: 9 },
-        footStyles: { fillColor: [220, 80, 80] as [number, number, number], textColor: [255, 255, 255], fontStyle: "bold" },
+        footStyles: { fillColor: AMBER, textColor: [255, 255, 255], fontStyle: "bold" },
         alternateRowStyles: { fillColor: [246, 248, 250] },
         columnStyles: { 3: { halign: "right", fontStyle: "bold" } },
         styles: { fontSize: 9, cellPadding: 2.5 }, margin: { left: 14, right: 14 },
@@ -737,12 +756,12 @@ async function handleGenerate(
       startY: y + 4,
       head: [["Rubrique", "Montant"]],
       body: [
-        ["Encaissements devis TTC", `${metrics.totalTTC.toFixed(2)} €`],
-        ["Entrées de capital", `${(metrics.totalCapital ?? 0).toFixed(2)} €`],
-        ["Total encaissé", `${(metrics.totalEntrees ?? metrics.totalTTC).toFixed(2)} €`],
-        ["Sorties confirmées", `− ${(metrics.totalSorties ?? 0).toFixed(2)} €`],
-        ["SOLDE NET", `${(metrics.solde ?? metrics.totalTTC).toFixed(2)} €`],
-        ["TVA collectée (20%)", `${metrics.totalTVA.toFixed(2)} €`],
+        ["Encaissements devis TTC", `${metrics.totalTTC.toFixed(2)} EUR`],
+        ["Entrees de capital", `${(metrics.totalCapital ?? 0).toFixed(2)} EUR`],
+        ["Total encaisse", `${(metrics.totalEntrees ?? metrics.totalTTC).toFixed(2)} EUR`],
+        ["Sorties confirmees", `-${(metrics.totalSorties ?? 0).toFixed(2)} EUR`],
+        ["SOLDE NET", `${(metrics.solde ?? metrics.totalTTC).toFixed(2)} EUR`],
+        ["TVA collectee (20%)", `${metrics.totalTVA.toFixed(2)} EUR`],
       ],
       headStyles: { fillColor: AMBER, textColor: [255, 255, 255], fontStyle: "bold" },
       alternateRowStyles: { fillColor: [246, 248, 250] },
