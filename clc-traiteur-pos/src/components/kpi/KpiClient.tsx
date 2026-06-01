@@ -64,6 +64,8 @@ const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?:
 export default function KpiClient() {
   const { devisList, appMode } = useStore();
   const isPro = appMode === "pro";
+  // Afficher les graphiques dès qu'il y a des données, peu importe le mode
+  const hasData = devisList.length > 0;
 
   const { metrics, monthlyData } = useMemo(() => {
     const confirmed = devisList.filter((d) => d.status === "Confirmé");
@@ -189,7 +191,7 @@ export default function KpiClient() {
         <div className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] p-4 lg:p-6">
           <h3 className="font-bold text-[var(--text-primary)] text-sm mb-1">Répartition catégories</h3>
           <p className="text-xs text-[var(--text-muted)] mb-4">En % des commandes</p>
-          {isPro ? (
+          {!hasData ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <p className="text-xs text-[var(--text-muted)]">Aucune donnée — ajoutez des devis confirmés</p>
             </div>
@@ -249,7 +251,7 @@ export default function KpiClient() {
         <div className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] p-4 lg:p-6">
           <h3 className="font-bold text-[var(--text-primary)] text-sm mb-1">Top plats</h3>
           <p className="text-xs text-[var(--text-muted)] mb-5">Commandes cumulées</p>
-          {isPro ? (
+          {!hasData ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <p className="text-xs text-[var(--text-muted)]">Aucune donnée — ajoutez des devis confirmés</p>
             </div>

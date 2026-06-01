@@ -259,55 +259,10 @@ export default function ComptabiliteClient() {
               </motion.div>
             ))}
 
-            {/* Total row */}
-            <div className="px-4 lg:px-6 py-4 bg-[var(--surface-2)] border-t-2 border-[var(--amber)]/20">
-              {/* Desktop — lignes totaux */}
-              <div className="hidden md:block space-y-0">
-                {/* Total devis */}
-                <div className="grid grid-cols-[1fr_110px_110px_120px] gap-0">
-                  <p className="text-sm font-bold text-[var(--text-primary)] self-center py-1">Total devis</p>
-                  <p className="text-sm font-mono font-bold text-[var(--text-primary)] self-center text-right pr-4 py-1">{formatCurrency(metrics.totalHT)}</p>
-                  <p className="text-sm font-mono font-bold text-[var(--text-secondary)] self-center text-right pr-4 py-1">{formatCurrency(metrics.totalTVA)}</p>
-                  <p className="text-sm font-mono font-bold text-[var(--amber)] self-center text-right pr-2 py-1">{formatCurrency(metrics.totalTTC)}</p>
-                </div>
-                {metrics.totalCapital > 0 && (
-                  <>
-                    {/* Entrées capital */}
-                    <div className="grid grid-cols-[1fr_110px_110px_120px] gap-0">
-                      <p className="text-sm text-[var(--text-secondary)] self-center py-1">Total Entrées</p>
-                      <p className="text-sm font-mono text-[var(--text-muted)] self-center text-right pr-4 py-1">—</p>
-                      <p className="text-sm font-mono text-[var(--text-muted)] self-center text-right pr-4 py-1">—</p>
-                      <p className="text-sm font-mono font-semibold text-[var(--amber)] self-center text-right pr-2 py-1">{formatCurrency(metrics.totalCapital)}</p>
-                    </div>
-                    {/* Total général */}
-                    <div className="grid grid-cols-[1fr_110px_110px_120px] gap-0 pt-2 border-t border-[var(--amber)]/30 mt-1">
-                      <p className="text-base font-bold text-[var(--text-primary)] self-center">TOTAL GÉNÉRAL</p>
-                      <p className="text-sm font-mono font-bold text-[var(--text-primary)] self-center text-right pr-4">{formatCurrency(metrics.totalHT)}</p>
-                      <p className="text-sm font-mono font-bold text-[var(--text-secondary)] self-center text-right pr-4">{formatCurrency(metrics.totalTVA)}</p>
-                      <p className="text-base font-mono font-bold text-[var(--amber)] self-center text-right pr-2">{formatCurrency(metrics.totalEntrees)}</p>
-                    </div>
-                  </>
-                )}
-              </div>
-              {/* Mobile */}
-              <div className="md:hidden space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-bold text-[var(--text-primary)]">Total devis</p>
-                  <p className="text-sm font-mono font-bold text-[var(--amber)]">{formatCurrency(metrics.totalTTC)}</p>
-                </div>
-                {metrics.totalCapital > 0 && (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm text-[var(--text-secondary)]">Total Entrées</p>
-                      <p className="text-sm font-mono text-[var(--amber)]">{formatCurrency(metrics.totalCapital)}</p>
-                    </div>
-                    <div className="flex items-center justify-between pt-1.5 border-t border-[var(--amber)]/30">
-                      <p className="text-base font-bold text-[var(--text-primary)]">TOTAL GÉNÉRAL</p>
-                      <p className="text-base font-mono font-bold text-[var(--amber)]">{formatCurrency(metrics.totalEntrees)}</p>
-                    </div>
-                  </>
-                )}
-              </div>
+            {/* Total section devis */}
+            <div className="flex items-center justify-between px-4 lg:px-6 py-3 bg-[var(--surface-2)] border-t-2 border-[var(--amber)]/20">
+              <p className="text-sm font-bold text-[var(--text-primary)]">Total encaissements devis</p>
+              <p className="text-sm font-mono font-bold text-[var(--amber)]">{formatCurrency(metrics.totalTTC)}</p>
             </div>
           </>
         )}
@@ -322,7 +277,7 @@ export default function ComptabiliteClient() {
               <h2 className="font-bold text-[var(--text-primary)] text-sm">Entrées de capital</h2>
             </div>
             <span className="text-xs text-[var(--text-muted)]">
-              {confirmedCapital.length} entrée{confirmedCapital.length > 1 ? "s" : ""} · Total : <span className="font-mono font-bold text-[var(--amber)]">{formatCurrency(metrics.totalCapital)}</span>
+              Total entrées de capital : <span className="font-mono font-bold text-[var(--amber)]">{formatCurrency(metrics.totalCapital)}</span>
             </span>
           </div>
           {/* Desktop header */}
@@ -477,8 +432,51 @@ export default function ComptabiliteClient() {
               </div>
             );
           })}
+          {/* Total sorties */}
+          <div className="flex items-center justify-between px-4 lg:px-6 py-3 bg-red-500/5 border-t-2 border-red-500/20">
+            <p className="text-sm font-bold text-[var(--text-primary)]">Total sorties confirmées</p>
+            <p className="text-sm font-mono font-bold text-[var(--danger)]">{formatCurrency(metrics.totalSorties)}</p>
+          </div>
         </div>
       )}
+
+      {/* ── Bilan général ──────────────────────────────────────── */}
+      <div className="rounded-2xl border-2 border-[var(--amber)]/30 overflow-hidden bg-[var(--surface-1)] mb-6">
+        <div className="px-4 lg:px-6 py-4 border-b border-[var(--amber)]/20 bg-[var(--amber)]/5 flex items-center gap-2">
+          <CurrencyEur size={16} className="text-[var(--amber)]" />
+          <h2 className="font-bold text-[var(--text-primary)] text-sm">Bilan général</h2>
+        </div>
+        <div className="divide-y divide-[var(--border)]">
+          <div className="flex items-center justify-between px-4 lg:px-6 py-3">
+            <span className="text-sm text-[var(--text-secondary)]">Encaissements devis (TTC)</span>
+            <span className="text-sm font-mono font-semibold text-[var(--amber)]">{formatCurrency(metrics.totalTTC)}</span>
+          </div>
+          {metrics.totalCapital > 0 && (
+            <div className="flex items-center justify-between px-4 lg:px-6 py-3">
+              <span className="text-sm text-[var(--text-secondary)]">Entrées de capital</span>
+              <span className="text-sm font-mono font-semibold text-[var(--amber)]">{formatCurrency(metrics.totalCapital)}</span>
+            </div>
+          )}
+          <div className="flex items-center justify-between px-4 lg:px-6 py-3 bg-[var(--amber)]/5">
+            <span className="text-sm font-bold text-[var(--text-primary)]">Total encaissé</span>
+            <span className="text-sm font-mono font-bold text-[var(--amber)]">{formatCurrency(metrics.totalEntrees)}</span>
+          </div>
+          {metrics.totalSorties > 0 && (
+            <>
+              <div className="flex items-center justify-between px-4 lg:px-6 py-3">
+                <span className="text-sm text-[var(--text-secondary)]">Sorties confirmées</span>
+                <span className="text-sm font-mono font-semibold text-[var(--danger)]">− {formatCurrency(metrics.totalSorties)}</span>
+              </div>
+            </>
+          )}
+          <div className="flex items-center justify-between px-4 lg:px-6 py-4 bg-[var(--amber)]/8">
+            <span className="text-base font-bold text-[var(--text-primary)]">SOLDE NET</span>
+            <span className={`text-base font-mono font-bold ${metrics.solde >= 0 ? "text-[var(--success)]" : "text-[var(--danger)]"}`}>
+              {formatCurrency(metrics.solde)}
+            </span>
+          </div>
+        </div>
+      </div>
 
       {/* Doc generation modal */}
       <AnimatePresence>
@@ -670,60 +668,89 @@ async function handleGenerate(
   if (type === "summary") {
     addHeader("Récapitulatif Comptable", `Période : ensemble des devis confirmés — ${metrics.count} facture(s)`);
 
-    // Synthèse
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...DARK);
-    doc.text("Synthèse financière", 14, 52);
+    let y = 52;
 
+    // ── Section 1 : Encaissements devis ──────────────────────────────
+    doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.setTextColor(...DARK);
+    doc.text("1. Encaissements — Devis confirmés", 14, y);
     autoTable(doc, {
-      startY: 56,
-      head: [["Indicateur", "Montant"]],
+      startY: y + 4,
+      head: [["Réf.", "Client", "Type", "Date", "HT", "TVA", "TTC"]],
+      body: confirmed.map(d => [d.id, d.clientName, d.eventType, formatDate(d.eventDate),
+        `${d.totalHT.toFixed(2)} €`, `${(d.totalTTC - d.totalHT).toFixed(2)} €`, `${d.totalTTC.toFixed(2)} €`]),
+      foot: [["", "", "", "Total devis", `${metrics.totalHT.toFixed(2)} €`, `${metrics.totalTVA.toFixed(2)} €`, `${metrics.totalTTC.toFixed(2)} €`]],
+      headStyles: { fillColor: DARK, textColor: [255, 255, 255], fontStyle: "bold", fontSize: 9 },
+      footStyles: { fillColor: AMBER, textColor: [255, 255, 255], fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [246, 248, 250] },
+      columnStyles: { 4: { halign: "right" }, 5: { halign: "right" }, 6: { halign: "right", fontStyle: "bold" } },
+      styles: { fontSize: 9, cellPadding: 2.5 }, margin: { left: 14, right: 14 },
+    });
+    y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
+
+    // ── Section 2 : Entrées de capital ────────────────────────────────
+    if (entreesCapital.length > 0) {
+      if (y > 220) { doc.addPage(); y = 20; }
+      doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.setTextColor(...DARK);
+      doc.text("2. Entrées de capital", 14, y);
+      autoTable(doc, {
+        startY: y + 4,
+        head: [["Libellé", "Source", "Date", "Montant"]],
+        body: entreesCapital.map(e => [e.libelle, e.source, formatDate(e.date), `${e.montant.toFixed(2)} €`]),
+        foot: [["", "", "Total entrées", `${(metrics.totalCapital ?? 0).toFixed(2)} €`]],
+        headStyles: { fillColor: DARK, textColor: [255, 255, 255], fontStyle: "bold", fontSize: 9 },
+        footStyles: { fillColor: AMBER, textColor: [255, 255, 255], fontStyle: "bold" },
+        alternateRowStyles: { fillColor: [246, 248, 250] },
+        columnStyles: { 3: { halign: "right", fontStyle: "bold" } },
+        styles: { fontSize: 9, cellPadding: 2.5 }, margin: { left: 14, right: 14 },
+      });
+      y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
+    }
+
+    // ── Section 3 : Sorties confirmées ────────────────────────────────
+    const toutesLesSorties = [
+      ...sortiesRepas.map(d => [`Courses repas`, d.clientName, formatDate(d.eventDate), `${d.totalEstime.toFixed(2)} €`]),
+      ...sortiesLogistique.map(d => [`Logistique`, d.clientName, formatDate(d.eventDate), `${(d.totalEstime ?? 0).toFixed(2)} €`]),
+    ];
+    if (toutesLesSorties.length > 0) {
+      if (y > 220) { doc.addPage(); y = 20; }
+      doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.setTextColor(...DARK);
+      doc.text("3. Sorties confirmées", 14, y);
+      autoTable(doc, {
+        startY: y + 4,
+        head: [["Type", "Référence", "Date", "Montant"]],
+        body: toutesLesSorties,
+        foot: [["", "", "Total sorties", `${(metrics.totalSorties ?? 0).toFixed(2)} €`]],
+        headStyles: { fillColor: DARK, textColor: [255, 255, 255], fontStyle: "bold", fontSize: 9 },
+        footStyles: { fillColor: [220, 80, 80] as [number, number, number], textColor: [255, 255, 255], fontStyle: "bold" },
+        alternateRowStyles: { fillColor: [246, 248, 250] },
+        columnStyles: { 3: { halign: "right", fontStyle: "bold" } },
+        styles: { fontSize: 9, cellPadding: 2.5 }, margin: { left: 14, right: 14 },
+      });
+      y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
+    }
+
+    // ── Section 4 : Bilan général ─────────────────────────────────────
+    if (y > 230) { doc.addPage(); y = 20; }
+    doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.setTextColor(...DARK);
+    doc.text("4. Bilan général", 14, y);
+    autoTable(doc, {
+      startY: y + 4,
+      head: [["Rubrique", "Montant"]],
       body: [
-        ["Chiffre d'affaires Hors Taxes", `${metrics.totalHT.toFixed(2)} €`],
-        ["TVA collectée (taux 20%)", `${metrics.totalTVA.toFixed(2)} €`],
-        ["Chiffre d'affaires TTC", `${metrics.totalTTC.toFixed(2)} €`],
+        ["Encaissements devis TTC", `${metrics.totalTTC.toFixed(2)} €`],
         ["Entrées de capital", `${(metrics.totalCapital ?? 0).toFixed(2)} €`],
-        ["Total encaissé (CA + Capital)", `${(metrics.totalEntrees ?? metrics.totalTTC).toFixed(2)} €`],
-        ["Sorties confirmées (courses + logistique)", `${(metrics.totalSorties ?? 0).toFixed(2)} €`],
-        ["Solde net", `${(metrics.solde ?? metrics.totalTTC).toFixed(2)} €`],
-        ["Nombre de prestations facturées", String(metrics.count)],
+        ["Total encaissé", `${(metrics.totalEntrees ?? metrics.totalTTC).toFixed(2)} €`],
+        ["Sorties confirmées", `− ${(metrics.totalSorties ?? 0).toFixed(2)} €`],
+        ["SOLDE NET", `${(metrics.solde ?? metrics.totalTTC).toFixed(2)} €`],
+        ["TVA collectée (20%)", `${metrics.totalTVA.toFixed(2)} €`],
       ],
       headStyles: { fillColor: AMBER, textColor: [255, 255, 255], fontStyle: "bold" },
       alternateRowStyles: { fillColor: [246, 248, 250] },
       columnStyles: { 1: { halign: "right", fontStyle: "bold" } },
-      styles: { fontSize: 10, cellPadding: 3 },
-      margin: { left: 14, right: 14 },
+      styles: { fontSize: 10, cellPadding: 3.5 }, margin: { left: 14, right: 14 },
     });
 
-    const afterSummary = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...DARK);
-    doc.text("Détail par prestation", 14, afterSummary);
-
-    autoTable(doc, {
-      startY: afterSummary + 4,
-      head: [["Réf.", "Client", "Type", "Date", "HT", "TVA", "TTC"]],
-      body: confirmed.map(d => [
-        d.id,
-        d.clientName,
-        d.eventType,
-        formatDate(d.eventDate),
-        `${d.totalHT.toFixed(2)} €`,
-        `${(d.totalTTC - d.totalHT).toFixed(2)} €`,
-        `${d.totalTTC.toFixed(2)} €`,
-      ]),
-      foot: [["", "", "", "TOTAL", `${metrics.totalHT.toFixed(2)} €`, `${metrics.totalTVA.toFixed(2)} €`, `${metrics.totalTTC.toFixed(2)} €`]],
-      headStyles: { fillColor: DARK, textColor: [255, 255, 255], fontStyle: "bold" },
-      footStyles: { fillColor: AMBER, textColor: [255, 255, 255], fontStyle: "bold" },
-      alternateRowStyles: { fillColor: [246, 248, 250] },
-      columnStyles: { 4: { halign: "right" }, 5: { halign: "right" }, 6: { halign: "right", fontStyle: "bold" } },
-      styles: { fontSize: 9, cellPadding: 2.5 },
-      margin: { left: 14, right: 14 },
-    });
-
-    addFooter(1, 1);
+    addFooter(1, doc.getNumberOfPages());
   }
 
   // ─── JOURNAL DES VENTES ────────────────────────────────────────────────────

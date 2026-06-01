@@ -148,19 +148,17 @@ export async function generateDevisPDF(devis: Devis) {
 
   autoTable(doc, {
     startY: tableY,
-    head: [["Prestation", "Quantité", "Prix unit.", "Sous-total"]],
+    head: [["Prestation", "Quantité", "Sous-total"]],
     body: devis.items.map(item => [
       item.dishName,
       String(item.quantity),
-      `${item.unitPrice.toFixed(2)} €`,
       `${item.subtotal.toFixed(2)} €`,
     ]),
     alternateRowStyles: { fillColor: LIGHT_BG },
     columnStyles: {
       0: { halign: "left", cellWidth: "auto" },
-      1: { halign: "right", cellWidth: 22 },
-      2: { halign: "right", cellWidth: 30 },
-      3: { halign: "right", cellWidth: 30, fontStyle: "bold" },
+      1: { halign: "right", cellWidth: 26 },
+      2: { halign: "right", cellWidth: 34, fontStyle: "bold" },
     },
     styles: { fontSize: 10, cellPadding: { top: 3.5, bottom: 3.5, left: 4, right: 4 } },
     margin: { left: L, right: 14 },
@@ -171,7 +169,7 @@ export async function generateDevisPDF(devis: Devis) {
         data.cell.styles.textColor = [255, 255, 255];
         data.cell.styles.fontStyle = "bold";
         data.cell.styles.fontSize = 10;
-        data.cell.styles.halign = data.column.index === 0 ? "left" : "right";
+        data.cell.styles.halign = data.column.index === 0 ? "left" : "right"; // 3 colonnes
       }
     },
   });
