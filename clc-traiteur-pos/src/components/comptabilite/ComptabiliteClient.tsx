@@ -219,8 +219,8 @@ export default function ComptabiliteClient() {
           <>
             {/* Desktop table header */}
             <div className="hidden md:grid grid-cols-[80px_1fr_130px_110px_110px_120px] gap-0 px-6 py-3 border-b border-[var(--border)]">
-              {["Réf.", "Client", "Événement", "Montant HT", "TVA 20%", "Total TTC"].map((h, i) => (
-                <p key={h} className={`text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide ${i >= 3 ? "text-right pr-4" : ""}`}>{h}</p>
+              {(["Réf.", "Client", "Événement", "Montant HT", "TVA 20%", "Total TTC"] as const).map((h, i) => (
+                <p key={h} className={`text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide ${i === 3 || i === 4 ? "text-right pr-4" : i === 5 ? "text-right pr-2" : ""}`}>{h}</p>
               ))}
             </div>
 
@@ -389,13 +389,13 @@ export default function ComptabiliteClient() {
 
       {/* ── Sorties (courses confirmées) ───────────────────────── */}
       {(sortiesRepas.length > 0 || sortiesLogistique.length > 0) && (
-        <div className="rounded-2xl border border-red-500/20 overflow-hidden bg-[var(--surface-1)] mb-6">
-          <div className="px-4 lg:px-6 py-4 border-b border-red-500/20 flex items-center justify-between bg-red-500/5">
+        <div className="rounded-2xl border border-[var(--border)] overflow-hidden bg-[var(--surface-1)] mb-6">
+          <div className="px-4 lg:px-6 py-4 border-b border-[var(--border)] flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <ArrowDown size={16} className="text-[var(--danger)]" />
+              <ArrowDown size={16} className="text-[var(--amber)]" />
               <h2 className="font-bold text-[var(--text-primary)] text-sm">Sorties confirmées</h2>
             </div>
-            <span className="text-xs font-mono font-bold text-[var(--danger)]">{formatCurrency(metrics.totalSorties)}</span>
+            <span className="text-xs font-mono font-bold text-[var(--amber)]">{formatCurrency(metrics.totalSorties)}</span>
           </div>
 
           {sortiesRepas.map((d) => (
@@ -410,7 +410,7 @@ export default function ComptabiliteClient() {
                   <span className="text-xs text-[var(--text-muted)]">{d.guestCount} convives</span>
                 </div>
               </div>
-              <p className="text-sm font-mono font-bold text-[var(--danger)] shrink-0">{formatCurrency(d.totalEstime)}</p>
+              <p className="text-sm font-mono font-bold text-[var(--amber)] shrink-0">{formatCurrency(d.totalEstime)}</p>
             </div>
           ))}
 
@@ -428,14 +428,14 @@ export default function ComptabiliteClient() {
                     <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Calendar size={10}/>{formatDate(d.eventDate)}</span>
                   </div>
                 </div>
-                <p className="text-sm font-mono font-bold text-[var(--danger)] shrink-0">{total > 0 ? formatCurrency(total) : "—"}</p>
+                <p className="text-sm font-mono font-bold text-[var(--amber)] shrink-0">{total > 0 ? formatCurrency(total) : "—"}</p>
               </div>
             );
           })}
           {/* Total sorties */}
-          <div className="flex items-center justify-between px-4 lg:px-6 py-3 bg-red-500/5 border-t-2 border-red-500/20">
+          <div className="flex items-center justify-between px-4 lg:px-6 py-3 bg-[var(--surface-2)] border-t-2 border-[var(--amber)]/20">
             <p className="text-sm font-bold text-[var(--text-primary)]">Total sorties confirmées</p>
-            <p className="text-sm font-mono font-bold text-[var(--danger)]">{formatCurrency(metrics.totalSorties)}</p>
+            <p className="text-sm font-mono font-bold text-[var(--amber)]">{formatCurrency(metrics.totalSorties)}</p>
           </div>
         </div>
       )}
@@ -465,7 +465,7 @@ export default function ComptabiliteClient() {
             <>
               <div className="flex items-center justify-between px-4 lg:px-6 py-3">
                 <span className="text-sm text-[var(--text-secondary)]">Sorties confirmées</span>
-                <span className="text-sm font-mono font-semibold text-[var(--danger)]">− {formatCurrency(metrics.totalSorties)}</span>
+                <span className="text-sm font-mono font-semibold text-[var(--amber)]">− {formatCurrency(metrics.totalSorties)}</span>
               </div>
             </>
           )}
