@@ -19,7 +19,6 @@ function StatutBadge({ statut, onToggle }: { statut?: CoursesStatut; onToggle: (
           ? "bg-green-500/15 text-[var(--success)] border border-green-500/20"
           : "bg-[var(--surface-3)] text-[var(--text-muted)] border border-[var(--border)] hover:border-[var(--amber)]/30"
       }`}
-      title={confirmed ? "Marquer en attente" : "Marquer confirmé"}
     >
       {confirmed ? <Check size={10} weight="bold" /> : <Clock size={10} />}
       {confirmed ? "Confirmé" : "En attente"}
@@ -53,11 +52,52 @@ function QtyEdit({ value, onSave }: { value: number; onSave: (n: number) => void
   );
 }
 
+// Input stock avec chiffre max en fond gris
+function StockInput({ value, max, onSave }: { value: number; max: number; onSave: (n: number) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(String(value));
+
+  const handleChange = (raw: string) => {
+    setVal(raw);
+    const n = parseInt(raw, 10);
+    if (!isNaN(n) && n >= 0) onSave(Math.min(n, max));
+  };
+
+  const inc = () => { const next = Math.min(value + 1, max); onSave(next); setVal(String(next)); };
+  const dec = () => { const next = Math.max(value - 1, 0); onSave(next); setVal(String(next)); };
+
+  return (
+    <div className="relative flex items-center justify-center w-20 h-7" onClick={(e) => e.stopPropagation()}>
+      {/* Chiffre max en fond gris */}
+      <span className="absolute right-1 top-0.5 text-[10px] font-mono text-[var(--text-muted)] select-none pointer-events-none">/{max}</span>
+      <div className="flex items-center gap-0.5 bg-[var(--surface-3)] border border-[var(--border)] rounded-lg overflow-hidden h-7">
+        <button onClick={dec} disabled={value <= 0}
+          className="w-5 h-7 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)] transition-all disabled:opacity-30 text-xs font-bold shrink-0">−</button>
+        {editing ? (
+          <input autoFocus type="number" min="0" max={max} value={val}
+            onChange={(e) => handleChange(e.target.value)}
+            onBlur={() => { setEditing(false); setVal(String(value)); }}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === "Escape") setEditing(false); }}
+            className="w-8 h-7 text-center text-xs font-mono font-bold bg-transparent text-[var(--text-primary)] outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+        ) : (
+          <button onClick={() => { setEditing(true); setVal(String(value)); }}
+            className="w-8 h-7 text-center text-xs font-mono font-bold text-[var(--amber)] hover:bg-[var(--surface-2)] transition-all">
+            {value}
+          </button>
+        )}
+        <button onClick={inc} disabled={value >= max}
+          className="w-5 h-7 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)] transition-all disabled:opacity-30 text-xs font-bold shrink-0">+</button>
+      </div>
+    </div>
+  );
+}
+
 export default function TabCourses() {
   const [rubrique, setRubrique] = useState<Rubrique>("repas");
   const { demandesCourses, demandesLogistique, removeDemandeCoursesRepas, removeDemandeLogistique,
-          updateShoppingItem, updateLogistiqueItem, materiel,
-          setCoursesStatut, setLogistiqueStatut } = useStore();
+          updateShoppingItem, updateLogistiqueItem, materiel, ingredients,
+          setCoursesStatut, setLogistiqueStatut,
+          setShoppingItemStock, setLogistiqueItemStock } = useStore();
   const [expanded, setExpanded] = useState<string | null>(null);
   const toggle = (id: string) => setExpanded((prev) => (prev === id ? null : id));
 
@@ -110,21 +150,32 @@ export default function TabCourses() {
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
                     className="overflow-hidden border-t border-[var(--border)]">
-                    <div className="grid grid-cols-[2fr_70px_60px_80px] gap-2 px-4 py-2 bg-[var(--surface-2)]">
-                      {["Ingrédient", "Quantité", "Unité", "Total"].map((h) => (
-                        <p key={h} className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">{h}</p>
+                    {/* Header */}
+                    <div className="grid grid-cols-[2fr_65px_80px_55px_80px] gap-2 px-4 py-2 bg-[var(--surface-2)]">
+                      {["Ingrédient", "À acheter", "Unité", "Stock", "Total"].map((h, i) => (
+                        <p key={h} className={`text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide ${i === 4 ? "text-right" : ""}`}>{h}</p>
                       ))}
                     </div>
-                    {d.items.map((item) => (
-                      <div key={item.ingredientId} className="grid grid-cols-[2fr_70px_60px_80px] items-center gap-2 px-4 py-2.5 border-t border-[var(--border)] first:border-0">
-                        <p className="text-sm text-[var(--text-primary)] truncate">{item.ingredientName}</p>
-                        <QtyEdit value={item.qty} onSave={(n) => updateShoppingItem(d.id, item.ingredientId, n)} />
-                        <p className="text-xs text-[var(--text-muted)]">{item.unit}</p>
-                        <p className="text-sm font-mono font-bold text-[var(--amber)]">{formatCurrency(item.total)}</p>
-                      </div>
-                    ))}
+                    {d.items.map((item) => {
+                      const ing = ingredients.find((i) => i.id === item.ingredientId);
+                      const stockDispo = ing?.stockQty ?? 0;
+                      const stockUsed = item.stockUtilise ?? 0;
+                      const qtyAcheter = Math.max(0, item.qty - stockUsed);
+                      return (
+                        <div key={item.ingredientId} className="grid grid-cols-[2fr_65px_80px_55px_80px] items-center gap-2 px-4 py-2.5 border-t border-[var(--border)] first:border-0">
+                          <p className="text-sm text-[var(--text-primary)] truncate">{item.ingredientName}</p>
+                          <QtyEdit value={item.qty} onSave={(n) => updateShoppingItem(d.id, item.ingredientId, n)} />
+                          <p className="text-xs text-[var(--text-muted)]">{item.unit}</p>
+                          <StockInput value={stockUsed} max={Math.min(stockDispo, item.qty)}
+                            onSave={(n) => setShoppingItemStock(d.id, item.ingredientId, n)} />
+                          <p className={`text-sm font-mono font-bold text-right ${qtyAcheter === 0 ? "text-[var(--success)]" : "text-[var(--amber)]"}`}>
+                            {qtyAcheter === 0 ? "✓" : formatCurrency(item.total)}
+                          </p>
+                        </div>
+                      );
+                    })}
                     <div className="flex items-center justify-between px-4 py-3 bg-[var(--surface-2)] border-t border-[var(--border)]">
-                      <span className="text-sm font-bold text-[var(--text-primary)]">TOTAL ESTIMÉ</span>
+                      <span className="text-sm font-bold text-[var(--text-primary)]">TOTAL À ACHETER</span>
                       <span className="text-base font-mono font-bold text-[var(--amber)]">{formatCurrency(d.totalEstime)}</span>
                     </div>
                   </motion.div>
@@ -145,10 +196,10 @@ export default function TabCourses() {
               <p className="text-xs text-[var(--text-muted)] mt-1">Appuyez sur « Commencer » dans l'onglet Commandes</p>
             </div>
           ) : demandesLogistique.map((d) => {
-            // Calculer le total logistique dynamiquement
             const total = d.totalEstime ?? d.items.reduce((sum, item) => {
               const mat = materiel.find((m) => m.name === item.name);
-              return sum + (mat?.pricePerUnit ?? 0) * item.qty;
+              const qtyAcheter = Math.max(0, item.qty - (item.stockUtilise ?? 0));
+              return sum + (mat?.pricePerUnit ?? 0) * qtyAcheter;
             }, 0);
 
             return (
@@ -180,31 +231,37 @@ export default function TabCourses() {
                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
                       className="overflow-hidden border-t border-[var(--border)]">
-                      <div className="grid grid-cols-[1fr_80px_90px] gap-2 px-4 py-2 bg-[var(--surface-2)]">
-                        {["Élément", "Quantité", "Prix est."].map((h) => (
-                          <p key={h} className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">{h}</p>
+                      {/* Header */}
+                      <div className="grid grid-cols-[1fr_65px_55px_90px] gap-2 px-4 py-2 bg-[var(--surface-2)]">
+                        {["Élément", "Quantité", "Stock", "Prix est."].map((h, i) => (
+                          <p key={h} className={`text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide ${i === 3 ? "text-right" : ""}`}>{h}</p>
                         ))}
                       </div>
                       {d.items.map((item, i) => {
                         const mat = materiel.find((m) => m.name === item.name);
                         const prix = mat?.pricePerUnit ?? 0;
-                        const itemTotal = prix * item.qty;
+                        const stockDispo = mat?.stockQty ?? 0;
+                        const stockUsed = item.stockUtilise ?? 0;
+                        const qtyAcheter = Math.max(0, item.qty - stockUsed);
+                        const itemTotal = prix * qtyAcheter;
                         return (
-                          <div key={i} className="grid grid-cols-[1fr_80px_90px] items-center gap-2 px-4 py-2.5 border-t border-[var(--border)] first:border-0">
+                          <div key={i} className="grid grid-cols-[1fr_65px_55px_90px] items-center gap-2 px-4 py-2.5 border-t border-[var(--border)] first:border-0">
                             <div>
                               <p className="text-sm text-[var(--text-primary)]">{item.name}</p>
                               {item.note && <p className="text-xs text-[var(--text-muted)] italic">{item.note}</p>}
                             </div>
                             <QtyEdit value={item.qty} onSave={(n) => updateLogistiqueItem(d.id, i, n)} />
-                            <p className="text-sm font-mono font-bold text-[var(--amber)]">
-                              {itemTotal > 0 ? formatCurrency(itemTotal) : <span className="text-xs text-[var(--text-muted)]">—</span>}
+                            <StockInput value={stockUsed} max={Math.min(stockDispo, item.qty)}
+                              onSave={(n) => setLogistiqueItemStock(d.id, i, n)} />
+                            <p className={`text-sm font-mono font-bold text-right ${qtyAcheter === 0 ? "text-[var(--success)]" : "text-[var(--amber)]"}`}>
+                              {qtyAcheter === 0 ? "✓" : (itemTotal > 0 ? formatCurrency(itemTotal) : "—")}
                             </p>
                           </div>
                         );
                       })}
                       {total > 0 && (
                         <div className="flex items-center justify-between px-4 py-3 bg-[var(--surface-2)] border-t border-[var(--border)]">
-                          <span className="text-sm font-bold text-[var(--text-primary)]">TOTAL ESTIMÉ</span>
+                          <span className="text-sm font-bold text-[var(--text-primary)]">TOTAL À ACHETER</span>
                           <span className="text-base font-mono font-bold text-[var(--amber)]">{formatCurrency(total)}</span>
                         </div>
                       )}

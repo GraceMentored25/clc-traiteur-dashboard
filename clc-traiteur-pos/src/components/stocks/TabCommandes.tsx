@@ -38,13 +38,15 @@ export default function TabCommandes() {
     const shoppingItems: ShoppingItem[] = Object.values(totaux).map(({ ingredientId, qty }) => {
       const ing = ingredients.find((i) => i.id === ingredientId) ??
         DEFAULT_INGREDIENTS.find((i) => i.id === ingredientId);
+      const qtyArrondie = Math.ceil(qty * 10) / 10;
       return {
         ingredientId,
         ingredientName: ing?.name ?? ingredientId,
         unit: ing?.unit ?? "kg",
-        qty: Math.ceil(qty * 10) / 10,
+        qty: qtyArrondie,
+        stockUtilise: 0,
         pricePerUnit: ing?.pricePerUnit ?? 0,
-        total: Math.round((qty * (ing?.pricePerUnit ?? 0)) * 100) / 100,
+        total: Math.round((qtyArrondie * (ing?.pricePerUnit ?? 0)) * 100) / 100,
       };
     });
 

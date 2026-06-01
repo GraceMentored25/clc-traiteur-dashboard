@@ -86,13 +86,15 @@ export interface ShoppingItem {
   ingredientName: string;
   unit: string;
   qty: number;
+  stockUtilise: number; // quantité prélevée depuis le stock
   pricePerUnit: number;
-  total: number;
+  total: number; // calculé sur qty - stockUtilise
 }
 
 export interface LogistiqueItem {
   name: string;
   qty: number;
+  stockUtilise?: number; // quantité prélevée depuis le stock matériel
   unit: string;
   note?: string;
 }

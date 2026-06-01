@@ -57,11 +57,13 @@ export interface AppState {
   removeDemandeCoursesRepas: (id: string) => void;
   updateShoppingItem: (demandeId: string, ingredientId: string, qty: number) => void;
   setCoursesStatut: (id: string, statut: import("@/lib/types").CoursesStatut) => void;
+  setShoppingItemStock: (demandeId: string, ingredientId: string, stockUtilise: number) => void;
 
   demandesLogistique: DemandeLogistique[];
   addDemandeLogistique: (d: DemandeLogistique) => void;
   removeDemandeLogistique: (id: string) => void;
   updateLogistiqueItem: (demandeId: string, index: number, qty: number) => void;
+  setLogistiqueItemStock: (demandeId: string, index: number, stockUtilise: number) => void;
   setLogistiqueStatut: (id: string, statut: import("@/lib/types").CoursesStatut) => void;
 
   cart: CartItem[];
@@ -178,7 +180,36 @@ export const useStore = create<AppState>()(
       addDemandeCoursesRepas: (d) => set((s) => ({ demandesCourses: [d, ...s.demandesCourses] })),
       removeDemandeCoursesRepas: (id) => set((s) => ({ demandesCourses: s.demandesCourses.filter((d) => d.id !== id) })),
       setCoursesStatut: (id, statut) =>
-        set((s) => ({ demandesCourses: s.demandesCourses.map((d) => d.id === id ? { ...d, statut } : d) })),
+        set((s) => {
+          const updated = s.demandesCourses.map((d) => d.id === id ? { ...d, statut } : d);
+          // Quand on confirme, déduire le stock utilisé des ingrédients
+          if (statut === "confirmé") {
+            const demande = s.demandesCourses.find((d) => d.id === id);
+            if (demande) {
+              const newIngredients = s.ingredients.map((ing) => {
+                const item = demande.items.find((i) => i.ingredientId === ing.id);
+                if (!item || !item.stockUtilise) return ing;
+                return { ...ing, stockQty: Math.max(0, ing.stockQty - item.stockUtilise) };
+              });
+              return { demandesCourses: updated, ingredients: newIngredients };
+            }
+          }
+          return { demandesCourses: updated };
+        }),
+      setShoppingItemStock: (demandeId, ingredientId, stockUtilise) =>
+        set((s) => ({
+          demandesCourses: s.demandesCourses.map((d) => {
+            if (d.id !== demandeId) return d;
+            const items = d.items.map((i) => {
+              if (i.ingredientId !== ingredientId) return i;
+              const stock = Math.min(stockUtilise, i.qty); // ne peut pas utiliser plus que la quantité totale
+              const qtyAcheter = Math.max(0, i.qty - stock);
+              return { ...i, stockUtilise: stock, total: Math.round(qtyAcheter * i.pricePerUnit * 100) / 100 };
+            });
+            const totalEstime = items.reduce((s, i) => s + i.total, 0);
+            return { ...d, items, totalEstime };
+          }),
+        })),
       updateShoppingItem: (demandeId, ingredientId, qty) =>
         set((s) => ({
           demandesCourses: s.demandesCourses.map((d) =>
@@ -209,8 +240,40 @@ export const useStore = create<AppState>()(
             return { ...d, items, totalEstime };
           }),
         })),
+      setLogistiqueItemStock: (demandeId, index, stockUtilise) =>
+        set((s) => ({
+          demandesLogistique: s.demandesLogistique.map((d) => {
+            if (d.id !== demandeId) return d;
+            const items = d.items.map((item, i) => {
+              if (i !== index) return item;
+              const stock = Math.min(stockUtilise, item.qty);
+              return { ...item, stockUtilise: stock };
+            });
+            const mat = s.materiel;
+            const totalEstime = items.reduce((sum, item) => {
+              const m = mat.find((m) => m.name === item.name);
+              const qtyAcheter = Math.max(0, item.qty - (item.stockUtilise ?? 0));
+              return sum + (m?.pricePerUnit ?? 0) * qtyAcheter;
+            }, 0);
+            return { ...d, items, totalEstime };
+          }),
+        })),
       setLogistiqueStatut: (id, statut) =>
-        set((s) => ({ demandesLogistique: s.demandesLogistique.map((d) => d.id === id ? { ...d, statut } : d) })),
+        set((s) => {
+          const updated = s.demandesLogistique.map((d) => d.id === id ? { ...d, statut } : d);
+          if (statut === "confirmé") {
+            const demande = s.demandesLogistique.find((d) => d.id === id);
+            if (demande) {
+              const newMateriel = s.materiel.map((mat) => {
+                const item = demande.items.find((i) => i.name === mat.name);
+                if (!item || !item.stockUtilise) return mat;
+                return { ...mat, stockQty: Math.max(0, mat.stockQty - item.stockUtilise) };
+              });
+              return { demandesLogistique: updated, materiel: newMateriel };
+            }
+          }
+          return { demandesLogistique: updated };
+        }),
 
       cart: [],
       addToCart: (item) => {
