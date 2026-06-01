@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Plus, Trash, CurrencyEur, Check, X } from "@phosphor-icons/react";
+import { Plus, Trash, CurrencyEur, Check, X, CaretDown, CaretUp } from "@phosphor-icons/react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useStore } from "@/lib/store";
 import { RECIPES } from "@/lib/data/stocks";
 import { RecipeIngredient } from "@/lib/types";
@@ -46,6 +47,7 @@ export default function TabRessources() {
   const [editVal, setEditVal] = useState("");
   const [unitEditId, setUnitEditId] = useState<string | null>(null);
   const [unitVal, setUnitVal] = useState("");
+  const [expandedRecipe, setExpandedRecipe] = useState<number | null>(null);
 
   const effectiveMult = useMemo(() => {
     const c = parseFloat(customMult);
@@ -127,59 +129,83 @@ export default function TabRessources() {
             <span className="text-xs text-[var(--text-muted)]">convive{effectiveMult > 1 ? "s" : ""}</span>
           </div>
 
-          <div className="space-y-4">
-            {allRecipes.map((recipe) => (
-              <div key={recipe.dishId} className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] overflow-hidden">
-                <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between">
-                  <h3 className="font-semibold text-sm text-[var(--text-primary)]">{recipe.dishName}</h3>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-[var(--text-muted)]">{effectiveMult} convive{effectiveMult > 1 ? "s" : ""}</span>
-                    <button onClick={() => addIngToRecipe(recipe.dishId)}
-                      className="w-6 h-6 rounded-lg bg-[var(--amber)]/10 text-[var(--amber)] hover:bg-[var(--amber)]/20 flex items-center justify-center transition-all">
-                      <Plus size={11} weight="bold" />
-                    </button>
-                  </div>
+          <div className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] overflow-hidden">
+            {allRecipes.map((recipe, idx) => {
+              const isExpanded = expandedRecipe === recipe.dishId;
+              return (
+                <div key={recipe.dishId} className={idx > 0 ? "border-t border-[var(--border)]" : ""}>
+                  {/* Bandeau cliquable */}
+                  <button
+                    onClick={() => setExpandedRecipe(isExpanded ? null : recipe.dishId)}
+                    className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-[var(--surface-2)] transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{recipe.dishName}</p>
+                      <span className="text-xs text-[var(--text-muted)] shrink-0">{recipe.ingredients.length} ingrédient{recipe.ingredients.length > 1 ? "s" : ""}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button onClick={(e) => { e.stopPropagation(); addIngToRecipe(recipe.dishId); setExpandedRecipe(recipe.dishId); }}
+                        className="w-6 h-6 rounded-lg bg-[var(--amber)]/10 text-[var(--amber)] hover:bg-[var(--amber)]/20 flex items-center justify-center transition-all"
+                        title="Ajouter un ingrédient">
+                        <Plus size={11} weight="bold" />
+                      </button>
+                      {isExpanded ? <CaretUp size={14} className="text-[var(--text-muted)]" /> : <CaretDown size={14} className="text-[var(--text-muted)]" />}
+                    </div>
+                  </button>
+
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden border-t border-[var(--border)]"
+                      >
+                        <div className="divide-y divide-[var(--border)]">
+                          {recipe.ingredients.map((ri) => {
+                            const ing = ingredients.find((i) => i.id === ri.ingredientId);
+                            const displayQty = ri.qtyPerPerson * effectiveMult;
+                            const qtyStr = displayQty < 1
+                              ? `${(displayQty * 1000).toFixed(0)} g`
+                              : `${displayQty.toFixed(2)} ${ing?.unit ?? "kg"}`;
+                            const editKey = `${recipe.dishId}-${ri.ingredientId}`;
+                            return (
+                              <div key={ri.ingredientId} className="flex items-center gap-3 px-4 py-2.5 bg-[var(--surface-2)]">
+                                <select value={ri.ingredientId}
+                                  onChange={(e) => changeIngInRecipe(recipe.dishId, ri.ingredientId, e.target.value)}
+                                  className="flex-1 min-w-0 text-sm text-[var(--text-primary)] bg-transparent outline-none truncate">
+                                  {ingredients.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+                                </select>
+                                {editingId === editKey ? (
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <input autoFocus type="number" min="0" step="0.001" value={editVal}
+                                      onChange={(e) => setEditVal(e.target.value)}
+                                      onKeyDown={(e) => { if (e.key === "Enter") { updateQty(recipe.dishId, ri.ingredientId, editVal); setEditingId(null); } if (e.key === "Escape") setEditingId(null); }}
+                                      onBlur={() => { updateQty(recipe.dishId, ri.ingredientId, editVal); setEditingId(null); }}
+                                      className="w-20 h-6 px-2 text-xs text-right bg-[var(--surface-3)] border border-[var(--amber)]/50 rounded-lg text-[var(--text-primary)] outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                                    <span className="text-xs text-[var(--text-muted)] shrink-0">{ing?.unit}</span>
+                                  </div>
+                                ) : (
+                                  <button onClick={() => { setEditingId(editKey); setEditVal(displayQty.toFixed(3)); }}
+                                    className="text-sm font-mono text-[var(--text-secondary)] hover:text-[var(--amber)] shrink-0 transition-colors">
+                                    {qtyStr}
+                                  </button>
+                                )}
+                                <button onClick={() => removeIngFromRecipe(recipe.dishId, ri.ingredientId)}
+                                  className="w-6 h-6 flex items-center justify-center rounded-lg text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition-all shrink-0">
+                                  <Trash size={11} />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
-                <div className="divide-y divide-[var(--border)]">
-                  {recipe.ingredients.map((ri) => {
-                    const ing = ingredients.find((i) => i.id === ri.ingredientId);
-                    const displayQty = ri.qtyPerPerson * effectiveMult;
-                    const qtyStr = displayQty < 1
-                      ? `${(displayQty * 1000).toFixed(0)} g`
-                      : `${displayQty.toFixed(2)} ${ing?.unit ?? "kg"}`;
-                    const editKey = `${recipe.dishId}-${ri.ingredientId}`;
-                    return (
-                      <div key={ri.ingredientId} className="flex items-center gap-3 px-4 py-2.5">
-                        <select value={ri.ingredientId}
-                          onChange={(e) => changeIngInRecipe(recipe.dishId, ri.ingredientId, e.target.value)}
-                          className="flex-1 min-w-0 text-sm text-[var(--text-primary)] bg-transparent outline-none truncate">
-                          {ingredients.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-                        </select>
-                        {editingId === editKey ? (
-                          <div className="flex items-center gap-1 shrink-0">
-                            <input autoFocus type="number" min="0" step="0.001" value={editVal}
-                              onChange={(e) => setEditVal(e.target.value)}
-                              onKeyDown={(e) => { if (e.key === "Enter") { updateQty(recipe.dishId, ri.ingredientId, editVal); setEditingId(null); } if (e.key === "Escape") setEditingId(null); }}
-                              onBlur={() => { updateQty(recipe.dishId, ri.ingredientId, editVal); setEditingId(null); }}
-                              className="w-20 h-6 px-2 text-xs text-right bg-[var(--surface-3)] border border-[var(--amber)]/50 rounded-lg text-[var(--text-primary)] outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-                            <span className="text-xs text-[var(--text-muted)] shrink-0">{ing?.unit}</span>
-                          </div>
-                        ) : (
-                          <button onClick={() => { setEditingId(editKey); setEditVal(displayQty.toFixed(3)); }}
-                            className="text-sm font-mono text-[var(--text-secondary)] hover:text-[var(--amber)] shrink-0 transition-colors">
-                            {qtyStr}
-                          </button>
-                        )}
-                        <button onClick={() => removeIngFromRecipe(recipe.dishId, ri.ingredientId)}
-                          className="w-6 h-6 flex items-center justify-center rounded-lg text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition-all shrink-0">
-                          <Trash size={11} />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </>
       )}

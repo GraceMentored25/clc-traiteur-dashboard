@@ -14,6 +14,7 @@ import {
   Plus,
   Trash,
   PiggyBank,
+  PencilSimple,
 } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
 import { Devis, EntreeCapital } from "@/lib/types";
@@ -37,6 +38,7 @@ export default function ComptabiliteClient() {
   const [period, setPeriod] = useState<Period>("all");
   const [docModal, setDocModal] = useState<"summary" | "invoices" | "tva" | null>(null);
   const [capitalModal, setCapitalModal] = useState(false);
+  const [editingCapitalId, setEditingCapitalId] = useState<string | null>(null);
   const [capitalForm, setCapitalForm] = useState({ libelle: "", montant: "", date: new Date().toISOString().split("T")[0], source: "vente" as EntreeCapital["source"] });
 
   const confirmed = useMemo(() => {
@@ -74,8 +76,19 @@ export default function ComptabiliteClient() {
   // Sorties confirmées (courses repas + logistique)
   const sortiesRepas = useMemo(() =>
     demandesCourses.filter((d) => d.statut === "confirmé"), [demandesCourses]);
+  const { materiel } = useStore();
   const sortiesLogistique = useMemo(() =>
-    demandesLogistique.filter((d) => d.statut === "confirmé"), [demandesLogistique]);
+    demandesLogistique.filter((d) => d.statut === "confirmé").map((d) => ({
+      ...d,
+      // Recalculer totalEstime si absent (anciennes demandes)
+      totalEstime: d.totalEstime && d.totalEstime > 0
+        ? d.totalEstime
+        : d.items.reduce((sum, item) => {
+            const mat = materiel.find((m) => m.name === item.name);
+            return sum + (mat?.pricePerUnit ?? 0) * item.qty;
+          }, 0),
+    })),
+  [demandesLogistique, materiel]);
 
   const metrics = useMemo(() => {
     const totalHT = confirmed.reduce((s, d) => s + d.totalHT, 0);
@@ -94,13 +107,14 @@ export default function ComptabiliteClient() {
   const handleAddCapital = () => {
     const montant = parseFloat(capitalForm.montant.replace(",", "."));
     if (!capitalForm.libelle.trim() || isNaN(montant) || montant <= 0) return;
-    addEntreeCapital({
-      id: `CAP-${Date.now()}`,
-      libelle: capitalForm.libelle.trim(),
-      montant,
-      date: capitalForm.date,
-      source: capitalForm.source,
-    });
+    if (editingCapitalId) {
+      // Modification
+      removeEntreeCapital(editingCapitalId);
+      addEntreeCapital({ id: editingCapitalId, libelle: capitalForm.libelle.trim(), montant, date: capitalForm.date, source: capitalForm.source });
+      setEditingCapitalId(null);
+    } else {
+      addEntreeCapital({ id: `CAP-${Date.now()}`, libelle: capitalForm.libelle.trim(), montant, date: capitalForm.date, source: capitalForm.source });
+    }
     setCapitalForm({ libelle: "", montant: "", date: new Date().toISOString().split("T")[0], source: "vente" });
     setCapitalModal(false);
   };
@@ -281,22 +295,28 @@ export default function ComptabiliteClient() {
             </span>
           </div>
           {/* Desktop header */}
-          <div className="hidden md:grid grid-cols-[1fr_100px_120px_90px_40px] gap-0 px-6 py-3 border-b border-[var(--border)]">
-            {["Libellé", "Source", "Date", "Montant", ""].map((h) => (
-              <p key={h} className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">{h}</p>
+          <div className="hidden md:grid grid-cols-[1fr_100px_120px_120px_70px] gap-0 px-6 py-3 border-b border-[var(--border)]">
+            {["Libellé", "Source", "Date", "Montant", ""].map((h, i) => (
+              <p key={h} className={`text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide ${i === 3 ? "text-right pr-2" : ""}`}>{h}</p>
             ))}
           </div>
           {confirmedCapital.map((e) => (
             <div key={e.id}>
               {/* Desktop */}
-              <div className="hidden md:grid grid-cols-[1fr_100px_120px_90px_40px] items-center gap-0 px-6 py-3 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors">
+              <div className="hidden md:grid grid-cols-[1fr_100px_120px_120px_70px] items-center gap-0 px-6 py-3 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors">
                 <p className="text-sm font-medium text-[var(--text-primary)] truncate">{e.libelle}</p>
                 <p className="text-xs text-[var(--text-secondary)] capitalize">{SOURCES.find(s => s.value === e.source)?.label}</p>
                 <div className="flex items-center gap-1 text-xs text-[var(--text-muted)]"><Calendar size={11}/>{formatDate(e.date)}</div>
-                <p className="text-sm font-mono font-bold text-[var(--amber)]">{formatCurrency(e.montant)}</p>
-                <button onClick={() => removeEntreeCapital(e.id)} className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition-all">
-                  <Trash size={13} />
-                </button>
+                <p className="text-sm font-mono font-bold text-[var(--amber)] text-right pr-2">{formatCurrency(e.montant)}</p>
+                <div className="flex items-center gap-1 justify-end">
+                  <button onClick={() => { setCapitalForm({ libelle: e.libelle, montant: String(e.montant), date: e.date, source: e.source }); setEditingCapitalId(e.id); setCapitalModal(true); }}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 transition-all">
+                    <PencilSimple size={13} />
+                  </button>
+                  <button onClick={() => removeEntreeCapital(e.id)} className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition-all">
+                    <Trash size={13} />
+                  </button>
+                </div>
               </div>
               {/* Mobile */}
               <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-[var(--border)] last:border-0">
@@ -308,6 +328,10 @@ export default function ComptabiliteClient() {
                   </div>
                 </div>
                 <p className="text-sm font-mono font-bold text-[var(--amber)] shrink-0">{formatCurrency(e.montant)}</p>
+                <button onClick={() => { setCapitalForm({ libelle: e.libelle, montant: String(e.montant), date: e.date, source: e.source }); setEditingCapitalId(e.id); setCapitalModal(true); }}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 transition-all shrink-0">
+                  <PencilSimple size={13} />
+                </button>
                 <button onClick={() => removeEntreeCapital(e.id)} className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition-all shrink-0">
                   <Trash size={13} />
                 </button>
@@ -335,9 +359,9 @@ export default function ComptabiliteClient() {
                 <div className="flex items-center justify-between mb-5">
                   <div className="flex items-center gap-2">
                     <PiggyBank size={18} className="text-[var(--amber)]" />
-                    <h3 className="font-bold text-[var(--text-primary)]">Nouvelle entrée de capital</h3>
+                    <h3 className="font-bold text-[var(--text-primary)]">{editingCapitalId ? "Modifier l'entrée" : "Nouvelle entrée de capital"}</h3>
                   </div>
-                  <button onClick={() => setCapitalModal(false)} className="w-8 h-8 rounded-xl bg-[var(--surface-2)] flex items-center justify-center text-[var(--text-muted)]">
+                  <button onClick={() => { setCapitalModal(false); setEditingCapitalId(null); }} className="w-8 h-8 rounded-xl bg-[var(--surface-2)] flex items-center justify-center text-[var(--text-muted)]">
                     <X size={15} />
                   </button>
                 </div>
