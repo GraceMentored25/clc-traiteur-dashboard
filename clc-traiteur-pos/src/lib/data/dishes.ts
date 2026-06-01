@@ -105,7 +105,7 @@ export const DISHES: Dish[] = [
   {
     id: 11,
     name: "Koki",
-    category: "Entrées",
+    category: "Plats principaux",
     price: 8,
     image: "/dishes/koki.jpg",
     description: "Gâteau de haricots blancs vapeur aux feuilles de bananier",
@@ -123,7 +123,7 @@ export const DISHES: Dish[] = [
   {
     id: 13,
     name: "Sanga",
-    category: "Entrées",
+    category: "Plats principaux",
     price: 9,
     image: "/dishes/sanga.jpg",
     description: "Maïs et haricots cuits ensemble, saison de sel et poivre",
