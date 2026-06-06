@@ -230,14 +230,14 @@ const DishCard = memo(function DishCard({ dish }: Props) {
           </div>
 
           {/* Total line */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-1 min-w-0">
             {displayQty > 0 ? (
               <>
-                <div className="flex items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
-                  <ShoppingCartSimple size={12} className="text-[var(--amber)]" />
-                  <span>{displayQty} × {formatCurrency(effectivePrice)}</span>
+                <div className="flex items-center gap-1 text-[11px] text-[var(--text-muted)] min-w-0 truncate">
+                  <ShoppingCartSimple size={11} className="text-[var(--amber)] shrink-0" />
+                  <span className="truncate">{displayQty} × {formatCurrency(effectivePrice)}</span>
                 </div>
-                <span className="text-sm font-bold font-mono text-[var(--amber)]">
+                <span className="text-sm font-bold font-mono text-[var(--amber)] shrink-0">
                   {formatCurrency(total)}
                 </span>
               </>
