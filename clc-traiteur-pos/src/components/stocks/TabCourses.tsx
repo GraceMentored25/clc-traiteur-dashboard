@@ -67,10 +67,8 @@ function StockInput({ value, max, onSave }: { value: number; max: number; onSave
   const dec = () => { const next = Math.max(value - 1, 0); onSave(next); setVal(String(next)); };
 
   return (
-    <div className="relative flex items-center justify-center w-20 h-7" onClick={(e) => e.stopPropagation()}>
-      {/* Chiffre max en fond gris */}
-      <span className="absolute right-1 top-0.5 text-[10px] font-mono text-[var(--text-muted)] select-none pointer-events-none">/{max}</span>
-      <div className="flex items-center gap-0.5 bg-[var(--surface-3)] border border-[var(--border)] rounded-lg overflow-hidden h-7">
+    <div className="flex items-center justify-start" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center bg-[var(--surface-3)] border border-[var(--border)] rounded-lg overflow-hidden h-7">
         <button onClick={dec} disabled={value <= 0}
           className="w-5 h-7 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)] transition-all disabled:opacity-30 text-xs font-bold shrink-0">−</button>
         {editing ? (
@@ -78,15 +76,17 @@ function StockInput({ value, max, onSave }: { value: number; max: number; onSave
             onChange={(e) => handleChange(e.target.value)}
             onBlur={() => { setEditing(false); setVal(String(value)); }}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === "Escape") setEditing(false); }}
-            className="w-8 h-7 text-center text-xs font-mono font-bold bg-transparent text-[var(--text-primary)] outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+            className="w-6 h-7 text-center text-xs font-mono font-bold bg-transparent text-[var(--text-primary)] outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
         ) : (
           <button onClick={() => { setEditing(true); setVal(String(value)); }}
-            className="w-8 h-7 text-center text-xs font-mono font-bold text-[var(--amber)] hover:bg-[var(--surface-2)] transition-all">
+            className="w-6 h-7 text-center text-xs font-mono font-bold text-[var(--amber)] hover:bg-[var(--surface-2)] transition-all">
             {value}
           </button>
         )}
+        {/* /max à l'intérieur du box */}
+        <span className="text-[10px] font-mono text-[var(--text-muted)] pr-1 select-none">/{max}</span>
         <button onClick={inc} disabled={value >= max}
-          className="w-5 h-7 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)] transition-all disabled:opacity-30 text-xs font-bold shrink-0">+</button>
+          className="w-5 h-7 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)] transition-all disabled:opacity-30 text-xs font-bold shrink-0 border-l border-[var(--border)]">+</button>
       </div>
     </div>
   );
