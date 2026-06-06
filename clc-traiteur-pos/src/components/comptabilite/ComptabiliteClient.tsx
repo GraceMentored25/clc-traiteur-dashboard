@@ -219,7 +219,10 @@ export default function ComptabiliteClient() {
       {/* Récapitulatif financier par devis */}
       <div className="rounded-2xl border border-[var(--border)] overflow-hidden bg-[var(--surface-1)] mb-6">
         <div className="px-4 lg:px-6 py-4 border-b border-[var(--border)] flex items-center justify-between">
-          <h2 className="font-bold text-[var(--text-primary)] text-sm">Détail des encaissements</h2>
+          <div className="flex items-center gap-2">
+            <Receipt size={16} className="text-[var(--amber)]" />
+            <h2 className="font-bold text-[var(--text-primary)] text-sm">Détail des encaissements</h2>
+          </div>
           <span className="text-xs text-[var(--text-muted)]">{confirmed.length} facture{confirmed.length > 1 ? "s" : ""}</span>
         </div>
 
@@ -290,12 +293,8 @@ export default function ComptabiliteClient() {
               <PiggyBank size={16} className="text-[var(--amber)]" />
               <h2 className="font-bold text-[var(--text-primary)] text-sm">Entrées de capital</h2>
             </div>
-            <div className="hidden md:grid grid-cols-[1fr_100px_120px_120px] gap-0 w-full">
-              <p className="text-xs text-[var(--text-muted)] col-span-3">Total entrées de capital</p>
-              <p className="text-sm font-mono font-bold text-[var(--amber)] text-right">{formatCurrency(metrics.totalCapital)}</p>
-            </div>
-            <span className="md:hidden text-xs text-[var(--text-muted)]">
-              Total : <span className="font-mono font-bold text-[var(--amber)]">{formatCurrency(metrics.totalCapital)}</span>
+            <span className="text-xs text-[var(--text-muted)]">
+              {confirmedCapital.length} entrée{confirmedCapital.length > 1 ? "s" : ""}
             </span>
           </div>
           {/* Desktop header — Libellé | Source | Date | [actions] Montant */}
@@ -344,6 +343,15 @@ export default function ComptabiliteClient() {
               </div>
             </div>
           ))}
+          {/* Total en pied aligné sur la colonne Montant */}
+          <div className="hidden md:grid grid-cols-[1fr_100px_120px_120px] gap-0 px-6 py-3 bg-[var(--surface-2)] border-t-2 border-[var(--amber)]/20">
+            <p className="text-sm font-bold text-[var(--text-primary)] col-span-3">Total entrées de capital</p>
+            <p className="text-sm font-mono font-bold text-[var(--amber)] text-right">{formatCurrency(metrics.totalCapital)}</p>
+          </div>
+          <div className="md:hidden flex items-center justify-between px-4 py-3 bg-[var(--surface-2)] border-t-2 border-[var(--amber)]/20">
+            <p className="text-sm font-bold text-[var(--text-primary)]">Total entrées de capital</p>
+            <p className="text-sm font-mono font-bold text-[var(--amber)]">{formatCurrency(metrics.totalCapital)}</p>
+          </div>
         </div>
       )}
 
