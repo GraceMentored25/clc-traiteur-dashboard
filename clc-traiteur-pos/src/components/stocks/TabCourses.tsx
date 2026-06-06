@@ -86,7 +86,7 @@ function StockInput({ value, max, onSave }: { value: number; max: number; onSave
         {/* /max à l'intérieur du box */}
         <span className="text-[10px] font-mono text-[var(--text-muted)] pr-1 select-none">/{max}</span>
         <button onClick={inc} disabled={value >= max}
-          className="w-5 h-7 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)] transition-all disabled:opacity-30 text-xs font-bold shrink-0 border-l border-[var(--border)]">+</button>
+          className="w-6 h-7 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)] transition-all disabled:opacity-30 text-sm font-bold shrink-0">+</button>
       </div>
     </div>
   );
