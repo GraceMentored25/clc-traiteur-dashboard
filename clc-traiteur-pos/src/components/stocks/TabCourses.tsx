@@ -52,42 +52,48 @@ function QtyEdit({ value, onSave }: { value: number; onSave: (n: number) => void
   );
 }
 
-// Input stock avec chiffre max en fond gris
+// Input stock : − [valeur/max] +
 function StockInput({ value, max, onSave }: { value: number; max: number; onSave: (n: number) => void }) {
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(String(value));
 
-  const handleChange = (raw: string) => {
-    setVal(raw);
-    const n = parseInt(raw, 10);
+  const inc = () => { const n = Math.min(value + 1, max); onSave(n); setVal(String(n)); };
+  const dec = () => { const n = Math.max(value - 1, 0); onSave(n); setVal(String(n)); };
+  const commit = () => {
+    const n = parseInt(val, 10);
     if (!isNaN(n) && n >= 0) onSave(Math.min(n, max));
+    else setVal(String(value));
+    setEditing(false);
   };
 
-  const inc = () => { const next = Math.min(value + 1, max); onSave(next); setVal(String(next)); };
-  const dec = () => { const next = Math.max(value - 1, 0); onSave(next); setVal(String(next)); };
-
   return (
-    <div className="flex items-center justify-start" onClick={(e) => e.stopPropagation()}>
-      <div className="flex items-center bg-[var(--surface-3)] border border-[var(--border)] rounded-lg overflow-hidden h-7">
-        <button onClick={dec} disabled={value <= 0}
-          className="w-5 h-7 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)] transition-all disabled:opacity-30 text-xs font-bold shrink-0">−</button>
+    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+      {/* Bouton − */}
+      <button onClick={dec} disabled={value <= 0}
+        className="w-5 h-6 rounded flex items-center justify-center bg-[var(--surface-3)] text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-30 text-sm font-bold shrink-0 transition-all">
+        −
+      </button>
+
+      {/* Box valeur/max */}
+      <div className="flex items-center bg-[var(--surface-3)] border border-[var(--border)] rounded-lg px-1.5 h-6 min-w-[42px]">
         {editing ? (
           <input autoFocus type="number" min="0" max={max} value={val}
-            onChange={(e) => handleChange(e.target.value)}
-            onBlur={() => { setEditing(false); setVal(String(value)); }}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === "Escape") setEditing(false); }}
-            className="w-6 h-7 text-center text-xs font-mono font-bold bg-transparent text-[var(--text-primary)] outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+            onChange={(e) => setVal(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") { setVal(String(value)); setEditing(false); } }}
+            className="w-6 text-center text-xs font-mono font-bold bg-transparent text-[var(--text-primary)] outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
         ) : (
           <button onClick={() => { setEditing(true); setVal(String(value)); }}
-            className="w-6 h-7 text-center text-xs font-mono font-bold text-[var(--amber)] hover:bg-[var(--surface-2)] transition-all">
-            {value}
-          </button>
+            className="text-xs font-mono font-bold text-[var(--amber)]">{value}</button>
         )}
-        {/* /max à l'intérieur du box */}
-        <span className="text-[10px] font-mono text-[var(--text-muted)] pr-1 select-none">/{max}</span>
-        <button onClick={inc} disabled={value >= max}
-          className="w-6 h-7 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)] transition-all disabled:opacity-30 text-sm font-bold shrink-0">+</button>
+        <span className="text-[10px] font-mono text-[var(--text-muted)] select-none">/{max}</span>
       </div>
+
+      {/* Bouton + */}
+      <button onClick={inc} disabled={value >= max}
+        className="w-5 h-6 rounded flex items-center justify-center bg-[var(--amber)] text-[var(--surface)] hover:bg-[var(--amber-light)] disabled:opacity-30 text-sm font-bold shrink-0 transition-all">
+        +
+      </button>
     </div>
   );
 }
