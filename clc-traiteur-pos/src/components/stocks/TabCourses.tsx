@@ -67,30 +67,30 @@ function StockInput({ value, max, onSave }: { value: number; max: number; onSave
   };
 
   return (
-    <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+    <div className="flex items-stretch h-6 rounded-lg overflow-hidden border border-[var(--border)] bg-[var(--surface-3)] w-fit" onClick={(e) => e.stopPropagation()}>
       {/* − */}
       <button onClick={dec} disabled={value <= 0}
-        className="w-6 h-7 rounded-lg flex items-center justify-center bg-[var(--surface-3)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-30 font-bold text-sm shrink-0 transition-all active:scale-95">
+        className="px-1.5 flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] disabled:opacity-30 font-bold text-sm transition-all border-r border-[var(--border)]">
         −
       </button>
 
-      {/* valeur/max */}
+      {/* valeur/max cliquable */}
       {editing ? (
         <input autoFocus type="number" min="0" max={max} value={val}
           onChange={(e) => setVal(e.target.value)}
           onBlur={commit}
           onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") { setVal(String(value)); setEditing(false); } }}
-          className="w-10 h-7 text-center text-xs font-mono font-bold bg-[var(--surface-3)] border border-[var(--amber)]/60 rounded-lg text-[var(--text-primary)] outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+          className="w-12 text-center text-xs font-mono font-bold bg-transparent text-[var(--text-primary)] outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
       ) : (
         <button onClick={() => { setEditing(true); setVal(String(value)); }}
-          className="h-7 px-1.5 rounded-lg bg-[var(--surface-3)] border border-[var(--border)] text-xs font-mono font-bold text-[var(--amber)] hover:border-[var(--amber)]/40 transition-all min-w-[36px] text-center">
+          className="px-1 text-xs font-mono font-bold text-[var(--amber)] hover:bg-[var(--surface-2)] transition-all min-w-[40px] text-center">
           {value}<span className="text-[var(--text-muted)] font-normal">/{max}</span>
         </button>
       )}
 
       {/* + */}
       <button onClick={inc} disabled={value >= max}
-        className="w-6 h-7 rounded-lg flex items-center justify-center bg-[var(--amber)] text-[var(--surface)] hover:bg-[var(--amber-light)] disabled:opacity-30 font-bold text-sm shrink-0 transition-all active:scale-95">
+        className="px-1.5 flex items-center justify-center bg-[var(--amber)] text-[var(--surface)] hover:bg-[var(--amber-light)] disabled:opacity-30 font-bold text-sm transition-all border-l border-[var(--border)]">
         +
       </button>
     </div>
@@ -156,7 +156,7 @@ export default function TabCourses() {
                     exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
                     className="overflow-hidden border-t border-[var(--border)]">
                     {/* Header */}
-                    <div className="grid grid-cols-[2fr_65px_60px_90px_80px] gap-2 px-4 py-2 bg-[var(--surface-2)]">
+                    <div className="grid grid-cols-[2fr_60px_55px_88px_75px] gap-2 px-4 py-2 bg-[var(--surface-2)]">
                       {["Ingrédient", "À acheter", "Unité", "Stock", "Total"].map((h, i) => (
                         <p key={h} className={`text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide ${i === 4 ? "text-right" : ""}`}>{h}</p>
                       ))}
@@ -167,7 +167,7 @@ export default function TabCourses() {
                       const stockUsed = item.stockUtilise ?? 0;
                       const qtyAcheter = Math.max(0, item.qty - stockUsed);
                       return (
-                        <div key={item.ingredientId} className="grid grid-cols-[2fr_65px_60px_90px_80px] items-center gap-2 px-4 py-2.5 border-t border-[var(--border)] first:border-0">
+                        <div key={item.ingredientId} className="grid grid-cols-[2fr_60px_55px_88px_75px] items-center gap-2 px-4 py-2.5 border-t border-[var(--border)] first:border-0">
                           <p className="text-sm text-[var(--text-primary)] truncate">{item.ingredientName}</p>
                           <QtyEdit value={item.qty} onSave={(n) => updateShoppingItem(d.id, item.ingredientId, n)} />
                           <p className="text-xs text-[var(--text-muted)]">{item.unit}</p>
