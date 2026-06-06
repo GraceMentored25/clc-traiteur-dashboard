@@ -17,6 +17,7 @@ import {
   Flask,
   Briefcase,
   Package,
+  Database,
 } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,7 @@ const NAV_ITEMS = [
   { href: "/comptabilite", label: "Gestion comptable", icon: Wallet },
   { href: "/stocks", label: "Gestion des stocks", icon: Package },
   { href: "/kpi", label: "KPI & Métriques", icon: ChartBar },
+  { href: "/data", label: "Gestion des données", icon: Database },
 ];
 
 export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: () => void }) {
