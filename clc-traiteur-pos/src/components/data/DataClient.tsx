@@ -75,27 +75,45 @@ export default function DataClient() {
           throw new Error("Ce fichier ne provient pas de C.LC. Traiteur.");
         }
 
-        // Restaurer le store avec toutes les données du backup
+        // Fusionner avec l'état actuel — ne pas changer le mode ni le thème en cours
+        const current = useStore.getState();
+
+        // Dédupliquer par id pour éviter les doublons à l'import
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mergeById = (existing: any[], incoming: any[]): any[] => {
+          const existingIds = new Set(existing.map((x) => x.id));
+          return [...existing, ...incoming.filter((x) => !existingIds.has(x.id))];
+        };
+
+        const importedPro = data.devisListPro ?? [];
+        const importedLab = data.devisListLab ?? [];
+        const newProList = mergeById(current.devisListPro, importedPro);
+        const newLabList = mergeById(current.devisListLab, importedLab);
+
         useStore.setState({
-          devisListPro: data.devisListPro ?? [],
-          devisListLab: data.devisListLab ?? [],
-          devisList: data.devisList ?? (data.appMode === "pro" ? data.devisListPro ?? [] : data.devisListLab ?? []),
-          appMode: data.appMode ?? "pro",
-          theme: data.theme ?? "dark",
-          customPrices: data.customPrices ?? {},
-          customDishes: data.customDishes ?? [],
-          customCategories: data.customCategories ?? [],
-          entreesCapital: data.entreesCapital ?? [],
-          ingredients: data.ingredients?.length > 0 ? data.ingredients : DEFAULT_INGREDIENTS,
-          materiel: data.materiel?.length > 0 ? data.materiel : DEFAULT_MATERIEL,
-          customRecipes: data.customRecipes ?? [],
-          demandesCourses: data.demandesCourses ?? [],
-          demandesLogistique: data.demandesLogistique ?? [],
+          devisListPro: newProList,
+          devisListLab: newLabList,
+          // Mettre à jour la vue active selon le mode EN COURS (pas celui du backup)
+          devisList: current.appMode === "pro" ? newProList : newLabList,
+          // Conserver le mode et thème actuels
+          appMode: current.appMode,
+          theme: current.theme,
+          // Fusionner les autres données
+          customPrices: { ...data.customPrices, ...current.customPrices }, // priorité aux modifs locales
+          customDishes: mergeById(current.customDishes, data.customDishes ?? []),
+          customCategories: [...new Set([...current.customCategories, ...(data.customCategories ?? [])])],
+          entreesCapital: mergeById(current.entreesCapital, data.entreesCapital ?? []),
+          // Stocks : prendre les données du backup si actuelles sont vides
+          ingredients: current.ingredients?.length > 0 ? current.ingredients : (data.ingredients?.length > 0 ? data.ingredients : DEFAULT_INGREDIENTS),
+          materiel: current.materiel?.length > 0 ? current.materiel : (data.materiel?.length > 0 ? data.materiel : DEFAULT_MATERIEL),
+          customRecipes: data.customRecipes ?? current.customRecipes,
+          demandesCourses: mergeById(current.demandesCourses, data.demandesCourses ?? []),
+          demandesLogistique: mergeById(current.demandesLogistique, data.demandesLogistique ?? []),
         });
 
-        const nbDevis = (data.devisListPro?.length ?? 0) + (data.devisListLab?.length ?? 0);
+        const nbDevis = importedPro.length + importedLab.length;
         setStatus("success");
-        setMessage(`Importation réussie — ${nbDevis} devis, ${data.entreesCapital?.length ?? 0} entrées capital, sauvegarde du ${new Date(data._exportedAt).toLocaleDateString("fr-FR")}`);
+        setMessage(`Fusion réussie — ${nbDevis} devis ajoutés, ${data.entreesCapital?.length ?? 0} entrées capital, fichier du ${new Date(data._exportedAt).toLocaleDateString("fr-FR")}`);
         setTimeout(() => setStatus("idle"), 6000);
       } catch (err) {
         setStatus("error");
@@ -215,7 +233,7 @@ export default function DataClient() {
           <div className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] p-6">
             <h2 className="font-bold text-[var(--text-primary)] text-sm mb-1">Importer des données</h2>
             <p className="text-xs text-[var(--text-muted)] mb-4">
-              Restaure toutes les données depuis un fichier de sauvegarde <code className="font-mono bg-[var(--surface-2)] px-1 rounded">.json</code>. <span className="text-[var(--warning)]">Les données actuelles seront remplacées.</span>
+              Fusionne les données du fichier avec les données actuelles. Les devis du fichier sont <strong>ajoutés</strong> sans écraser ceux existants. Le mode et thème actuels sont conservés.
             </p>
             <input
               ref={fileRef}

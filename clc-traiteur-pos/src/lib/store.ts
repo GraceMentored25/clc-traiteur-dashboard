@@ -340,6 +340,9 @@ export const useStore = create<AppState>()(
           ...(mode === "pro"
             ? { devisListPro: s.devisListPro.filter((d) => d.id !== id) }
             : { devisListLab: s.devisListLab.filter((d) => d.id !== id) }),
+          // Supprimer aussi les courses et logistique liées à ce devis
+          demandesCourses: s.demandesCourses.filter((d) => d.devisId !== id),
+          demandesLogistique: s.demandesLogistique.filter((d) => d.devisId !== id),
         }));
       },
     }),
