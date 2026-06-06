@@ -128,8 +128,8 @@ export default function TabCourses() {
             </div>
           ) : demandesCourses.map((d) => (
             <div key={d.id} className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] overflow-hidden">
-              <button onClick={() => toggle(d.id)}
-                className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-[var(--surface-2)] transition-colors text-left">
+              <div onClick={() => toggle(d.id)}
+                className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-[var(--surface-2)] transition-colors cursor-pointer">
                 <ShoppingCart size={16} className="text-[var(--amber)] shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{d.clientName}</p>
@@ -148,7 +148,7 @@ export default function TabCourses() {
                   </button>
                   {expanded === d.id ? <CaretUp size={14} className="text-[var(--text-muted)]" /> : <CaretDown size={14} className="text-[var(--text-muted)]" />}
                 </div>
-              </button>
+              </div>
 
               <AnimatePresence>
                 {expanded === d.id && (
@@ -211,8 +211,8 @@ export default function TabCourses() {
 
             return (
               <div key={d.id} className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] overflow-hidden">
-                <button onClick={() => toggle(d.id + "-log")}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-[var(--surface-2)] transition-colors text-left">
+                <div onClick={() => toggle(d.id + "-log")}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-[var(--surface-2)] transition-colors cursor-pointer">
                   <Truck size={16} className="text-[var(--amber)] shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{d.clientName}</p>
@@ -231,7 +231,7 @@ export default function TabCourses() {
                     </button>
                     {expanded === d.id + "-log" ? <CaretUp size={14} className="text-[var(--text-muted)]" /> : <CaretDown size={14} className="text-[var(--text-muted)]" />}
                   </div>
-                </button>
+                </div>
 
                 <AnimatePresence>
                   {expanded === d.id + "-log" && (
