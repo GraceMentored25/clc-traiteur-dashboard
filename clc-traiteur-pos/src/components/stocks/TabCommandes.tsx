@@ -39,14 +39,18 @@ export default function TabCommandes() {
       const ing = ingredients.find((i) => i.id === ingredientId) ??
         DEFAULT_INGREDIENTS.find((i) => i.id === ingredientId);
       const qtyArrondie = Math.ceil(qty * 10) / 10;
+      // Utiliser automatiquement le stock disponible
+      const ingStock = ingredients.find((i) => i.id === ingredientId);
+      const stockUtilise = Math.min(ingStock?.stockQty ?? 0, qtyArrondie);
+      const qtyAcheter = Math.max(0, qtyArrondie - stockUtilise);
       return {
         ingredientId,
         ingredientName: ing?.name ?? ingredientId,
         unit: ing?.unit ?? "kg",
         qty: qtyArrondie,
-        stockUtilise: 0,
+        stockUtilise,
         pricePerUnit: ing?.pricePerUnit ?? 0,
-        total: Math.round((qtyArrondie * (ing?.pricePerUnit ?? 0)) * 100) / 100,
+        total: Math.round((qtyAcheter * (ing?.pricePerUnit ?? 0)) * 100) / 100,
       };
     });
 
@@ -69,17 +73,26 @@ export default function TabCommandes() {
     const eventItems = LOGISTIQUE_PAR_EVENEMENT[devis.eventType] ?? [];
     const allLogItems = [...baseItems, ...eventItems];
 
-    const logItems: LogistiqueItem[] = allLogItems.map((item) => ({
-      name: item.name,
-      qty: item.unit === "par convive" ? devis.guestCount : item.qtyBase,
-      unit: item.unit === "par convive" ? "unité" : item.unit,
-      note: item.note,
-    }));
-
     const materiaux = useStore.getState().materiel;
+
+    const logItems: LogistiqueItem[] = allLogItems.map((item) => {
+      const qty = item.unit === "par convive" ? devis.guestCount : item.qtyBase;
+      const mat = materiaux.find((m) => m.name === item.name);
+      // Utiliser automatiquement le stock disponible (sans dépasser la quantité demandée)
+      const stockUtilise = Math.min(mat?.stockQty ?? 0, qty);
+      return {
+        name: item.name,
+        qty,
+        stockUtilise,
+        unit: item.unit === "par convive" ? "unité" : item.unit,
+        note: item.note,
+      };
+    });
+
     const totalEstimeLog = logItems.reduce((sum, item) => {
       const mat = materiaux.find((m) => m.name === item.name);
-      return sum + (mat?.pricePerUnit ?? 0) * item.qty;
+      const qtyAcheter = Math.max(0, item.qty - (item.stockUtilise ?? 0));
+      return sum + (mat?.pricePerUnit ?? 0) * qtyAcheter;
     }, 0);
 
     const demandeLog: DemandeLogistique = {
