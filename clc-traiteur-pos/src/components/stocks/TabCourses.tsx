@@ -158,7 +158,7 @@ export default function TabCourses() {
                     {/* Header */}
                     <div className="grid grid-cols-[2fr_60px_55px_88px_75px] gap-2 px-4 py-2 bg-[var(--surface-2)]">
                       {["Ingrédient", "À acheter", "Unité", "Stock", "Total"].map((h, i) => (
-                        <p key={h} className={`text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide ${i === 4 ? "text-right" : ""}`}>{h}</p>
+                        <p key={h} className={`text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide ${i === 3 ? "text-center" : i === 4 ? "text-right" : ""}`}>{h}</p>
                       ))}
                     </div>
                     {d.items.map((item) => {
@@ -171,8 +171,10 @@ export default function TabCourses() {
                           <p className="text-sm text-[var(--text-primary)] truncate">{item.ingredientName}</p>
                           <QtyEdit value={item.qty} onSave={(n) => updateShoppingItem(d.id, item.ingredientId, n)} />
                           <p className="text-xs text-[var(--text-muted)]">{item.unit}</p>
-                          <StockInput value={stockUsed} max={Math.min(stockDispo, item.qty)}
-                            onSave={(n) => setShoppingItemStock(d.id, item.ingredientId, n)} />
+                          <div className="flex justify-center">
+                            <StockInput value={stockUsed} max={Math.min(stockDispo, item.qty)}
+                              onSave={(n) => setShoppingItemStock(d.id, item.ingredientId, n)} />
+                          </div>
                           <p className={`text-sm font-mono font-bold text-right ${qtyAcheter === 0 ? "text-[var(--success)]" : "text-[var(--amber)]"}`}>
                             {qtyAcheter === 0 ? "✓" : formatCurrency(item.total)}
                           </p>
@@ -239,7 +241,7 @@ export default function TabCourses() {
                       {/* Header */}
                       <div className="grid grid-cols-[1fr_65px_55px_90px] gap-2 px-4 py-2 bg-[var(--surface-2)]">
                         {["Élément", "Quantité", "Stock", "Prix est."].map((h, i) => (
-                          <p key={h} className={`text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide ${i === 3 ? "text-right" : ""}`}>{h}</p>
+                          <p key={h} className={`text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide ${i === 2 ? "text-center" : i === 3 ? "text-right" : ""}`}>{h}</p>
                         ))}
                       </div>
                       {d.items.map((item, i) => {
@@ -256,8 +258,10 @@ export default function TabCourses() {
                               {item.note && <p className="text-xs text-[var(--text-muted)] italic">{item.note}</p>}
                             </div>
                             <QtyEdit value={item.qty} onSave={(n) => updateLogistiqueItem(d.id, i, n)} />
-                            <StockInput value={stockUsed} max={Math.min(stockDispo, item.qty)}
-                              onSave={(n) => setLogistiqueItemStock(d.id, i, n)} />
+                            <div className="flex justify-center">
+                              <StockInput value={stockUsed} max={Math.min(stockDispo, item.qty)}
+                                onSave={(n) => setLogistiqueItemStock(d.id, i, n)} />
+                            </div>
                             <p className={`text-sm font-mono font-bold text-right ${qtyAcheter === 0 ? "text-[var(--success)]" : "text-[var(--amber)]"}`}>
                               {qtyAcheter === 0 ? "✓" : (itemTotal > 0 ? formatCurrency(itemTotal) : "—")}
                             </p>
