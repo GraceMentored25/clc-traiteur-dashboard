@@ -239,7 +239,7 @@ export default function TabCourses() {
                       exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
                       className="overflow-hidden border-t border-[var(--border)]">
                       {/* Header */}
-                      <div className="grid grid-cols-[1fr_65px_55px_90px] gap-2 px-4 py-2 bg-[var(--surface-2)]">
+                      <div className="grid grid-cols-[1fr_65px_88px_90px] gap-2 px-4 py-2 bg-[var(--surface-2)]">
                         {["Élément", "Quantité", "Stock", "Prix est."].map((h, i) => (
                           <p key={h} className={`text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide ${i === 2 ? "text-center" : i === 3 ? "text-right" : ""}`}>{h}</p>
                         ))}
@@ -252,7 +252,7 @@ export default function TabCourses() {
                         const qtyAcheter = Math.max(0, item.qty - stockUsed);
                         const itemTotal = prix * qtyAcheter;
                         return (
-                          <div key={i} className="grid grid-cols-[1fr_65px_55px_90px] items-center gap-2 px-4 py-2.5 border-t border-[var(--border)] first:border-0">
+                          <div key={i} className="grid grid-cols-[1fr_65px_88px_90px] items-center gap-2 px-4 py-2.5 border-t border-[var(--border)] first:border-0">
                             <div>
                               <p className="text-sm text-[var(--text-primary)]">{item.name}</p>
                               {item.note && <p className="text-xs text-[var(--text-muted)] italic">{item.note}</p>}
