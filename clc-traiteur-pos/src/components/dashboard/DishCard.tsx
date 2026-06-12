@@ -2,11 +2,12 @@
 
 import { useState, memo, useCallback, useRef } from "react";
 import Image from "next/image";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { Plus, Minus, ShoppingCartSimple, Check, X, Trash } from "@phosphor-icons/react";
 import { Dish } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { formatCurrency, cn } from "@/lib/utils";
+import { Select } from "@/components/ui/Select";
 
 interface Props {
   dish: Dish;
@@ -22,15 +23,22 @@ const DishCard = memo(function DishCard({ dish }: Props) {
   const [editForm, setEditForm] = useState({ price: "", unit: dish.unit });
   const priceRef = useRef<HTMLInputElement>(null);
 
-  const { addToCart, updateQuantity, removeFromCart, cart, customPrices, setCustomPrice, customDishes, removeCustomDish } = useStore();
+  // Sélecteurs granulaires — chaque carte ne re-rende que si SES données changent
+  const cartItem = useStore(useCallback((s) => s.cart.find((c) => c.dish.id === dish.id), [dish.id]));
+  const effectivePrice = useStore(useCallback((s) => s.customPrices[dish.id] ?? dish.price, [dish.id, dish.price]));
+  const isCustomDish = useStore(useCallback((s) => s.customDishes.some((d) => d.id === dish.id), [dish.id]));
+  const addToCart = useStore((s) => s.addToCart);
+  const updateQuantity = useStore((s) => s.updateQuantity);
+  const removeFromCart = useStore((s) => s.removeFromCart);
+  const setCustomPrice = useStore((s) => s.setCustomPrice);
+  const removeCustomDish = useStore((s) => s.removeCustomDish);
 
-  const effectivePrice = customPrices[dish.id] ?? dish.price;
-  const effectiveUnit = editForm.unit; // on affiche l'unité éditée localement mais c'est dans le store qu'on persiste
-
-  const cartItem = cart.find((c) => c.dish.id === dish.id);
   const inCart = !!cartItem;
   const displayQty = inCart ? cartItem!.quantity : quantity;
-  const isCustomDish = customDishes.some((d) => d.id === dish.id);
+  const isPriceCustom = useStore(useCallback((s) => {
+    const cp = s.customPrices[dish.id];
+    return cp !== undefined && cp !== dish.price;
+  }, [dish.id, dish.price]));
 
   const openEdit = useCallback((e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -50,7 +58,6 @@ const DishCard = memo(function DishCard({ dish }: Props) {
     setEditOpen(false);
   }, [dish.id, inCart, removeFromCart, removeCustomDish]);
 
-  // Prix badge inline
   const handlePriceBadgeClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     setPriceInput(String(effectivePrice));
@@ -102,20 +109,18 @@ const DishCard = memo(function DishCard({ dish }: Props) {
   }, [inCart, dish, effectivePrice, addToCart, updateQuantity, removeFromCart]);
 
   const total = displayQty * effectivePrice;
-  const isPriceCustom = customPrices[dish.id] !== undefined && customPrices[dish.id] !== dish.price;
 
   return (
     <>
-      <motion.div
-        layout
+      <div
         className={cn(
-          "relative rounded-2xl overflow-hidden border transition-all duration-200 group flex flex-col",
+          "relative rounded-2xl overflow-hidden border transition-colors duration-150 group flex flex-col",
           inCart
             ? "border-[var(--amber)]/40 bg-[var(--surface-2)] shadow-[0_0_0_1px_rgba(232,150,12,0.15),0_4px_20px_rgba(232,150,12,0.06)]"
             : "border-[var(--border)] bg-[var(--surface-1)] hover:border-[var(--surface-3)]"
         )}
       >
-        {/* Image — clic pour éditer */}
+        {/* Image */}
         <div
           className="relative w-full h-32 overflow-hidden bg-[var(--surface-3)] shrink-0 cursor-pointer"
           onClick={openEdit}
@@ -124,20 +129,21 @@ const DishCard = memo(function DishCard({ dish }: Props) {
             src={dish.image}
             alt={dish.name}
             fill
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            className="object-cover transition-transform duration-200 group-hover:scale-105"
             sizes="(max-width: 768px) 50vw, 25vw"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
 
-          {/* Price badge — cliquable */}
+          {/* Price badge */}
           <div className="absolute bottom-2 left-2.5">
             <AnimatePresence mode="wait">
               {editingPrice ? (
-                <motion.div
+                <m.div
                   key="editing"
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.9, opacity: 0 }}
+                  transition={{ duration: 0.1 }}
                   className="flex items-center gap-1 bg-[var(--surface-1)] rounded-lg px-1.5 py-0.5 border border-[var(--amber)]/50"
                   onClick={(e) => e.stopPropagation()}
                 >
@@ -158,17 +164,18 @@ const DishCard = memo(function DishCard({ dish }: Props) {
                   >
                     <Check size={9} weight="bold" />
                   </button>
-                </motion.div>
+                </m.div>
               ) : (
-                <motion.button
+                <m.button
                   key="display"
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.9, opacity: 0 }}
+                  transition={{ duration: 0.1 }}
                   onClick={handlePriceBadgeClick}
                   title="Cliquer pour modifier le prix"
                   className={cn(
-                    "flex items-center gap-1 text-xs font-bold text-white backdrop-blur-sm px-2 py-0.5 rounded-lg transition-all group/price",
+                    "flex items-center gap-1 text-xs font-bold text-white px-2 py-0.5 rounded-lg transition-colors",
                     isPriceCustom
                       ? "bg-[var(--amber)]/80 hover:bg-[var(--amber)]"
                       : "bg-black/50 hover:bg-black/70"
@@ -176,16 +183,14 @@ const DishCard = memo(function DishCard({ dish }: Props) {
                 >
                   {formatCurrency(effectivePrice)}
                   <span className="text-white/60 font-normal text-[10px]"> / {dish.unit}</span>
-                </motion.button>
+                </m.button>
               )}
             </AnimatePresence>
           </div>
 
-          {/* In-cart dot */}
           {inCart && (
             <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[var(--amber)] shadow-[0_0_6px_rgba(232,150,12,0.8)]" />
           )}
-
         </div>
 
         {/* Body */}
@@ -205,7 +210,7 @@ const DishCard = memo(function DishCard({ dish }: Props) {
               onClick={decrement}
               disabled={displayQty === 0}
               className={cn(
-                "w-7 h-7 rounded-lg flex items-center justify-center transition-all active:scale-95",
+                "w-7 h-7 rounded-lg flex items-center justify-center transition-colors active:scale-95",
                 displayQty > 0
                   ? "bg-[var(--amber)]/15 text-[var(--amber)] hover:bg-[var(--amber)]/25"
                   : "bg-[var(--surface-3)] text-[var(--text-muted)] opacity-40 cursor-not-allowed"
@@ -219,11 +224,11 @@ const DishCard = memo(function DishCard({ dish }: Props) {
               placeholder="0"
               onChange={(e) => handleManualInput(e.target.value)}
               onFocus={(e) => e.target.select()}
-              className="w-full h-7 text-center font-mono font-bold text-sm bg-[var(--surface-3)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--amber)]/50 focus:ring-1 focus:ring-[var(--amber)]/15 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="w-full h-7 text-center font-mono font-bold text-sm bg-[var(--surface-3)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--amber)]/50 focus:ring-1 focus:ring-[var(--amber)]/15 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
             <button
               onClick={increment}
-              className="w-7 h-7 rounded-lg bg-[var(--amber)] hover:bg-[var(--amber-light)] flex items-center justify-center text-[var(--surface)] transition-all active:scale-95"
+              className="w-7 h-7 rounded-lg bg-[var(--amber)] hover:bg-[var(--amber-light)] flex items-center justify-center text-[var(--surface)] transition-colors active:scale-95"
             >
               <Plus size={11} weight="bold" />
             </button>
@@ -246,20 +251,21 @@ const DishCard = memo(function DishCard({ dish }: Props) {
             )}
           </div>
         </div>
-      </motion.div>
+      </div>
 
-      {/* ── Modale édition plat ──────────────────────────────── */}
+      {/* Modale édition */}
       <AnimatePresence>
         {editOpen && (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
               onClick={() => setEditOpen(false)}
               className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" />
-            <motion.div
-              initial={{ scale: 0.93, opacity: 0, y: 16 }}
+            <m.div
+              initial={{ scale: 0.95, opacity: 0, y: 12 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 300, damping: 28 }}
+              exit={{ scale: 0.97, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
               className="fixed inset-0 z-50 flex items-center justify-center p-4"
               onClick={(e) => e.stopPropagation()}
             >
@@ -270,35 +276,30 @@ const DishCard = memo(function DishCard({ dish }: Props) {
                     <X size={13} />
                   </button>
                 </div>
-
                 <div className="space-y-3">
                   <div>
                     <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide mb-1 block">Prix (€)</label>
-                    <input
-                      type="number" min="0" step="0.5"
+                    <input type="number" min="0" step="0.5"
                       value={editForm.price}
                       onChange={(e) => setEditForm(f => ({ ...f, price: e.target.value }))}
                       onFocus={(e) => e.target.select()}
-                      className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
                   <div>
                     <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide mb-1 block">Unité</label>
-                    <select
+                    <Select
                       value={editForm.unit}
-                      onChange={(e) => setEditForm(f => ({ ...f, unit: e.target.value }))}
-                      className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all"
-                    >
-                      {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
-                    </select>
+                      onChange={(v) => setEditForm(f => ({ ...f, unit: v }))}
+                      options={UNITS.map(u => ({ value: u, label: u }))}
+                      className="w-full"
+                    />
                   </div>
                 </div>
-
                 <div className="flex gap-2 mt-5">
                   {isCustomDish && (
-                    <button
-                      onClick={handleDelete}
-                      className="w-9 h-9 rounded-xl flex items-center justify-center bg-red-500/10 text-[var(--danger)] hover:bg-red-500/20 transition-all shrink-0"
+                    <button onClick={handleDelete}
+                      className="w-9 h-9 rounded-xl flex items-center justify-center bg-red-500/10 text-[var(--danger)] hover:bg-red-500/20 transition-colors shrink-0"
                       title="Supprimer ce plat"
                     >
                       <Trash size={15} />
@@ -307,15 +308,14 @@ const DishCard = memo(function DishCard({ dish }: Props) {
                   <button onClick={() => setEditOpen(false)} className="flex-1 h-9 rounded-xl border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-2)] transition-colors">
                     Annuler
                   </button>
-                  <button
-                    onClick={confirmEdit}
+                  <button onClick={confirmEdit}
                     className="flex-1 h-9 rounded-xl bg-[var(--amber)] hover:bg-[var(--amber-light)] text-[var(--surface)] font-semibold text-sm transition-colors"
                   >
                     Enregistrer
                   </button>
                 </div>
               </div>
-            </motion.div>
+            </m.div>
           </>
         )}
       </AnimatePresence>

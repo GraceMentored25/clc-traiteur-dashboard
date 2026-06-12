@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { MagnifyingGlass, Plus, Calendar, Receipt, PencilSimple, Trash, Warning, FilePdf } from "@phosphor-icons/react";
 import { generateDevisPDF } from "@/lib/generateDevisPDF";
 import { useStore } from "@/lib/store";
@@ -64,14 +64,14 @@ export default function DevisClient() {
             {devisList.length} devis — {stats.confirmed} confirmés
           </p>
         </div>
-        <motion.button
+        <m.button
           whileTap={{ scale: 0.97 }}
           onClick={() => router.push("/dashboard")}
           className="flex items-center gap-2 h-9 px-4 rounded-xl bg-[var(--amber)] text-[var(--surface)] text-sm font-semibold hover:bg-[var(--amber-light)] transition-colors"
         >
           <Plus size={15} weight="bold" />
           Nouveau devis
-        </motion.button>
+        </m.button>
       </div>
 
       {/* KPI mini cards */}
@@ -82,7 +82,7 @@ export default function DevisClient() {
           { label: "En attente", value: stats.pending, mono: false },
           { label: "CA confirmé TTC", value: formatCurrency(stats.ca), mono: true },
         ].map((stat, i) => (
-          <motion.div
+          <m.div
             key={stat.label}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -93,7 +93,7 @@ export default function DevisClient() {
             <p className={`text-xl font-bold tracking-tight ${stat.mono ? "font-mono text-[var(--amber)]" : "text-[var(--text-primary)]"}`}>
               {stat.value}
             </p>
-          </motion.div>
+          </m.div>
         ))}
       </div>
 
@@ -143,7 +143,7 @@ export default function DevisClient() {
 
             <div>
               {filtered.map((devis, i) => (
-                <motion.div
+                <m.div
                   key={devis.id}
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -220,7 +220,7 @@ export default function DevisClient() {
                       <p className="text-sm font-mono font-bold text-[var(--amber)] shrink-0">{formatCurrency(devis.totalTTC)}</p>
                     </div>
                   </div>
-                </motion.div>
+                </m.div>
               ))}
             </div>
           </>
@@ -259,14 +259,14 @@ export default function DevisClient() {
       <AnimatePresence>
         {toDelete && (
           <>
-            <motion.div
+            <m.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setToDelete(null)}
               className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
             />
-            <motion.div
+            <m.div
               initial={{ scale: 0.92, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0 }}
@@ -297,7 +297,7 @@ export default function DevisClient() {
                   </button>
                 </div>
               </div>
-            </motion.div>
+            </m.div>
           </>
         )}
       </AnimatePresence>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, memo, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import {
   MagnifyingGlass, ShoppingCart, SquaresFour, Rows,
   SortAscending, Plus, X,
@@ -13,6 +13,7 @@ import DishCard from "./DishCard";
 import DishRow from "./DishRow";
 import CartPanel from "./CartPanel";
 import DevisModal from "./DevisModal";
+import { Select } from "@/components/ui/Select";
 
 type ViewMode = "grid" | "list";
 type SortMode = "default" | "alpha-asc" | "alpha-desc";
@@ -46,8 +47,12 @@ export default function DashboardClient() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [sortOpen]);
 
-  const { cart, cartTotal, customDishes, customCategories, addCustomDish, addCustomCategory } = useStore();
-  const cartCount = cart.length;
+  const cartCount = useStore((s) => s.cart.length);
+  const cartTotal = useStore((s) => s.cartTotal);
+  const customDishes = useStore((s) => s.customDishes);
+  const customCategories = useStore((s) => s.customCategories);
+  const addCustomDish = useStore((s) => s.addCustomDish);
+  const addCustomCategory = useStore((s) => s.addCustomCategory);
 
   const allCategories = useMemo(() => [...CATEGORIES, ...customCategories], [customCategories]);
   const allDishes = useMemo(() => [...DISHES, ...customDishes], [customDishes]);
@@ -91,7 +96,7 @@ export default function DashboardClient() {
     <div className="flex flex-col min-h-[100dvh]">
 
       {/* ── DESKTOP header ─────────────────────────────────────── */}
-      <header className="hidden lg:flex sticky top-0 z-30 items-center gap-3 px-8 py-4 bg-[var(--surface-1)]/80 backdrop-blur-xl border-b border-[var(--border)]">
+      <header className="hidden lg:flex sticky top-0 z-30 items-center gap-3 px-8 py-4 bg-[var(--surface-1)]/80 backdrop-blur-md border-b border-[var(--border)]">
         <div className="flex-1">
           <h1 className="text-lg font-bold text-[var(--text-primary)] tracking-tight">Création de devis</h1>
           <p className="text-xs text-[var(--text-muted)]">Sélectionnez les plats et définissez les quantités</p>
@@ -105,7 +110,7 @@ export default function DashboardClient() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Rechercher..."
-            className="w-full h-9 pl-8 pr-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--amber)]/50 transition-all"
+            className="w-full h-9 pl-8 pr-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--amber)]/50 transition-colors"
           />
         </div>
 
@@ -114,7 +119,7 @@ export default function DashboardClient() {
           <button
             onClick={() => setSortOpen((v) => !v)}
             className={cn(
-              "flex items-center gap-1.5 h-9 px-3 rounded-xl text-sm transition-all border",
+              "flex items-center gap-1.5 h-9 px-3 rounded-xl text-sm transition-colors border",
               sortMode !== "default"
                 ? "bg-[var(--amber)]/10 border-[var(--amber)]/30 text-[var(--amber)]"
                 : "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
@@ -125,7 +130,7 @@ export default function DashboardClient() {
           </button>
           <AnimatePresence>
             {sortOpen && (
-              <motion.div
+              <m.div
                 initial={{ opacity: 0, y: -6, scale: 0.96 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -4, scale: 0.97 }}
@@ -147,7 +152,7 @@ export default function DashboardClient() {
                     {sortMode === opt.value && <div className="w-1.5 h-1.5 rounded-full bg-[var(--amber)]" />}
                   </button>
                 ))}
-              </motion.div>
+              </m.div>
             )}
           </AnimatePresence>
         </div>
@@ -159,7 +164,7 @@ export default function DashboardClient() {
               key={v}
               onClick={() => setViewMode(v)}
               className={cn(
-                "w-8 h-7 rounded-lg flex items-center justify-center transition-all",
+                "w-8 h-7 rounded-lg flex items-center justify-center transition-colors",
                 viewMode === v ? "bg-[var(--amber)] text-[var(--surface)]" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
               )}
             >
@@ -169,10 +174,10 @@ export default function DashboardClient() {
         </div>
 
         {/* Cart */}
-        <motion.button
+        <m.button
           whileTap={{ scale: 0.96 }}
           onClick={() => setCartOpen(true)}
-          className="relative flex items-center gap-2 h-9 px-4 rounded-xl bg-[var(--amber)]/10 border border-[var(--amber)]/20 text-[var(--amber)] text-sm font-medium hover:bg-[var(--amber)]/15 transition-all"
+          className="relative flex items-center gap-2 h-9 px-4 rounded-xl bg-[var(--amber)]/10 border border-[var(--amber)]/20 text-[var(--amber)] text-sm font-medium hover:bg-[var(--amber)]/15 transition-colors"
         >
           <ShoppingCart size={17} weight="fill" />
           <span>Panier</span>
@@ -181,10 +186,10 @@ export default function DashboardClient() {
               {cartCount}
             </span>
           )}
-        </motion.button>
+        </m.button>
 
         {cartCount > 0 && (
-          <motion.button
+          <m.button
             initial={{ opacity: 0, x: 10 }}
             animate={{ opacity: 1, x: 0 }}
             whileTap={{ scale: 0.97 }}
@@ -192,7 +197,7 @@ export default function DashboardClient() {
             className="h-9 px-5 rounded-xl bg-[var(--amber)] hover:bg-[var(--amber-light)] text-[var(--surface)] font-semibold text-sm transition-colors whitespace-nowrap"
           >
             Générer — {formatCurrency(cartTotal())}
-          </motion.button>
+          </m.button>
         )}
       </header>
 
@@ -206,7 +211,7 @@ export default function DashboardClient() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Rechercher un plat..."
-            className="w-full h-10 pl-9 pr-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--amber)]/50 transition-all"
+            className="w-full h-10 pl-9 pr-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--amber)]/50 transition-colors"
           />
         </div>
         {/* Tri + toggle vue */}
@@ -216,7 +221,7 @@ export default function DashboardClient() {
             <button
               onClick={() => setSortOpen((v) => !v)}
               className={cn(
-                "w-full flex items-center justify-center gap-1.5 h-9 px-3 rounded-xl text-sm transition-all border",
+                "w-full flex items-center justify-center gap-1.5 h-9 px-3 rounded-xl text-sm transition-colors border",
                 sortMode !== "default"
                   ? "bg-[var(--amber)]/10 border-[var(--amber)]/30 text-[var(--amber)]"
                   : "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)]"
@@ -227,7 +232,7 @@ export default function DashboardClient() {
             </button>
             <AnimatePresence>
               {sortOpen && (
-                <motion.div
+                <m.div
                   initial={{ opacity: 0, y: -6, scale: 0.96 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -4, scale: 0.97 }}
@@ -249,7 +254,7 @@ export default function DashboardClient() {
                       {sortMode === opt.value && <div className="w-1.5 h-1.5 rounded-full bg-[var(--amber)]" />}
                     </button>
                   ))}
-                </motion.div>
+                </m.div>
               )}
             </AnimatePresence>
           </div>
@@ -258,7 +263,7 @@ export default function DashboardClient() {
             <button
               onClick={() => setViewMode("grid")}
               className={cn(
-                "flex items-center gap-1 px-2.5 h-8 rounded-lg text-xs font-medium transition-all",
+                "flex items-center gap-1 px-2.5 h-8 rounded-lg text-xs font-medium transition-colors",
                 viewMode === "grid" ? "bg-[var(--amber)] text-[var(--surface)]" : "text-[var(--text-muted)]"
               )}
             >
@@ -268,7 +273,7 @@ export default function DashboardClient() {
             <button
               onClick={() => setViewMode("list")}
               className={cn(
-                "flex items-center gap-1 px-2.5 h-8 rounded-lg text-xs font-medium transition-all",
+                "flex items-center gap-1 px-2.5 h-8 rounded-lg text-xs font-medium transition-colors",
                 viewMode === "list" ? "bg-[var(--amber)] text-[var(--surface)]" : "text-[var(--text-muted)]"
               )}
             >
@@ -286,7 +291,7 @@ export default function DashboardClient() {
             key={cat}
             onClick={() => setActiveCategory(cat)}
             className={cn(
-              "shrink-0 px-3 py-1.5 rounded-full text-xs lg:text-sm font-medium transition-all duration-200",
+              "shrink-0 px-3 py-1.5 rounded-full text-xs lg:text-sm font-medium transition-colors",
               activeCategory === cat
                 ? "bg-[var(--amber)] text-[var(--surface)]"
                 : "bg-[var(--surface-2)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)]"
@@ -301,7 +306,7 @@ export default function DashboardClient() {
           <button
             onClick={() => setAddCatOpen(true)}
             title="Nouvelle catégorie"
-            className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--amber)] hover:border-[var(--amber)]/40 transition-all"
+            className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--amber)] hover:border-[var(--amber)]/40 transition-colors"
           >
             <Plus size={13} weight="bold" />
           </button>
@@ -331,7 +336,7 @@ export default function DashboardClient() {
             {activeCategory !== "Tous" && (
               <button
                 onClick={() => { setNewDish(d => ({ ...d, category: activeCategory })); setAddDishOpen(true); }}
-                className="flex items-center gap-2 h-9 px-4 rounded-xl bg-[var(--amber)]/10 border border-[var(--amber)]/30 text-[var(--amber)] text-sm font-medium hover:bg-[var(--amber)]/20 transition-all"
+                className="flex items-center gap-2 h-9 px-4 rounded-xl bg-[var(--amber)]/10 border border-[var(--amber)]/30 text-[var(--amber)] text-sm font-medium hover:bg-[var(--amber)]/20 transition-colors"
               >
                 <Plus size={14} weight="bold" /> Ajouter un plat dans « {activeCategory} »
               </button>
@@ -346,7 +351,7 @@ export default function DashboardClient() {
               {activeCategory !== "Tous" && (
                 <button
                   onClick={() => { setNewDish(d => ({ ...d, category: activeCategory })); setAddDishOpen(true); }}
-                  className="flex items-center gap-1.5 h-7 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--amber)] hover:border-[var(--amber)]/40 text-xs font-medium transition-all"
+                  className="flex items-center gap-1.5 h-7 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--amber)] hover:border-[var(--amber)]/40 text-xs font-medium transition-colors"
                 >
                   <Plus size={11} weight="bold" /> Ajouter un plat
                 </button>
@@ -355,18 +360,17 @@ export default function DashboardClient() {
 
             {viewMode === "grid" ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-                <AnimatePresence mode="popLayout">
+                <AnimatePresence mode="popLayout" initial={false}>
                   {filtered.map((dish, i) => (
-                    <motion.div
+                    <m.div
                       key={dish.id}
-                      layout
-                      initial={{ opacity: 0, y: 12 }}
+                      initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ delay: i * 0.03, type: "spring", stiffness: 220, damping: 26 }}
+                      transition={{ delay: Math.min(i * 0.025, 0.15), duration: 0.18, ease: "easeOut" }}
                     >
                       <DishCard dish={dish} />
-                    </motion.div>
+                    </m.div>
                   ))}
                 </AnimatePresence>
               </div>
@@ -377,18 +381,17 @@ export default function DashboardClient() {
                     <p key={h} className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">{h}</p>
                   ))}
                 </div>
-                <AnimatePresence mode="popLayout">
+                <AnimatePresence mode="popLayout" initial={false}>
                   {filtered.map((dish, i) => (
-                    <motion.div
+                    <m.div
                       key={dish.id}
-                      layout
-                      initial={{ opacity: 0, x: -8 }}
+                      initial={{ opacity: 0, x: -6 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0 }}
-                      transition={{ delay: i * 0.02 }}
+                      transition={{ delay: Math.min(i * 0.015, 0.1), duration: 0.14, ease: "easeOut" }}
                     >
                       <DishRow dish={dish} />
-                    </motion.div>
+                    </m.div>
                   ))}
                 </AnimatePresence>
               </div>
@@ -399,11 +402,11 @@ export default function DashboardClient() {
 
       {/* ── Mobile FAB cart ────────────────────────────────────── */}
       <div className="lg:hidden fixed bottom-5 left-0 right-0 flex justify-center z-30 px-4">
-        <motion.button
+        <m.button
           whileTap={{ scale: 0.97 }}
           onClick={() => cartCount > 0 ? setCartOpen(true) : null}
           className={cn(
-            "flex items-center gap-3 h-14 px-6 rounded-2xl shadow-2xl font-semibold text-sm transition-all",
+            "flex items-center gap-3 h-14 px-6 rounded-2xl shadow-2xl font-semibold text-sm transition-colors",
             cartCount > 0
               ? "bg-[var(--amber)] text-[var(--surface)] cursor-pointer"
               : "bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-muted)] cursor-default"
@@ -415,7 +418,7 @@ export default function DashboardClient() {
           ) : (
             <span>Panier vide</span>
           )}
-        </motion.button>
+        </m.button>
       </div>
 
       <AnimatePresence>
@@ -432,9 +435,9 @@ export default function DashboardClient() {
       <AnimatePresence>
         {addDishOpen && (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setAddDishOpen(false)} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" />
-            <motion.div
+            <m.div
               initial={{ scale: 0.93, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0 }}
@@ -454,36 +457,39 @@ export default function DashboardClient() {
                     <label className="text-xs text-[var(--text-muted)] mb-1 block">Nom du plat *</label>
                     <input autoFocus value={newDish.name} onChange={(e) => setNewDish(d => ({ ...d, name: e.target.value }))}
                       placeholder="Ex: Taro braisé"
-                      className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all" />
+                      className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-colors" />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-xs text-[var(--text-muted)] mb-1 block">Prix (€) *</label>
                       <input value={newDish.price} onChange={(e) => setNewDish(d => ({ ...d, price: e.target.value }))}
                         type="number" min="0" step="0.5" placeholder="0.00"
-                        className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all" />
+                        className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-colors" />
                     </div>
                     <div>
                       <label className="text-xs text-[var(--text-muted)] mb-1 block">Unité</label>
-                      <select value={newDish.unit} onChange={(e) => setNewDish(d => ({ ...d, unit: e.target.value }))}
-                        className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all">
-                        {["portion", "pièce", "assiette", "verre", "100g", "litre"].map(u => <option key={u} value={u}>{u}</option>)}
-                      </select>
+                      <Select
+                        value={newDish.unit}
+                        onChange={(v) => setNewDish(d => ({ ...d, unit: v }))}
+                        options={["portion", "pièce", "assiette", "verre", "100g", "litre"].map(u => ({ value: u, label: u }))}
+                        className="w-full"
+                      />
                     </div>
                   </div>
                   <div>
                     <label className="text-xs text-[var(--text-muted)] mb-1 block">Catégorie *</label>
-                    <select value={newDish.category} onChange={(e) => setNewDish(d => ({ ...d, category: e.target.value }))}
-                      className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all">
-                      <option value="">Choisir…</option>
-                      {allCategories.filter(c => c !== "Tous").map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
+                    <Select
+                      value={newDish.category}
+                      onChange={(v) => setNewDish(d => ({ ...d, category: v }))}
+                      options={[{ value: "", label: "Choisir…" }, ...allCategories.filter(c => c !== "Tous").map(c => ({ value: c, label: c }))]}
+                      className="w-full"
+                    />
                   </div>
                   <div>
                     <label className="text-xs text-[var(--text-muted)] mb-1 block">Description (optionnel)</label>
                     <input value={newDish.description} onChange={(e) => setNewDish(d => ({ ...d, description: e.target.value }))}
                       placeholder="Brève description…"
-                      className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all" />
+                      className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-colors" />
                   </div>
                 </div>
                 <div className="flex gap-3 mt-5">
@@ -495,7 +501,7 @@ export default function DashboardClient() {
                   </button>
                 </div>
               </div>
-            </motion.div>
+            </m.div>
           </>
         )}
       </AnimatePresence>

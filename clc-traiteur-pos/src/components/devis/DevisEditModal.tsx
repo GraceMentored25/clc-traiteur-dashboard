@@ -1,11 +1,15 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { useForm } from "react-hook-form";
+import { m } from "framer-motion";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { X, PencilSimple, WarningCircle } from "@phosphor-icons/react";
 import { Devis, DevisStatus } from "@/lib/types";
+import { Select } from "@/components/ui/Select";
+
+const EVENT_TYPES = ["Mariage","Anniversaire","Baptême","Séminaire d'entreprise","Réception privée","Autre"].map(v => ({ value: v, label: v }));
+const STATUS_OPTS = ["Brouillon","Envoyé","Confirmé","Annulé"].map(v => ({ value: v, label: v }));
 
 const schema = z.object({
   clientName: z.string().min(2, "Requis"),
@@ -26,7 +30,7 @@ interface Props {
 }
 
 export default function DevisEditModal({ devis, onClose, onSave }: Props) {
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { register, control, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
       clientName: devis.clientName,
@@ -54,12 +58,12 @@ export default function DevisEditModal({ devis, onClose, onSave }: Props) {
 
   return (
     <>
-      <motion.div
+      <m.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose}
         className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
       />
-      <motion.div
+      <m.div
         initial={{ scale: 0.93, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0 }}
@@ -107,18 +111,15 @@ export default function DevisEditModal({ devis, onClose, onSave }: Props) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-[var(--text-secondary)]">Type d&apos;événement</label>
-                  <select {...register("eventType")} className="w-full h-10 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all">
-                    <option value="">Sélectionner...</option>
-                    {["Mariage","Anniversaire","Baptême","Séminaire d'entreprise","Réception privée","Autre"].map(v => (
-                      <option key={v} value={v}>{v}</option>
-                    ))}
-                  </select>
+                  <Controller name="eventType" control={control} render={({ field }) => (
+                    <Select value={field.value} onChange={field.onChange} options={EVENT_TYPES} placeholder="Sélectionner..." className="w-full" />
+                  )} />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-[var(--text-secondary)]">Statut</label>
-                  <select {...register("status")} className="w-full h-10 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all">
-                    {["Brouillon","Envoyé","Confirmé","Annulé"].map(v => <option key={v} value={v}>{v}</option>)}
-                  </select>
+                  <Controller name="status" control={control} render={({ field }) => (
+                    <Select value={field.value} onChange={field.onChange} options={STATUS_OPTS} className="w-full" />
+                  )} />
                 </div>
               </div>
 
@@ -132,15 +133,15 @@ export default function DevisEditModal({ devis, onClose, onSave }: Props) {
               <button type="button" onClick={onClose} className="flex-1 h-10 rounded-xl border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-2)] transition-colors">
                 Annuler
               </button>
-              <motion.button type="submit" disabled={isSubmitting} whileTap={{ scale: 0.97 }}
+              <m.button type="submit" disabled={isSubmitting} whileTap={{ scale: 0.97 }}
                 className="flex-1 h-10 rounded-xl bg-[var(--amber)] hover:bg-[var(--amber-light)] disabled:opacity-60 text-[var(--surface)] font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
               >
                 {isSubmitting ? <span className="w-3.5 h-3.5 rounded-full border-2 border-[var(--surface)]/30 border-t-[var(--surface)] animate-spin" /> : "Enregistrer"}
-              </motion.button>
+              </m.button>
             </div>
           </form>
         </div>
-      </motion.div>
+      </m.div>
     </>
   );
 }

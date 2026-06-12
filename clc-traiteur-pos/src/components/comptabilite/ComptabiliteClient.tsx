@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import {
   CurrencyEur,
   Receipt,
@@ -20,6 +20,7 @@ import { useStore } from "@/lib/store";
 import { Devis, EntreeCapital } from "@/lib/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { ArrowDown, ArrowUp, ShoppingCart, Truck } from "@phosphor-icons/react";
+import { Select } from "@/components/ui/Select";
 
 type Period = "all" | "month" | "quarter" | "year";
 
@@ -135,7 +136,7 @@ export default function ComptabiliteClient() {
           <p className="text-sm text-[var(--text-muted)] mt-1">Suivi financier des devis confirmés</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <motion.button
+          <m.button
             whileTap={{ scale: 0.97 }}
             onClick={() => setCapitalModal(true)}
             className="flex items-center gap-2 h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--amber)] hover:border-[var(--amber)]/40 text-xs font-semibold transition-colors"
@@ -143,15 +144,15 @@ export default function ComptabiliteClient() {
             <Plus size={14} weight="bold" />
             <span className="hidden sm:inline">Entrée de capital</span>
             <span className="sm:hidden">Capital</span>
-          </motion.button>
-          <motion.button
+          </m.button>
+          <m.button
             whileTap={{ scale: 0.97 }}
             onClick={() => setDocModal("summary")}
             className="flex items-center gap-2 h-9 px-3 lg:px-4 rounded-xl bg-[var(--amber)] hover:bg-[var(--amber-light)] text-[var(--surface)] text-xs lg:text-sm font-semibold transition-colors"
           >
             <FilePdf size={15} weight="fill" />
             <span className="hidden sm:inline">Générer</span>
-          </motion.button>
+          </m.button>
         </div>
       </div>
 
@@ -180,7 +181,7 @@ export default function ComptabiliteClient() {
           { label: "Solde net", value: formatCurrency(metrics.solde), icon: <CurrencyEur size={18} weight="fill" />, accent: false },
           { label: "TVA collectée (20%)", value: formatCurrency(metrics.totalTVA), icon: <Receipt size={18} weight="fill" />, accent: false },
         ].map((card, i) => (
-          <motion.div
+          <m.div
             key={card.label}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -212,7 +213,7 @@ export default function ComptabiliteClient() {
             }`}>
               {card.value}
             </p>
-          </motion.div>
+          </m.div>
         ))}
       </div>
 
@@ -242,7 +243,7 @@ export default function ComptabiliteClient() {
             </div>
 
             {confirmed.map((devis, i) => (
-              <motion.div key={devis.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}>
+              <m.div key={devis.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}>
                 {/* Desktop row */}
                 <div className="hidden md:grid grid-cols-[80px_1fr_130px_110px_110px_120px] gap-0 px-6 py-3.5 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors">
                   <p className="text-xs font-mono font-medium text-[var(--amber)] self-center">{devis.id}</p>
@@ -273,7 +274,7 @@ export default function ComptabiliteClient() {
                     <span>HT {formatCurrency(devis.totalHT)} · TVA {formatCurrency(devis.totalTTC - devis.totalHT)}</span>
                   </div>
                 </div>
-              </motion.div>
+              </m.div>
             ))}
 
             {/* Total section devis */}
@@ -359,9 +360,9 @@ export default function ComptabiliteClient() {
       <AnimatePresence>
         {capitalModal && (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setCapitalModal(false)} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" />
-            <motion.div
+            <m.div
               initial={{ scale: 0.93, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0 }}
@@ -404,11 +405,12 @@ export default function ComptabiliteClient() {
                   </div>
                   <div>
                     <label className="text-xs text-[var(--text-muted)] mb-1 block">Source</label>
-                    <select value={capitalForm.source}
-                      onChange={(e) => setCapitalForm(f => ({ ...f, source: e.target.value as EntreeCapital["source"] }))}
-                      className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all">
-                      {SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                    </select>
+                    <Select
+                      value={capitalForm.source}
+                      onChange={(v) => setCapitalForm(f => ({ ...f, source: v as EntreeCapital["source"] }))}
+                      options={SOURCES}
+                      className="w-full"
+                    />
                   </div>
                 </div>
                 <div className="flex gap-3 mt-5">
@@ -420,7 +422,7 @@ export default function ComptabiliteClient() {
                   </button>
                 </div>
               </div>
-            </motion.div>
+            </m.div>
           </>
         )}
       </AnimatePresence>
@@ -539,12 +541,12 @@ export default function ComptabiliteClient() {
       <AnimatePresence>
         {docModal && (
           <>
-            <motion.div
+            <m.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setDocModal(null)}
               className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
             />
-            <motion.div
+            <m.div
               initial={{ scale: 0.93, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0 }}
@@ -604,7 +606,7 @@ export default function ComptabiliteClient() {
                   </p>
                 </div>
               </div>
-            </motion.div>
+            </m.div>
           </>
         )}
       </AnimatePresence>
@@ -639,7 +641,7 @@ function DocButton({ icon, title, desc, onGenerate }: {
         <p className="text-sm font-semibold text-[var(--text-primary)]">{title}</p>
         <p className="text-[11px] text-[var(--text-muted)] mt-0.5 line-clamp-1">{desc}</p>
       </div>
-      <motion.button
+      <m.button
         whileTap={{ scale: 0.95 }}
         onClick={handleClick}
         disabled={loading}
@@ -656,7 +658,7 @@ function DocButton({ icon, title, desc, onGenerate }: {
         ) : (
           <><Download size={12} weight="bold" /> Générer</>
         )}
-      </motion.button>
+      </m.button>
     </div>
   );
 }

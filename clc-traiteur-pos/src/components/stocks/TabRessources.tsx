@@ -2,10 +2,11 @@
 
 import { useState, useMemo } from "react";
 import { Plus, Trash, CurrencyEur, Check, X, CaretDown, CaretUp } from "@phosphor-icons/react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { useStore } from "@/lib/store";
 import { RECIPES } from "@/lib/data/stocks";
 import { RecipeIngredient } from "@/lib/types";
+import { Select } from "@/components/ui/Select";
 
 type Rubrique = "recettes" | "prix-ing" | "prix-mat";
 const MULTIPLIERS = [1, 2, 5, 10, 20, 50, 100];
@@ -155,7 +156,7 @@ export default function TabRessources() {
 
                   <AnimatePresence>
                     {isExpanded && (
-                      <motion.div
+                      <m.div
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
@@ -172,11 +173,13 @@ export default function TabRessources() {
                             const editKey = `${recipe.dishId}-${ri.ingredientId}`;
                             return (
                               <div key={ri.ingredientId} className="flex items-center gap-3 px-4 py-2.5 bg-[var(--surface-2)]">
-                                <select value={ri.ingredientId}
-                                  onChange={(e) => changeIngInRecipe(recipe.dishId, ri.ingredientId, e.target.value)}
-                                  className="flex-1 min-w-0 text-sm text-[var(--text-primary)] bg-transparent outline-none truncate">
-                                  {ingredients.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-                                </select>
+                                <Select
+                                  value={ri.ingredientId}
+                                  onChange={(newId) => changeIngInRecipe(recipe.dishId, ri.ingredientId, newId)}
+                                  options={ingredients.map((i) => ({ value: i.id, label: i.name }))}
+                                  size="sm"
+                                  className="flex-1 min-w-0"
+                                />
                                 {editingId === editKey ? (
                                   <div className="flex items-center gap-1 shrink-0">
                                     <input autoFocus type="number" min="0" step="0.001" value={editVal}
@@ -188,7 +191,7 @@ export default function TabRessources() {
                                   </div>
                                 ) : (
                                   <button onClick={() => { setEditingId(editKey); setEditVal(displayQty.toFixed(3)); }}
-                                    className="text-sm font-mono text-[var(--text-secondary)] hover:text-[var(--amber)] shrink-0 transition-colors">
+                                    className="w-24 text-xs font-mono text-right text-[var(--text-secondary)] hover:text-[var(--amber)] shrink-0 transition-colors">
                                     {qtyStr}
                                   </button>
                                 )}
@@ -200,7 +203,7 @@ export default function TabRessources() {
                             );
                           })}
                         </div>
-                      </motion.div>
+                      </m.div>
                     )}
                   </AnimatePresence>
                 </div>

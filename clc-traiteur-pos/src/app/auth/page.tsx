@@ -1,9 +1,5 @@
-import AuthForm from "@/components/auth/AuthForm";
-
-export const metadata = {
-  title: "Connexion — C.LC. Traiteur",
-};
+import { redirect } from "next/navigation";
 
 export default function AuthPage() {
-  return <AuthForm />;
+  redirect("/");
 }

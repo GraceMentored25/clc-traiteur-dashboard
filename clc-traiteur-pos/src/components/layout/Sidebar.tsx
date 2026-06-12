@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import {
   ChartBar,
   Clipboard,
@@ -38,7 +38,7 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
 
   const handleLogout = () => {
     logout();
-    router.push("/auth");
+    router.push("/");
   };
 
   return (
@@ -58,6 +58,7 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
             width={52}
             height={52}
             className="shrink-0 rounded-full"
+            priority
           />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-[var(--text-primary)] tracking-tight leading-none">
@@ -94,7 +95,7 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
                 )}
               >
                 {active && (
-                  <motion.div
+                  <m.div
                     layoutId="sidebar-active"
                     className="absolute inset-0 rounded-xl bg-[var(--amber)]/8"
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}

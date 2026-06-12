@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { Plus, Trash, CurrencyEur, PencilSimple, Check, X } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
 import { RECIPES } from "@/lib/data/stocks";
 import { RecipeIngredient } from "@/lib/types";
+import { Select } from "@/components/ui/Select";
 
 type Rubrique = "recettes" | "prix";
 const MULTIPLIERS = [1, 2, 5, 10, 20, 50, 100];
@@ -183,13 +184,13 @@ export default function TabRecettes() {
                     return (
                       <div key={ri.ingredientId} className="flex items-center gap-3 px-4 py-2.5">
                         {/* Sélecteur ingrédient */}
-                        <select
+                        <Select
                           value={ri.ingredientId}
-                          onChange={(e) => changeIngInRecipe(recipe.dishId, ri.ingredientId, e.target.value)}
-                          className="flex-1 min-w-0 text-sm text-[var(--text-primary)] bg-transparent outline-none cursor-pointer truncate"
-                        >
-                          {ingredients.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-                        </select>
+                          onChange={(newId) => changeIngInRecipe(recipe.dishId, ri.ingredientId, newId)}
+                          options={ingredients.map((i) => ({ value: i.id, label: i.name }))}
+                          size="sm"
+                          className="flex-1 min-w-0"
+                        />
 
                         {/* Quantité éditable */}
                         {editingId === editKey ? (
@@ -207,7 +208,7 @@ export default function TabRecettes() {
                         ) : (
                           <button
                             onClick={() => { setEditingId(editKey); setEditVal(displayQty.toFixed(3)); }}
-                            className="text-sm font-mono text-[var(--text-secondary)] hover:text-[var(--amber)] shrink-0 transition-colors cursor-pointer"
+                            className="w-24 text-xs font-mono text-right text-[var(--text-secondary)] hover:text-[var(--amber)] shrink-0 transition-colors cursor-pointer"
                             title="Cliquer pour modifier"
                           >
                             {qtyStr}
@@ -244,11 +245,13 @@ export default function TabRecettes() {
                 {/* Unité éditable */}
                 {unitEditId === ing.id ? (
                   <div className="flex items-center gap-1">
-                    <select autoFocus value={unitVal} onChange={(e) => setUnitVal(e.target.value)} onBlur={() => commitUnit(ing.id)}
-                      className="w-20 h-7 px-1 text-xs bg-[var(--surface-2)] border border-[var(--amber)]/50 rounded-lg text-[var(--text-primary)] outline-none">
-                      {UNITS_ING.map((u) => <option key={u} value={u}>{u}</option>)}
-                      <option value={unitVal}>{unitVal}</option>
-                    </select>
+                    <Select
+                      value={unitVal}
+                      onChange={(v) => { setUnitVal(v); commitUnit(ing.id); }}
+                      options={[...new Set([...UNITS_ING, unitVal])].map((u) => ({ value: u, label: u }))}
+                      size="sm"
+                      className="w-24"
+                    />
                   </div>
                 ) : (
                   <button onClick={() => { setUnitEditId(ing.id); setUnitVal(ing.unit); }}

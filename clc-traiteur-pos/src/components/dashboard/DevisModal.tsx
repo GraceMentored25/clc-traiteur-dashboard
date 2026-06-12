@@ -1,15 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { X, CheckCircle, WarningCircle, FileText } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
 import { DevisItem, DevisStatus } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
+import { Select } from "@/components/ui/Select";
+
+const EVENT_TYPE_OPTS = ["Mariage","Anniversaire","Baptême","Séminaire d'entreprise","Réception privée","Autre"].map(v => ({ value: v, label: v }));
 
 const schema = z.object({
   clientName: z.string().min(2, "Nom requis (min 2 caractères)"),
@@ -28,12 +31,16 @@ interface Props {
 
 export default function DevisModal({ onClose }: Props) {
   const router = useRouter();
-  const { cart, cartTotal, clearCart, addDevis } = useStore();
+  const cart = useStore((s) => s.cart);
+  const cartTotal = useStore((s) => s.cartTotal);
+  const clearCart = useStore((s) => s.clearCart);
+  const addDevis = useStore((s) => s.addDevis);
   const [success, setSuccess] = useState(false);
   const total = cartTotal();
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
@@ -71,7 +78,7 @@ export default function DevisModal({ onClose }: Props) {
   return (
     <>
       {/* Backdrop */}
-      <motion.div
+      <m.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -80,11 +87,11 @@ export default function DevisModal({ onClose }: Props) {
       />
 
       {/* Modal */}
-      <motion.div
-        initial={{ scale: 0.92, opacity: 0, y: 20 }}
+      <m.div
+        initial={{ scale: 0.95, opacity: 0, y: 12 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.95, opacity: 0 }}
-        transition={{ type: "spring", stiffness: 300, damping: 28 }}
+        exit={{ scale: 0.97, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 420, damping: 34, mass: 0.7 }}
         className="fixed inset-0 z-50 flex items-center justify-center p-4"
         onClick={(e) => e.stopPropagation()}
       >
@@ -107,14 +114,14 @@ export default function DevisModal({ onClose }: Props) {
 
           {success ? (
             <div className="flex flex-col items-center justify-center px-8 py-12 text-center">
-              <motion.div
+              <m.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 200, damping: 18 }}
                 className="w-16 h-16 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center mb-5"
               >
                 <CheckCircle size={32} weight="fill" className="text-[var(--success)]" />
-              </motion.div>
+              </m.div>
               <h3 className="text-xl font-bold text-[var(--text-primary)] mb-2">
                 Devis créé avec succès
               </h3>
@@ -128,13 +135,13 @@ export default function DevisModal({ onClose }: Props) {
                 >
                   Nouveau devis
                 </button>
-                <motion.button
+                <m.button
                   whileTap={{ scale: 0.97 }}
                   onClick={handleGoToDevis}
                   className="flex-1 h-10 rounded-xl bg-[var(--amber)] text-[var(--surface)] font-semibold text-sm hover:bg-[var(--amber-light)] transition-colors"
                 >
                   Voir les devis
-                </motion.button>
+                </m.button>
               </div>
             </div>
           ) : (
@@ -170,7 +177,7 @@ export default function DevisModal({ onClose }: Props) {
                       {...register("clientName")}
                       type="text"
                       placeholder="Rosalie Ekindi"
-                      className="w-full h-10 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--amber)]/50 focus:ring-1 focus:ring-[var(--amber)]/15 transition-all"
+                      className="w-full h-10 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--amber)]/50 focus:ring-1 focus:ring-[var(--amber)]/15 transition-colors"
                     />
                     {errors.clientName && (
                       <p className="text-[11px] text-[var(--danger)] flex items-center gap-1">
@@ -184,7 +191,7 @@ export default function DevisModal({ onClose }: Props) {
                       {...register("clientPhone")}
                       type="tel"
                       placeholder="+33 6 xx xx xx xx"
-                      className="w-full h-10 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--amber)]/50 focus:ring-1 focus:ring-[var(--amber)]/15 transition-all"
+                      className="w-full h-10 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--amber)]/50 focus:ring-1 focus:ring-[var(--amber)]/15 transition-colors"
                     />
                     {errors.clientPhone && (
                       <p className="text-[11px] text-[var(--danger)] flex items-center gap-1">
@@ -200,7 +207,7 @@ export default function DevisModal({ onClose }: Props) {
                     <input
                       {...register("eventDate")}
                       type="date"
-                      className="w-full h-10 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 focus:ring-1 focus:ring-[var(--amber)]/15 transition-all"
+                      className="w-full h-10 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 focus:ring-1 focus:ring-[var(--amber)]/15 transition-colors"
                     />
                     {errors.eventDate && (
                       <p className="text-[11px] text-[var(--danger)] flex items-center gap-1">
@@ -215,7 +222,7 @@ export default function DevisModal({ onClose }: Props) {
                       type="number"
                       min="1"
                       placeholder="50"
-                      className="w-full h-10 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--amber)]/50 focus:ring-1 focus:ring-[var(--amber)]/15 transition-all"
+                      className="w-full h-10 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--amber)]/50 focus:ring-1 focus:ring-[var(--amber)]/15 transition-colors"
                     />
                     {errors.guestCount && (
                       <p className="text-[11px] text-[var(--danger)] flex items-center gap-1">
@@ -227,18 +234,9 @@ export default function DevisModal({ onClose }: Props) {
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-[var(--text-secondary)]">Type d&apos;événement</label>
-                  <select
-                    {...register("eventType")}
-                    className="w-full h-10 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 focus:ring-1 focus:ring-[var(--amber)]/15 transition-all"
-                  >
-                    <option value="">Sélectionner...</option>
-                    <option value="Mariage">Mariage</option>
-                    <option value="Anniversaire">Anniversaire</option>
-                    <option value="Baptême">Baptême</option>
-                    <option value="Séminaire d'entreprise">Séminaire d&apos;entreprise</option>
-                    <option value="Réception privée">Réception privée</option>
-                    <option value="Autre">Autre</option>
-                  </select>
+                  <Controller name="eventType" control={control} render={({ field }) => (
+                    <Select value={field.value} onChange={field.onChange} options={EVENT_TYPE_OPTS} placeholder="Sélectionner..." className="w-full" />
+                  )} />
                   {errors.eventType && (
                     <p className="text-[11px] text-[var(--danger)] flex items-center gap-1">
                       <WarningCircle size={11} /> {errors.eventType.message}
@@ -266,7 +264,7 @@ export default function DevisModal({ onClose }: Props) {
                 >
                   Annuler
                 </button>
-                <motion.button
+                <m.button
                   type="submit"
                   disabled={isSubmitting}
                   whileTap={{ scale: 0.97 }}
@@ -280,12 +278,12 @@ export default function DevisModal({ onClose }: Props) {
                   ) : (
                     "Créer le devis"
                   )}
-                </motion.button>
+                </m.button>
               </div>
             </form>
           )}
         </div>
-      </motion.div>
+      </m.div>
     </>
   );
 }

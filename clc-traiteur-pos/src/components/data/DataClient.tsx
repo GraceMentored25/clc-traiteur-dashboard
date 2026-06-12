@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import {
   DownloadSimple, UploadSimple, CheckCircle, Warning,
   Database, Trash, ClockCounterClockwise,
@@ -171,7 +171,7 @@ export default function DataClient() {
       {/* Statut */}
       <AnimatePresence>
         {status !== "idle" && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
@@ -183,7 +183,7 @@ export default function DataClient() {
           >
             {status === "success" ? <CheckCircle size={18} weight="fill" /> : <Warning size={18} weight="fill" />}
             {message}
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
 
@@ -219,14 +219,14 @@ export default function DataClient() {
             <p className="text-xs text-[var(--text-muted)] mb-4">
               Télécharge un fichier <code className="font-mono bg-[var(--surface-2)] px-1 rounded">.json</code> contenant tous vos devis, stocks, recettes, courses et entrées comptables.
             </p>
-            <motion.button
+            <m.button
               whileTap={{ scale: 0.97 }}
               onClick={handleExport}
               className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-[var(--amber)] hover:bg-[var(--amber-light)] text-[var(--surface)] font-semibold text-sm transition-colors"
             >
               <DownloadSimple size={16} weight="bold" />
               Télécharger la sauvegarde
-            </motion.button>
+            </m.button>
           </div>
 
           {/* Import */}
@@ -243,14 +243,14 @@ export default function DataClient() {
               className="hidden"
               id="import-file"
             />
-            <motion.button
+            <m.button
               whileTap={{ scale: 0.97 }}
               onClick={() => fileRef.current?.click()}
               className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] hover:border-[var(--amber)]/40 hover:text-[var(--amber)] font-semibold text-sm transition-all"
             >
               <UploadSimple size={16} weight="bold" />
               Importer un fichier de sauvegarde
-            </motion.button>
+            </m.button>
           </div>
 
           {/* Reset */}
@@ -263,14 +263,14 @@ export default function DataClient() {
               Supprime tous vos devis, stocks personnalisés et entrées comptables. Les données de démonstration (Lab) seront restaurées.
             </p>
             {!confirmReset ? (
-              <motion.button
+              <m.button
                 whileTap={{ scale: 0.97 }}
                 onClick={() => setConfirmReset(true)}
                 className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-red-500/10 border border-red-500/20 text-[var(--danger)] hover:bg-red-500/20 font-semibold text-sm transition-all"
               >
                 <Trash size={15} />
                 Réinitialiser les données
-              </motion.button>
+              </m.button>
             ) : (
               <div className="flex gap-3">
                 <button onClick={() => setConfirmReset(false)} className="flex-1 h-10 rounded-xl border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-2)] transition-colors">

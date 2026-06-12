@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { motion } from "framer-motion";
-import { X, Phone, Calendar, Users, FileText, CaretDown, Check, FilePdf } from "@phosphor-icons/react";
+import { m } from "framer-motion";
+import { X, Phone, Calendar, Users, FileText, Check, FilePdf } from "@phosphor-icons/react";
 import { generateDevisPDF } from "@/lib/generateDevisPDF";
 import { Devis, DevisItem, DevisStatus } from "@/lib/types";
 import { formatCurrency, formatDate, STATUS_COLORS } from "@/lib/utils";
 import { useStore } from "@/lib/store";
+import { Select } from "@/components/ui/Select";
 
 interface Props {
   devis: Devis;
@@ -50,12 +51,12 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
 
   return (
     <>
-      <motion.div
+      <m.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose}
         className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
       />
-      <motion.aside
+      <m.aside
         initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className="fixed right-0 top-0 h-full w-full sm:w-[460px] bg-[var(--surface-1)] border-l border-[var(--border)] z-50 flex flex-col overflow-y-auto"
@@ -129,19 +130,16 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
           {/* Status */}
           <div>
             <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-widest mb-3">Statut du devis</p>
-            <div className="relative">
-              <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
-                <span className={`text-sm font-semibold ${STATUS_COLORS[devis.status].split(" ")[0]}`}>{devis.status}</span>
-                <CaretDown size={14} className="text-[var(--text-muted)]" />
-              </div>
-              <select
-                value={devis.status}
-                onChange={(e) => onStatusChange(e.target.value as DevisStatus)}
-                className="absolute inset-0 w-full opacity-0 cursor-pointer"
-              >
-                {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
+            <Select
+              value={devis.status}
+              onChange={(v) => onStatusChange(v as DevisStatus)}
+              options={STATUS_OPTIONS.map((s) => ({
+                value: s,
+                label: s,
+                labelClassName: STATUS_COLORS[s]?.split(" ")[0],
+              }))}
+              className="w-full"
+            />
           </div>
 
           {/* Items — editable */}
@@ -193,7 +191,7 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
 
             {/* Save button — shown only if changed */}
             {(isDirty || saved) && (
-              <motion.button
+              <m.button
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 whileTap={{ scale: 0.97 }}
@@ -205,7 +203,7 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
                 }`}
               >
                 {saved ? <><Check size={14} weight="bold" /> Modifications enregistrées</> : "Enregistrer les modifications"}
-              </motion.button>
+              </m.button>
             )}
           </div>
 
@@ -235,7 +233,7 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
             </div>
           )}
         </div>
-      </motion.aside>
+      </m.aside>
     </>
   );
 }

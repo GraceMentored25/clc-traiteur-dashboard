@@ -9,12 +9,16 @@ import { formatCurrency, cn } from "@/lib/utils";
 
 const DishRow = memo(function DishRow({ dish }: { dish: Dish }) {
   const [quantity, setQuantity] = useState(0);
-  const { addToCart, updateQuantity, removeFromCart, cart, customPrices } = useStore();
 
-  const cartItem = cart.find((c) => c.dish.id === dish.id);
+  // Sélecteurs granulaires — re-render uniquement si CES données changent
+  const cartItem = useStore(useCallback((s) => s.cart.find((c) => c.dish.id === dish.id), [dish.id]));
+  const effectivePrice = useStore(useCallback((s) => s.customPrices[dish.id] ?? dish.price, [dish.id, dish.price]));
+  const addToCart = useStore((s) => s.addToCart);
+  const updateQuantity = useStore((s) => s.updateQuantity);
+  const removeFromCart = useStore((s) => s.removeFromCart);
+
   const inCart = !!cartItem;
   const displayQty = inCart ? cartItem!.quantity : quantity;
-  const effectivePrice = customPrices[dish.id] ?? dish.price;
 
   const increment = useCallback(() => {
     if (inCart) updateQuantity(dish.id, cartItem!.quantity + 1);
@@ -39,7 +43,7 @@ const DishRow = memo(function DishRow({ dish }: { dish: Dish }) {
 
   return (
     <div className={cn(
-      "px-4 py-2.5 rounded-xl transition-all border",
+      "px-4 py-2.5 rounded-xl transition-colors border",
       inCart ? "bg-[var(--amber)]/5 border-[var(--amber)]/20" : "hover:bg-[var(--surface-2)] border-transparent"
     )}>
 
@@ -61,15 +65,15 @@ const DishRow = memo(function DishRow({ dish }: { dish: Dish }) {
         </div>
         <div className="grid grid-cols-[26px_1fr_26px] items-center gap-1">
           <button onClick={decrement} disabled={displayQty === 0}
-            className={cn("w-[26px] h-7 rounded-lg flex items-center justify-center transition-all active:scale-95",
+            className={cn("w-[26px] h-7 rounded-lg flex items-center justify-center transition-colors active:scale-95",
               displayQty > 0 ? "bg-[var(--amber)]/15 text-[var(--amber)]" : "bg-[var(--surface-3)] text-[var(--text-muted)] opacity-40 cursor-not-allowed")}>
             <Minus size={10} weight="bold" />
           </button>
           <input type="number" min="0" value={displayQty === 0 ? "" : displayQty} placeholder="0"
             onChange={(e) => handleInput(e.target.value)} onFocus={(e) => e.target.select()}
-            className="w-full h-7 text-center font-mono font-bold text-sm bg-[var(--surface-3)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--amber)]/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+            className="w-full h-7 text-center font-mono font-bold text-sm bg-[var(--surface-3)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--amber)]/50 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
           <button onClick={increment}
-            className="w-[26px] h-7 rounded-lg bg-[var(--amber)] flex items-center justify-center text-[var(--surface)] transition-all active:scale-95">
+            className="w-[26px] h-7 rounded-lg bg-[var(--amber)] flex items-center justify-center text-[var(--surface)] transition-colors active:scale-95">
             <Plus size={10} weight="bold" />
           </button>
         </div>
@@ -93,15 +97,15 @@ const DishRow = memo(function DishRow({ dish }: { dish: Dish }) {
         {/* Contrôles compacts */}
         <div className="flex items-center gap-1 shrink-0">
           <button onClick={decrement} disabled={displayQty === 0}
-            className={cn("w-7 h-7 rounded-lg flex items-center justify-center transition-all active:scale-95",
+            className={cn("w-7 h-7 rounded-lg flex items-center justify-center transition-colors active:scale-95",
               displayQty > 0 ? "bg-[var(--amber)]/15 text-[var(--amber)]" : "bg-[var(--surface-3)] text-[var(--text-muted)] opacity-40 cursor-not-allowed")}>
             <Minus size={11} weight="bold" />
           </button>
           <input type="number" min="0" value={displayQty === 0 ? "" : displayQty} placeholder="0"
             onChange={(e) => handleInput(e.target.value)} onFocus={(e) => e.target.select()}
-            className="w-12 h-7 text-center font-mono font-bold text-sm bg-[var(--surface-3)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--amber)]/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+            className="w-12 h-7 text-center font-mono font-bold text-sm bg-[var(--surface-3)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--amber)]/50 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
           <button onClick={increment}
-            className="w-7 h-7 rounded-lg bg-[var(--amber)] flex items-center justify-center text-[var(--surface)] transition-all active:scale-95">
+            className="w-7 h-7 rounded-lg bg-[var(--amber)] flex items-center justify-center text-[var(--surface)] transition-colors active:scale-95">
             <Plus size={11} weight="bold" />
           </button>
         </div>

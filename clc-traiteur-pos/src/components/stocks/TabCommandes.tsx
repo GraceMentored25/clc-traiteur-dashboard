@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { Play, Receipt, Calendar, Users, Check } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -128,7 +128,7 @@ export default function TabCommandes() {
       {confirmed.map((devis) => {
         const done = alreadyStarted(devis.id) || started.has(devis.id);
         return (
-          <motion.div
+          <m.div
             key={devis.id}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -154,7 +154,7 @@ export default function TabCommandes() {
 
             <AnimatePresence mode="wait">
               {done ? (
-                <motion.div
+                <m.div
                   key="done"
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
@@ -162,9 +162,9 @@ export default function TabCommandes() {
                 >
                   <Check size={14} weight="bold" />
                   <span className="hidden sm:inline">Généré</span>
-                </motion.div>
+                </m.div>
               ) : (
-                <motion.button
+                <m.button
                   key="start"
                   whileTap={{ scale: 0.97 }}
                   onClick={() => handleCommencer(devis.id)}
@@ -172,10 +172,10 @@ export default function TabCommandes() {
                 >
                   <Play size={13} weight="fill" />
                   Commencer
-                </motion.button>
+                </m.button>
               )}
             </AnimatePresence>
-          </motion.div>
+          </m.div>
         );
       })}
     </div>

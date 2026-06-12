@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Image from "next/image";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { Eye, EyeSlash, WarningCircle, ArrowRight } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
 
@@ -46,7 +46,7 @@ export default function AuthForm() {
   return (
     <div className="min-h-[100dvh] flex">
       {/* Left panel — image */}
-      <motion.div
+      <m.div
         initial={{ x: -40, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
@@ -59,13 +59,13 @@ export default function AuthForm() {
         <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
         {/* Overlay content */}
         <div className="relative z-10 flex flex-col justify-end p-12">
-          <motion.div
+          <m.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.4, duration: 0.6 }}
           >
             <div className="flex items-center gap-3 mb-6">
-              <Image src="/logo.png" alt="Chez La Camerounaise" width={56} height={56} className="shrink-0 rounded-full" />
+              <Image src="/logo.png" alt="Chez La Camerounaise" width={56} height={56} className="shrink-0 rounded-full" priority />
               <span className="text-white font-semibold text-lg tracking-tight">Chez La Camerounaise</span>
             </div>
             <h2 className="text-4xl font-bold text-white tracking-tight leading-tight mb-3">
@@ -74,9 +74,9 @@ export default function AuthForm() {
             <p className="text-white/60 text-base leading-relaxed max-w-xs">
               Gérez vos événements, devis et commandes depuis un seul espace.
             </p>
-          </motion.div>
+          </m.div>
 
-          <motion.div
+          <m.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.6, duration: 0.6 }}
@@ -92,15 +92,15 @@ export default function AuthForm() {
                 <div className="text-white/50 text-xs mt-0.5">{stat.label}</div>
               </div>
             ))}
-          </motion.div>
+          </m.div>
         </div>
 
         {/* Ambient glow */}
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-      </motion.div>
+      </m.div>
 
       {/* Right panel — form */}
-      <motion.div
+      <m.div
         initial={{ x: 40, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
@@ -110,12 +110,12 @@ export default function AuthForm() {
           {/* Mobile logo */}
           <div className="md:hidden flex items-center gap-3 mb-10">
             <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 bg-[var(--surface-3)]">
-              <Image src="/logo.png" alt="Chez La Camerounaise" width={40} height={40} className="w-full h-full object-cover" />
+              <Image src="/logo.png" alt="Chez La Camerounaise" width={40} height={40} className="w-full h-full object-cover" priority />
             </div>
             <span className="font-semibold text-[var(--text-primary)]">Chez La Camerounaise</span>
           </div>
 
-          <motion.div
+          <m.div
             initial={{ y: 16, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.2, duration: 0.5 }}
@@ -178,7 +178,7 @@ export default function AuthForm() {
               {/* Auth error */}
               <AnimatePresence>
                 {authError && (
-                  <motion.div
+                  <m.div
                     initial={{ opacity: 0, y: -6 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
@@ -186,12 +186,12 @@ export default function AuthForm() {
                   >
                     <WarningCircle size={16} weight="fill" />
                     {authError}
-                  </motion.div>
+                  </m.div>
                 )}
               </AnimatePresence>
 
               {/* Submit */}
-              <motion.button
+              <m.button
                 type="submit"
                 disabled={loading}
                 whileTap={{ scale: 0.98 }}
@@ -208,15 +208,15 @@ export default function AuthForm() {
                     <ArrowRight size={16} weight="bold" />
                   </>
                 )}
-              </motion.button>
+              </m.button>
             </form>
 
             <p className="text-center text-xs text-[var(--text-muted)] mt-8">
               Accès réservé au personnel autorisé C.LC. Traiteur
             </p>
-          </motion.div>
+          </m.div>
         </div>
-      </motion.div>
+      </m.div>
     </div>
   );
 }

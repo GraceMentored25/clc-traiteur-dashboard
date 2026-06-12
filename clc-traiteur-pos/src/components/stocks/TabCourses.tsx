@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { ShoppingCart, Truck, CaretDown, CaretUp, Trash, Calendar, Users, Check, Clock } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -152,7 +152,7 @@ export default function TabCourses() {
 
               <AnimatePresence>
                 {expanded === d.id && (
-                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
+                  <m.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
                     className="overflow-hidden border-t border-[var(--border)]">
                     {/* Header */}
@@ -185,7 +185,7 @@ export default function TabCourses() {
                       <span className="text-sm font-bold text-[var(--text-primary)]">TOTAL À ACHETER</span>
                       <span className="text-base font-mono font-bold text-[var(--amber)]">{formatCurrency(d.totalEstime)}</span>
                     </div>
-                  </motion.div>
+                  </m.div>
                 )}
               </AnimatePresence>
             </div>
@@ -235,7 +235,7 @@ export default function TabCourses() {
 
                 <AnimatePresence>
                   {expanded === d.id + "-log" && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
+                    <m.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
                       className="overflow-hidden border-t border-[var(--border)]">
                       {/* Header */}
@@ -274,7 +274,7 @@ export default function TabCourses() {
                           <span className="text-base font-mono font-bold text-[var(--amber)]">{formatCurrency(total)}</span>
                         </div>
                       )}
-                    </motion.div>
+                    </m.div>
                   )}
                 </AnimatePresence>
               </div>
