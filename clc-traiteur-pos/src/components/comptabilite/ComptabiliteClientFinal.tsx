@@ -311,7 +311,7 @@ export default function ComptabiliteClientFinal() {
               <div className="hidden md:grid items-center gap-0 px-6 py-3 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors group" style={{ gridTemplateColumns: "80px 1fr 130px 110px 110px 120px" }}>
                 <p className="text-sm font-medium text-[var(--text-primary)] truncate" style={{ gridColumn: "1 / 3" }}>{e.libelle}</p>
                 <p className="text-xs text-[var(--text-secondary)] capitalize">{SOURCES.find(s => s.value === e.source)?.label}</p>
-                <div className="flex items-center justify-end gap-1 text-xs text-[var(--text-muted)] pr-2" style={{ gridColumn: "4 / 6" }}><Calendar size={11}/>{formatDate(e.date)}</div>
+                <div className="flex w-full items-center justify-end gap-1 text-xs text-[var(--text-muted)] pr-2" style={{ gridColumn: "4 / 6" }}><Calendar size={11}/>{formatDate(e.date)}</div>
                 {/* Montant + boutons alignés à droite */}
                 <div className="flex items-center justify-end gap-1">
                   <button onClick={() => { setCapitalForm({ libelle: e.libelle, montant: String(e.montant), date: e.date, source: e.source }); setEditingCapitalId(e.id); setCapitalModal(true); }}
@@ -454,7 +454,7 @@ export default function ComptabiliteClientFinal() {
                 <div style={{ gridColumn: "1" }} className="flex items-center gap-1.5"><ShoppingCart size={12} className="text-[var(--text-muted)]"/><span className="text-xs text-[var(--text-secondary)]">Repas</span></div>
                 <p style={{ gridColumn: "2" }} className="text-sm font-medium text-[var(--text-primary)] truncate">{d.clientName}</p>
                 <div style={{ gridColumn: "3" }}></div>
-                <div style={{ gridColumn: "4 / 6" }} className="flex items-center justify-end gap-1 text-xs text-[var(--text-muted)] pr-2"><Calendar size={11}/>{formatDate(d.eventDate)}</div>
+                <div style={{ gridColumn: "4 / 6" }} className="flex w-full items-center justify-end gap-1 text-xs text-[var(--text-muted)] pr-2"><Calendar size={11}/>{formatDate(d.eventDate)}</div>
                 <p style={{ gridColumn: "6" }} className="text-sm font-mono font-bold text-[var(--amber)] text-right pr-2">{formatCurrency(d.totalEstime)}</p>
               </div>
               {/* Mobile */}
@@ -477,7 +477,7 @@ export default function ComptabiliteClientFinal() {
                   <div style={{ gridColumn: "1" }} className="flex items-center gap-1.5"><Truck size={12} className="text-[var(--text-muted)]"/><span className="text-xs text-[var(--text-secondary)]">Logistique</span></div>
                   <p style={{ gridColumn: "2" }} className="text-sm font-medium text-[var(--text-primary)] truncate">{d.clientName}</p>
                   <div style={{ gridColumn: "3" }}></div>
-                  <div style={{ gridColumn: "4 / 6" }} className="flex items-center justify-end gap-1 text-xs text-[var(--text-muted)] pr-2"><Calendar size={11}/>{formatDate(d.eventDate)}</div>
+                  <div style={{ gridColumn: "4 / 6" }} className="flex w-full items-center justify-end gap-1 text-xs text-[var(--text-muted)] pr-2"><Calendar size={11}/>{formatDate(d.eventDate)}</div>
                   <p style={{ gridColumn: "6" }} className="text-sm font-mono font-bold text-[var(--amber)] text-right pr-2">{total > 0 ? formatCurrency(total) : "—"}</p>
                 </div>
                 {/* Mobile */}
