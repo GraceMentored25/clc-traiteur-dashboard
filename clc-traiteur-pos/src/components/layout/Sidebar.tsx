@@ -18,6 +18,7 @@ import {
   Briefcase,
   Package,
   Database,
+  ListChecks,
 } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -27,8 +28,8 @@ const NAV_ITEMS = [
   { href: "/devis", label: "Gestion de devis", icon: Clipboard },
   { href: "/comptabilite", label: "Gestion comptable", icon: Wallet },
   { href: "/stocks", label: "Gestion des stocks", icon: Package },
+  { href: "/organisation", label: "Organisation", icon: ListChecks },
   { href: "/kpi", label: "KPI & Métriques", icon: ChartBar },
-  { href: "/data", label: "Gestion des données", icon: Database },
 ];
 
 export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: () => void }) {
@@ -178,6 +179,17 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
           <SignOut size={17} />
           Déconnexion
         </button>
+        <Link href="/data" onClick={onClose}>
+          <div className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer",
+            pathname === "/data"
+              ? "text-[var(--amber)] bg-[var(--amber)]/8"
+              : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)]"
+          )}>
+            <Database size={17} weight={pathname === "/data" ? "fill" : "regular"} className="shrink-0" />
+            Données
+          </div>
+        </Link>
       </div>
     </aside>
   );
