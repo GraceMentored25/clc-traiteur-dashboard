@@ -117,8 +117,8 @@ export function Select({
         <div
           ref={dropdownRef}
           role="listbox"
-          style={{ ...dropdownStyle, background: "#0D1117" }}
-          className="rounded-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.7)] overflow-hidden"
+          style={dropdownStyle}
+          className="rounded-xl bg-[var(--surface-1)] border border-[var(--border)] shadow-[0_8px_32px_rgba(0,0,0,0.4)] overflow-hidden"
         >
           <ul className="py-1 max-h-60 overflow-y-auto">
             {options.map((opt) => (
@@ -127,14 +127,14 @@ export function Select({
                 role="option"
                 aria-selected={opt.value === value}
                 onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onChange(opt.value); setOpen(false); }}
-                style={opt.value === value
-                  ? { background: "rgba(232,150,12,0.08)", color: "#E8960C" }
-                  : { color: "#F0F6FC" }
-                }
-                className="flex items-center justify-between gap-3 px-3 py-2 text-sm cursor-pointer transition-colors hover:!text-[#E8960C]"
+                className={`flex items-center justify-between gap-3 px-3 py-2 text-sm cursor-pointer transition-colors
+                  ${opt.value === value
+                    ? "bg-[var(--amber)]/10 text-[var(--amber)]"
+                    : "text-[var(--text-primary)] hover:text-[var(--amber)] hover:bg-[var(--surface-2)]"
+                  }`}
               >
                 <span>{opt.label}</span>
-                {opt.value === value && <Check size={11} weight="bold" style={{ color: "#E8960C" }} className="shrink-0" />}
+                {opt.value === value && <Check size={11} weight="bold" className="shrink-0 text-[var(--amber)]" />}
               </li>
             ))}
           </ul>

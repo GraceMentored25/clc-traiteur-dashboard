@@ -308,29 +308,23 @@ const DishCard = memo(function DishCard({ dish }: Props) {
                     ) : (
                       <h3 className="font-bold text-[var(--text-primary)] text-sm truncate">{editForm.name}</h3>
                     )}
-                    {isCustomDish && (
-                      <button
-                        onClick={() => { setEditingName(true); setTimeout(() => nameRef.current?.select(), 10); }}
-                        className="shrink-0 w-6 h-6 rounded-lg bg-[var(--surface-2)] hover:bg-[var(--surface-3)] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--amber)] transition-colors"
-                        title="Modifier le nom"
-                      >
-                        <PencilSimple size={11} />
-                      </button>
-                    )}
+                    <button
+                      onClick={() => { setEditingName(true); setTimeout(() => nameRef.current?.select(), 10); }}
+                      className="shrink-0 w-6 h-6 rounded-lg bg-[var(--surface-2)] hover:bg-[var(--surface-3)] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--amber)] transition-colors"
+                      title="Modifier le nom"
+                    >
+                      <PencilSimple size={11} />
+                    </button>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
-                    {isCustomDish && (
-                      <>
-                        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
-                        <button
-                          onClick={() => fileRef.current?.click()}
-                          className="w-7 h-7 rounded-xl bg-[var(--surface-2)] hover:bg-[var(--surface-3)] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--amber)] transition-colors"
-                          title="Changer la photo"
-                        >
-                          <Camera size={13} />
-                        </button>
-                      </>
-                    )}
+                    <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+                    <button
+                      onClick={() => fileRef.current?.click()}
+                      className="w-7 h-7 rounded-xl bg-[var(--surface-2)] hover:bg-[var(--surface-3)] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--amber)] transition-colors"
+                      title="Changer la photo"
+                    >
+                      <Camera size={13} />
+                    </button>
                     <button onClick={() => setEditOpen(false)} className="w-7 h-7 rounded-xl bg-[var(--surface-2)] flex items-center justify-center text-[var(--text-muted)]">
                       <X size={13} />
                     </button>
