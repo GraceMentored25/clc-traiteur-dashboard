@@ -7,7 +7,7 @@ import { generateDevisPDF } from "@/lib/generateDevisPDF";
 import { Devis, DevisItem, DevisStatus } from "@/lib/types";
 import { formatCurrency, formatDate, STATUS_COLORS } from "@/lib/utils";
 import { useStore } from "@/lib/store";
-import { Select } from "@/components/ui/Select";
+import { Select } from "@/components/ui/SelectV2";
 
 interface Props {
   devis: Devis;

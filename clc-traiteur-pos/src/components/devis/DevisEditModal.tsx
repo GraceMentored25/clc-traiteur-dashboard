@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { X, PencilSimple, WarningCircle } from "@phosphor-icons/react";
 import { Devis, DevisStatus } from "@/lib/types";
-import { Select } from "@/components/ui/Select";
+import { Select } from "@/components/ui/SelectV2";
 
 const EVENT_TYPES = ["Mariage","Anniversaire","Baptême","Séminaire d'entreprise","Réception privée","Autre"].map(v => ({ value: v, label: v }));
 const STATUS_OPTS = ["Brouillon","Envoyé","Confirmé","Annulé"].map(v => ({ value: v, label: v }));

@@ -6,7 +6,7 @@ import { Plus, Trash, CurrencyEur, PencilSimple, Check, X } from "@phosphor-icon
 import { useStore } from "@/lib/store";
 import { RECIPES } from "@/lib/data/stocks";
 import { RecipeIngredient } from "@/lib/types";
-import { Select } from "@/components/ui/Select";
+import { Select } from "@/components/ui/SelectV2";
 
 type Rubrique = "recettes" | "prix";
 const MULTIPLIERS = [1, 2, 5, 10, 20, 50, 100];

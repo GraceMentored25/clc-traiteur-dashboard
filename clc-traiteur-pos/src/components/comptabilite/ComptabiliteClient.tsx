@@ -20,7 +20,7 @@ import { useStore } from "@/lib/store";
 import { Devis, EntreeCapital } from "@/lib/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { ArrowDown, ArrowUp, ShoppingCart, Truck } from "@phosphor-icons/react";
-import { Select } from "@/components/ui/Select";
+import { Select } from "@/components/ui/SelectV2";
 
 type Period = "all" | "month" | "quarter" | "year";
 

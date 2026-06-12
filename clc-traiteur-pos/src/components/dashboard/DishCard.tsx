@@ -7,7 +7,7 @@ import { Plus, Minus, ShoppingCartSimple, Check, X, Trash, PencilSimple, Camera 
 import { Dish } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { formatCurrency, cn } from "@/lib/utils";
-import { Select } from "@/components/ui/Select";
+import { Select } from "@/components/ui/SelectV2";
 
 interface Props {
   dish: Dish;

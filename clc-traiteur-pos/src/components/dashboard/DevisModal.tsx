@@ -10,7 +10,7 @@ import { X, CheckCircle, WarningCircle, FileText } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
 import { DevisItem, DevisStatus } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
-import { Select } from "@/components/ui/Select";
+import { Select } from "@/components/ui/SelectV2";
 
 const EVENT_TYPE_OPTS = ["Mariage","Anniversaire","Baptême","Séminaire d'entreprise","Réception privée","Autre"].map(v => ({ value: v, label: v }));
 

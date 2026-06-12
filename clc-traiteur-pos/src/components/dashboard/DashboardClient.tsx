@@ -13,7 +13,7 @@ import DishCard from "./DishCard";
 import DishRow from "./DishRow";
 import CartPanel from "./CartPanel";
 import DevisModal from "./DevisModal";
-import { Select } from "@/components/ui/Select";
+import { Select } from "@/components/ui/SelectV2";
 
 type ViewMode = "grid" | "list";
 type SortMode = "default" | "alpha-asc" | "alpha-desc";

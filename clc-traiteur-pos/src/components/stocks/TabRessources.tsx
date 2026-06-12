@@ -1,12 +1,12 @@
 "use client";
-
+// force-recompile
 import { useState, useMemo } from "react";
 import { Plus, Trash, CurrencyEur, Check, X, CaretDown, CaretUp } from "@phosphor-icons/react";
 import { m, AnimatePresence } from "framer-motion";
 import { useStore } from "@/lib/store";
 import { RECIPES } from "@/lib/data/stocks";
 import { RecipeIngredient } from "@/lib/types";
-import { Select } from "@/components/ui/Select";
+import { Select } from "@/components/ui/SelectV2";
 
 type Rubrique = "recettes" | "prix-ing" | "prix-mat";
 const MULTIPLIERS = [1, 2, 5, 10, 20, 50, 100];
@@ -269,3 +269,4 @@ export default function TabRessources() {
     </div>
   );
 }
+
