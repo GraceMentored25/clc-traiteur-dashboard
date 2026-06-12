@@ -3,7 +3,7 @@
 import { useState, memo, useCallback, useRef } from "react";
 import Image from "next/image";
 import { m, AnimatePresence } from "framer-motion";
-import { Plus, Minus, ShoppingCartSimple, Check, X, Trash } from "@phosphor-icons/react";
+import { Plus, Minus, ShoppingCartSimple, Check, X, Trash, PencilSimple, Camera } from "@phosphor-icons/react";
 import { Dish } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { formatCurrency, cn } from "@/lib/utils";
@@ -20,8 +20,11 @@ const DishCard = memo(function DishCard({ dish }: Props) {
   const [editingPrice, setEditingPrice] = useState(false);
   const [priceInput, setPriceInput] = useState("");
   const [editOpen, setEditOpen] = useState(false);
-  const [editForm, setEditForm] = useState({ price: "", unit: dish.unit });
+  const [editForm, setEditForm] = useState({ price: "", unit: dish.unit, name: dish.name, image: dish.image });
+  const [editingName, setEditingName] = useState(false);
   const priceRef = useRef<HTMLInputElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   // Sélecteurs granulaires — chaque carte ne re-rende que si SES données changent
   const cartItem = useStore(useCallback((s) => s.cart.find((c) => c.dish.id === dish.id), [dish.id]));
@@ -32,6 +35,7 @@ const DishCard = memo(function DishCard({ dish }: Props) {
   const removeFromCart = useStore((s) => s.removeFromCart);
   const setCustomPrice = useStore((s) => s.setCustomPrice);
   const removeCustomDish = useStore((s) => s.removeCustomDish);
+  const updateCustomDish = useStore((s) => s.updateCustomDish);
 
   const inCart = !!cartItem;
   const displayQty = inCart ? cartItem!.quantity : quantity;
@@ -42,15 +46,33 @@ const DishCard = memo(function DishCard({ dish }: Props) {
 
   const openEdit = useCallback((e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setEditForm({ price: String(effectivePrice), unit: dish.unit });
+    setEditForm({ price: String(effectivePrice), unit: dish.unit, name: dish.name, image: dish.image });
+    setEditingName(false);
     setEditOpen(true);
-  }, [effectivePrice, dish.unit]);
+  }, [effectivePrice, dish.unit, dish.name, dish.image]);
 
   const confirmEdit = useCallback(() => {
     const val = parseFloat(editForm.price.replace(",", "."));
     if (!isNaN(val) && val > 0) setCustomPrice(dish.id, val);
+    if (isCustomDish) {
+      const patch: Partial<Omit<Dish, "id">> = { unit: editForm.unit };
+      if (editForm.name.trim()) patch.name = editForm.name.trim();
+      if (editForm.image) patch.image = editForm.image;
+      updateCustomDish(dish.id, patch);
+    }
     setEditOpen(false);
-  }, [editForm, dish.id, setCustomPrice]);
+  }, [editForm, dish.id, setCustomPrice, isCustomDish, updateCustomDish]);
+
+  const handlePhotoChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const result = ev.target?.result as string;
+      if (result) setEditForm((f) => ({ ...f, image: result }));
+    };
+    reader.readAsDataURL(file);
+  }, []);
 
   const handleDelete = useCallback(() => {
     if (inCart) removeFromCart(dish.id);
@@ -270,12 +292,58 @@ const DishCard = memo(function DishCard({ dish }: Props) {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="w-full max-w-xs bg-[var(--surface-1)] rounded-2xl border border-[var(--border)] p-5 shadow-2xl">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-[var(--text-primary)] text-sm">{dish.name}</h3>
-                  <button onClick={() => setEditOpen(false)} className="w-7 h-7 rounded-xl bg-[var(--surface-2)] flex items-center justify-center text-[var(--text-muted)]">
-                    <X size={13} />
-                  </button>
+                {/* Header : nom + bouton photo + fermer */}
+                <div className="flex items-center justify-between mb-4 gap-2">
+                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                    {editingName ? (
+                      <input
+                        ref={nameRef}
+                        autoFocus
+                        value={editForm.name}
+                        onChange={(e) => setEditForm(f => ({ ...f, name: e.target.value }))}
+                        onBlur={() => setEditingName(false)}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === "Escape") setEditingName(false); }}
+                        className="flex-1 min-w-0 h-7 px-2 rounded-lg bg-[var(--surface-2)] border border-[var(--amber)]/50 text-sm font-bold text-[var(--text-primary)] outline-none"
+                      />
+                    ) : (
+                      <h3 className="font-bold text-[var(--text-primary)] text-sm truncate">{editForm.name}</h3>
+                    )}
+                    {isCustomDish && (
+                      <button
+                        onClick={() => { setEditingName(true); setTimeout(() => nameRef.current?.select(), 10); }}
+                        className="shrink-0 w-6 h-6 rounded-lg bg-[var(--surface-2)] hover:bg-[var(--surface-3)] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--amber)] transition-colors"
+                        title="Modifier le nom"
+                      >
+                        <PencilSimple size={11} />
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {isCustomDish && (
+                      <>
+                        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+                        <button
+                          onClick={() => fileRef.current?.click()}
+                          className="w-7 h-7 rounded-xl bg-[var(--surface-2)] hover:bg-[var(--surface-3)] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--amber)] transition-colors"
+                          title="Changer la photo"
+                        >
+                          <Camera size={13} />
+                        </button>
+                      </>
+                    )}
+                    <button onClick={() => setEditOpen(false)} className="w-7 h-7 rounded-xl bg-[var(--surface-2)] flex items-center justify-center text-[var(--text-muted)]">
+                      <X size={13} />
+                    </button>
+                  </div>
                 </div>
+
+                {/* Aperçu photo si modifiée */}
+                {isCustomDish && editForm.image !== dish.image && (
+                  <div className="relative w-full h-24 rounded-xl overflow-hidden mb-3">
+                    <Image src={editForm.image} alt="aperçu" fill className="object-cover" sizes="280px" />
+                  </div>
+                )}
+
                 <div className="space-y-3">
                   <div>
                     <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide mb-1 block">Prix (€)</label>

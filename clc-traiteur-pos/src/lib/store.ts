@@ -24,6 +24,7 @@ export interface AppState {
   customDishes: Dish[];
   addCustomDish: (dish: Omit<Dish, "id">) => void;
   removeCustomDish: (id: number) => void;
+  updateCustomDish: (id: number, patch: Partial<Omit<Dish, "id">>) => void;
 
   customCategories: string[];
   addCustomCategory: (name: string) => void;
@@ -129,6 +130,8 @@ export const useStore = create<AppState>()(
         })),
       removeCustomDish: (id) =>
         set((s) => ({ customDishes: s.customDishes.filter((d) => d.id !== id) })),
+      updateCustomDish: (id, patch) =>
+        set((s) => ({ customDishes: s.customDishes.map((d) => d.id === id ? { ...d, ...patch } : d) })),
 
       customCategories: [],
       addCustomCategory: (name) =>
