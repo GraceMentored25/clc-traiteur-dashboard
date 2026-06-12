@@ -9,8 +9,8 @@ import TabStocks from "./TabStocks";
 
 const TABS = [
   { id: "commandes", label: "Commandes et devis", icon: ShoppingCart },
-  { id: "ressources", label: "Ressources", icon: BookOpen },
   { id: "courses", label: "Courses", icon: ListChecks },
+  { id: "ressources", label: "Ressources", icon: BookOpen },
   { id: "stocks", label: "Stocks", icon: Archive },
 ] as const;
 
