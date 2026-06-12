@@ -440,22 +440,22 @@ export default function ComptabiliteClientFinal() {
 
           {/* Header desktop — même grille que Détail */}
           <div className="hidden md:grid gap-0 px-6 py-3 border-b border-[var(--border)]" style={{ gridTemplateColumns: "80px 1fr 130px 110px 110px 120px" }}>
-            <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Type</p>
-            <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Référence</p>
-            <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide"></p>
+            <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide" style={{ gridColumn: "1" }}>Type</p>
+            <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide" style={{ gridColumn: "2" }}>Référence</p>
+            <p style={{ gridColumn: "3" }}></p>
             <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide text-right pr-2" style={{ gridColumn: "4 / 6" }}>Date</p>
-            <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide text-right pr-2">Montant</p>
+            <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide text-right pr-2" style={{ gridColumn: "6" }}>Montant</p>
           </div>
 
           {sortiesRepas.map((d) => (
             <div key={d.id} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors">
               {/* Desktop */}
               <div className="hidden md:grid items-center gap-0 px-6 py-3" style={{ gridTemplateColumns: "80px 1fr 130px 110px 110px 120px" }}>
-                <div className="flex items-center gap-1.5"><ShoppingCart size={12} className="text-[var(--text-muted)]"/><span className="text-xs text-[var(--text-secondary)]">Repas</span></div>
-                <p className="text-sm font-medium text-[var(--text-primary)] truncate">{d.clientName}</p>
-                <div></div>
-                <div className="flex items-center justify-end gap-1 text-xs text-[var(--text-muted)] pr-2" style={{ gridColumn: "4 / 6" }}><Calendar size={11}/>{formatDate(d.eventDate)}</div>
-                <p className="text-sm font-mono font-bold text-[var(--amber)] text-right pr-2">{formatCurrency(d.totalEstime)}</p>
+                <div style={{ gridColumn: "1" }} className="flex items-center gap-1.5"><ShoppingCart size={12} className="text-[var(--text-muted)]"/><span className="text-xs text-[var(--text-secondary)]">Repas</span></div>
+                <p style={{ gridColumn: "2" }} className="text-sm font-medium text-[var(--text-primary)] truncate">{d.clientName}</p>
+                <div style={{ gridColumn: "3" }}></div>
+                <div style={{ gridColumn: "4 / 6" }} className="flex items-center justify-end gap-1 text-xs text-[var(--text-muted)] pr-2"><Calendar size={11}/>{formatDate(d.eventDate)}</div>
+                <p style={{ gridColumn: "6" }} className="text-sm font-mono font-bold text-[var(--amber)] text-right pr-2">{formatCurrency(d.totalEstime)}</p>
               </div>
               {/* Mobile */}
               <div className="md:hidden flex items-center justify-between px-4 py-3 gap-3">
@@ -474,11 +474,11 @@ export default function ComptabiliteClientFinal() {
               <div key={d.id} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors">
                 {/* Desktop */}
                 <div className="hidden md:grid items-center gap-0 px-6 py-3" style={{ gridTemplateColumns: "80px 1fr 130px 110px 110px 120px" }}>
-                  <div className="flex items-center gap-1.5"><Truck size={12} className="text-[var(--text-muted)]"/><span className="text-xs text-[var(--text-secondary)]">Logistique</span></div>
-                  <p className="text-sm font-medium text-[var(--text-primary)] truncate">{d.clientName}</p>
-                  <div></div>
-                  <div className="flex items-center justify-end gap-1 text-xs text-[var(--text-muted)] pr-2" style={{ gridColumn: "4 / 6" }}><Calendar size={11}/>{formatDate(d.eventDate)}</div>
-                  <p className="text-sm font-mono font-bold text-[var(--amber)] text-right pr-2">{total > 0 ? formatCurrency(total) : "—"}</p>
+                  <div style={{ gridColumn: "1" }} className="flex items-center gap-1.5"><Truck size={12} className="text-[var(--text-muted)]"/><span className="text-xs text-[var(--text-secondary)]">Logistique</span></div>
+                  <p style={{ gridColumn: "2" }} className="text-sm font-medium text-[var(--text-primary)] truncate">{d.clientName}</p>
+                  <div style={{ gridColumn: "3" }}></div>
+                  <div style={{ gridColumn: "4 / 6" }} className="flex items-center justify-end gap-1 text-xs text-[var(--text-muted)] pr-2"><Calendar size={11}/>{formatDate(d.eventDate)}</div>
+                  <p style={{ gridColumn: "6" }} className="text-sm font-mono font-bold text-[var(--amber)] text-right pr-2">{total > 0 ? formatCurrency(total) : "—"}</p>
                 </div>
                 {/* Mobile */}
                 <div className="md:hidden flex items-center justify-between px-4 py-3 gap-3">
