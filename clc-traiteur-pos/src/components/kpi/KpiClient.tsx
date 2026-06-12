@@ -41,8 +41,11 @@ const PERIOD_OPTIONS: { value: PeriodKey; label: string; months: number | null }
 const TIP_BG = "#1C2128";
 const TIP_FG = "#F0F6FC";
 
+// couleur par année cyclique
+const YEAR_COLORS = ["#E8960C", "#58A6FF", "#3FB950", "#A855F7", "#EC4899", "#F97316"];
+
 // ── SVG Area Chart ──────────────────────────────────────────────────────────
-function AreaChartSVG({ data }: { data: { month: string; ca: number }[] }) {
+function AreaChartSVG({ data }: { data: { month: string; fullLabel: string; ca: number; yearColor: string; showXLabel: boolean }[] }) {
   const [tooltip, setTooltip] = useState<{ x: number; y: number; value: number; label: string } | null>(null);
   const W = 560, H = 200, PL = 48, PR = 8, PT = 8, PB = 28;
   const maxVal = Math.max(...data.map((d) => d.ca), 1);
@@ -69,7 +72,7 @@ function AreaChartSVG({ data }: { data: { month: string; ca: number }[] }) {
       <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 w-full h-full" onMouseLeave={() => setTooltip(null)}>
         <defs>
           <linearGradient id="caGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#E8960C" stopOpacity="0.25" />
+            <stop offset="0%" stopColor="#E8960C" stopOpacity="0.2" />
             <stop offset="100%" stopColor="#E8960C" stopOpacity="0" />
           </linearGradient>
         </defs>
@@ -80,25 +83,37 @@ function AreaChartSVG({ data }: { data: { month: string; ca: number }[] }) {
           </g>
         ))}
         <path d={areaPath} fill="url(#caGrad)" />
-        <path d={linePath} fill="none" stroke="#E8960C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+        {/* Ligne colorée par segment année */}
+        {pts.slice(0, -1).map((p, i) => (
+          <line key={i} x1={p.x} y1={p.y} x2={pts[i + 1].x} y2={pts[i + 1].y}
+            stroke={p.yearColor} strokeWidth={2} strokeLinecap="round" />
+        ))}
         {pts.map((p, i) => (
-          <g key={p.month + i}>
-            <text x={p.x} y={H - 6} textAnchor="middle" fill="#8B949E" fontSize={10}>{p.month}</text>
-            <circle cx={p.x} cy={p.y} r={3} fill="#E8960C" />
+          <g key={i}>
+            {/* Label axe X : année uniquement aux changements */}
+            {p.showXLabel && (
+              <text x={p.x} y={H - 6} textAnchor="middle" fill={p.yearColor} fontSize={10} fontWeight="600">{p.month}</text>
+            )}
+            {/* Point coloré */}
+            <circle cx={p.x} cy={p.y} r={tooltip?.x === p.x ? 4 : 2.5} fill={p.yearColor} style={{ transition: "r 0.1s" }} />
+            {/* Zone hover invisible */}
             <rect x={p.x - step / 2} y={PT} width={step} height={H - PT - PB} fill="transparent"
-              onMouseEnter={() => setTooltip({ x: p.x, y: p.y, value: p.ca, label: p.month })} />
+              onMouseEnter={() => setTooltip({ x: p.x, y: p.y, value: p.ca, label: p.fullLabel })} />
           </g>
         ))}
         {tooltip && (() => {
-          const TW = 122, TH = 26;
+          const TW = 148, TH = 42;
           const above = tooltip.y > PT + TH + 10;
           const ty = above ? tooltip.y - TH - 6 : tooltip.y + 10;
           const tx = Math.min(Math.max(tooltip.x - TW / 2, PL), W - PR - TW);
           return (
             <g>
-              <line x1={tooltip.x} y1={PT} x2={tooltip.x} y2={H - PB} stroke="rgba(232,150,12,0.3)" strokeWidth={1} />
-              <rect x={tx} y={ty} width={TW} height={TH} rx={6} fill={TIP_BG} stroke="#E8960C" strokeWidth={1} strokeOpacity={0.5} />
-              <text x={tx + TW / 2} y={ty + TH / 2 + 4} textAnchor="middle" fill={TIP_FG} fontSize={12} fontFamily="monospace" fontWeight="600">
+              <line x1={tooltip.x} y1={PT} x2={tooltip.x} y2={H - PB} stroke="rgba(232,150,12,0.25)" strokeWidth={1} />
+              <rect x={tx} y={ty} width={TW} height={TH} rx={7} fill={TIP_BG} stroke="#E8960C" strokeWidth={1} strokeOpacity={0.4} />
+              <text x={tx + TW / 2} y={ty + 14} textAnchor="middle" fill="#8B949E" fontSize={10}>
+                {tooltip.label}
+              </text>
+              <text x={tx + TW / 2} y={ty + 30} textAnchor="middle" fill={TIP_FG} fontSize={13} fontFamily="monospace" fontWeight="700">
                 {formatCurrency(tooltip.value)}
               </text>
             </g>
@@ -110,15 +125,15 @@ function AreaChartSVG({ data }: { data: { month: string; ca: number }[] }) {
 }
 
 // ── SVG Bar Chart ───────────────────────────────────────────────────────────
-function BarChartSVG({ data }: { data: { month: string; devis: number }[] }) {
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; value: number; label: string } | null>(null);
+function BarChartSVG({ data }: { data: { month: string; fullLabel: string; devis: number; yearColor: string; showXLabel: boolean }[] }) {
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; value: number; label: string; color: string } | null>(null);
   const W = 560, H = 180, PL = 36, PR = 8, PT = 8, PB = 28;
   const maxVal = Math.max(...data.map((d) => d.devis), 1);
   const slotW = (W - PL - PR) / data.length;
-  const barW = Math.min(28, slotW * 0.55);
+  const barW = Math.min(28, slotW * 0.6);
 
   const bars = data.map((d, i) => {
-    const bh = (d.devis / maxVal) * (H - PT - PB);
+    const bh = Math.max((d.devis / maxVal) * (H - PT - PB), d.devis > 0 ? 2 : 0);
     return { x: PL + i * slotW + slotW / 2, y: H - PB - bh, h: bh, ...d };
   });
 
@@ -137,21 +152,30 @@ function BarChartSVG({ data }: { data: { month: string; devis: number }[] }) {
           </g>
         ))}
         {bars.map((b, i) => (
-          <g key={b.month + i}>
-            <rect x={b.x - barW / 2} y={b.y} width={barW} height={b.h} rx={6} fill="#E8960C" fillOpacity={0.85} />
-            <text x={b.x} y={H - 6} textAnchor="middle" fill="#8B949E" fontSize={10}>{b.month}</text>
+          <g key={i}>
+            <rect x={b.x - barW / 2} y={b.y} width={barW} height={b.h} rx={4} fill={b.yearColor} fillOpacity={0.8} />
+            {b.showXLabel && (
+              <text x={b.x} y={H - 6} textAnchor="middle" fill={b.yearColor} fontSize={10} fontWeight="600">{b.month}</text>
+            )}
             <rect x={b.x - slotW / 2} y={PT} width={slotW} height={H - PT - PB} fill="transparent"
-              onMouseEnter={() => setTooltip({ x: b.x, y: b.y, value: b.devis, label: b.month })} />
+              onMouseEnter={() => setTooltip({ x: b.x, y: b.y, value: b.devis, label: b.fullLabel, color: b.yearColor })} />
           </g>
         ))}
-        {tooltip && (
-          <g>
-            <rect x={Math.min(tooltip.x + 8, W - 90)} y={tooltip.y - 8} width={82} height={24} rx={6} fill={TIP_BG} stroke="#E8960C" strokeWidth={1} strokeOpacity={0.4} />
-            <text x={Math.min(tooltip.x + 49, W - 49)} y={tooltip.y + 8} textAnchor="middle" fill={TIP_FG} fontSize={11} fontFamily="monospace">
-              {tooltip.value} devis
-            </text>
-          </g>
-        )}
+        {tooltip && (() => {
+          const TW = 130, TH = 42;
+          const above = tooltip.y > PT + TH + 10;
+          const ty = above ? tooltip.y - TH - 6 : tooltip.y + 10;
+          const tx = Math.min(Math.max(tooltip.x - TW / 2, PL), W - PR - TW);
+          return (
+            <g>
+              <rect x={tx} y={ty} width={TW} height={TH} rx={7} fill={TIP_BG} stroke={tooltip.color} strokeWidth={1} strokeOpacity={0.5} />
+              <text x={tx + TW / 2} y={ty + 14} textAnchor="middle" fill="#8B949E" fontSize={10}>{tooltip.label}</text>
+              <text x={tx + TW / 2} y={ty + 30} textAnchor="middle" fill={TIP_FG} fontSize={13} fontFamily="monospace" fontWeight="700">
+                {tooltip.value} devis
+              </text>
+            </g>
+          );
+        })()}
       </svg>
     </div>
   );
@@ -255,17 +279,26 @@ export default function KpiClient() {
     const deltaAvg = pct(thisAvg, prevAvg);
 
     // Graphique dynamique selon période
+    const allYears = Array.from(new Set(
+      Array.from({ length: nMonths }, (_, i) => new Date(curY, curM - (nMonths - 1) + i, 1).getFullYear())
+    )).sort();
+    const yearColorMap: Record<number, string> = {};
+    allYears.forEach((y, idx) => { yearColorMap[y] = YEAR_COLORS[idx % YEAR_COLORS.length]; });
+
     const slots = Array.from({ length: nMonths }, (_, i) => {
       const d = new Date(curY, curM - (nMonths - 1) + i, 1);
-      const label = nMonths > 24
-        ? (i % 3 === 0 ? `${MONTH_LABELS[d.getMonth()]} ${d.getFullYear().toString().slice(2)}` : "")
-        : MONTH_LABELS[d.getMonth()];
-      return { year: d.getFullYear(), month: d.getMonth(), label };
+      const y = d.getFullYear();
+      const m = d.getMonth();
+      // Affiche l'année uniquement au 1er mois de chaque année (ou 1er point)
+      const showXLabel = i === 0 || m === 0;
+      const xLabel = showXLabel ? `${String(y)}` : "";
+      const fullLabel = `${MONTH_LABELS[m]} ${y}`;
+      return { year: y, month: m, xLabel, fullLabel, showXLabel, yearColor: yearColorMap[y] };
     });
-    const monthly = slots.map(({ year, month, label }) => {
+    const monthly = slots.map(({ year, month, xLabel, fullLabel, showXLabel, yearColor }) => {
       const inMonth = devisList.filter((d) => { const c = new Date(d.createdAt); return c.getFullYear() === year && c.getMonth() === month; });
       const ca = inMonth.filter((d) => d.status === "Confirmé").reduce((s, d) => s + d.totalTTC, 0);
-      return { month: label, devis: inMonth.length, ca };
+      return { month: xLabel, fullLabel, devis: inMonth.length, ca, showXLabel, yearColor };
     });
 
     const catQty: Record<string, number> = {};
