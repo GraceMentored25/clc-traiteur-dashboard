@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useMemo, memo, useEffect, useRef } from "react";
+import Image from "next/image";
 import { m, AnimatePresence } from "framer-motion";
 import {
   MagnifyingGlass, ShoppingCart, SquaresFour, Rows,
-  SortAscending, Plus, X,
+  SortAscending, Plus, X, Camera,
 } from "@phosphor-icons/react";
 import { CATEGORIES, DISHES } from "@/lib/data/dishes";
 import { useStore } from "@/lib/store";
@@ -35,8 +36,9 @@ export default function DashboardClient() {
   const [addCatOpen, setAddCatOpen] = useState(false);
   const [addDishOpen, setAddDishOpen] = useState(false);
   const [newCatName, setNewCatName] = useState("");
-  const [newDish, setNewDish] = useState({ name: "", price: "", unit: "portion", description: "", category: "" });
+  const [newDish, setNewDish] = useState({ name: "", price: "", unit: "portion", description: "", category: "", image: "" });
   const sortRef = useRef<HTMLDivElement>(null);
+  const newDishFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!sortOpen) return;
@@ -77,6 +79,17 @@ export default function DashboardClient() {
     setAddCatOpen(false);
   };
 
+  const handleNewDishPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const result = ev.target?.result as string;
+      if (result) setNewDish((d) => ({ ...d, image: result }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleAddDish = () => {
     const price = parseFloat(newDish.price.replace(",", "."));
     if (!newDish.name.trim() || isNaN(price) || price <= 0 || !newDish.category) return;
@@ -86,9 +99,9 @@ export default function DashboardClient() {
       unit: newDish.unit || "portion",
       description: newDish.description.trim() || newDish.name.trim(),
       category: newDish.category,
-      image: "/dishes/ndole.jpg", // image par défaut
+      image: newDish.image || "/dishes/ndole.jpg",
     });
-    setNewDish({ name: "", price: "", unit: "portion", description: "", category: newDish.category });
+    setNewDish({ name: "", price: "", unit: "portion", description: "", category: newDish.category, image: "" });
     setAddDishOpen(false);
   };
 
@@ -453,6 +466,25 @@ export default function DashboardClient() {
                   </button>
                 </div>
                 <div className="space-y-3">
+                  {/* Photo */}
+                  <div>
+                    <label className="text-xs text-[var(--text-muted)] mb-1 block">Photo</label>
+                    <input ref={newDishFileRef} type="file" accept="image/*" className="hidden" onChange={handleNewDishPhoto} />
+                    <button
+                      type="button"
+                      onClick={() => newDishFileRef.current?.click()}
+                      className="w-full h-24 rounded-xl border-2 border-dashed border-[var(--border)] hover:border-[var(--amber)]/50 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] flex items-center justify-center gap-2 transition-colors overflow-hidden relative"
+                    >
+                      {newDish.image ? (
+                        <Image src={newDish.image} alt="aperçu" fill className="object-cover rounded-xl" sizes="320px" />
+                      ) : (
+                        <div className="flex flex-col items-center gap-1.5 text-[var(--text-muted)]">
+                          <Camera size={20} />
+                          <span className="text-xs">Importer une photo</span>
+                        </div>
+                      )}
+                    </button>
+                  </div>
                   <div>
                     <label className="text-xs text-[var(--text-muted)] mb-1 block">Nom du plat *</label>
                     <input autoFocus value={newDish.name} onChange={(e) => setNewDish(d => ({ ...d, name: e.target.value }))}
