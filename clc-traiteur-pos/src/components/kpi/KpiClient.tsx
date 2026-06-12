@@ -3,16 +3,12 @@
 import { useMemo, memo, useState } from "react";
 import { m } from "framer-motion";
 import {
-  TrendUp,
-  Receipt,
-  CheckCircle,
-  CurrencyEur,
-  ArrowUp,
-  ArrowDown,
+  TrendUp, Receipt, CheckCircle, CurrencyEur, ArrowUp, ArrowDown, CaretDown,
 } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
 import { formatCurrency } from "@/lib/utils";
 import { DISHES } from "@/lib/data/dishes";
+import { Select } from "@/components/ui/SelectV2";
 
 const MONTH_LABELS = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
 
@@ -27,14 +23,28 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 const FALLBACK_COLORS = ["#6366F1","#14B8A6","#F59E0B","#84CC16","#06B6D4"];
 
-// Mapping dishName → category depuis le catalogue complet
 const DISH_CATEGORY: Record<string, string> = {};
 for (const d of DISHES) DISH_CATEGORY[d.name.toLowerCase()] = d.category;
+
+type PeriodKey = "6m" | "12m" | "1y" | "2y" | "3y" | "all";
+
+const PERIOD_OPTIONS: { value: PeriodKey; label: string; months: number | null }[] = [
+  { value: "6m",  label: "6 derniers mois",  months: 6 },
+  { value: "12m", label: "12 derniers mois", months: 12 },
+  { value: "1y",  label: "Cette année",      months: 12 },
+  { value: "2y",  label: "2 dernières années", months: 24 },
+  { value: "3y",  label: "3 dernières années", months: 36 },
+  { value: "all", label: "Tout l'historique", months: null },
+];
+
+// ── Tooltip helpers ─────────────────────────────────────────────────────────
+const TIP_BG = "#1C2128";
+const TIP_FG = "#F0F6FC";
 
 // ── SVG Area Chart ──────────────────────────────────────────────────────────
 function AreaChartSVG({ data }: { data: { month: string; ca: number }[] }) {
   const [tooltip, setTooltip] = useState<{ x: number; y: number; value: number; label: string } | null>(null);
-  const W = 560, H = 200, PL = 40, PR = 8, PT = 8, PB = 28;
+  const W = 560, H = 200, PL = 48, PR = 8, PT = 8, PB = 28;
   const maxVal = Math.max(...data.map((d) => d.ca), 1);
   const step = (W - PL - PR) / Math.max(data.length - 1, 1);
 
@@ -47,61 +57,43 @@ function AreaChartSVG({ data }: { data: { month: string; ca: number }[] }) {
   const linePath = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
   const areaPath = `${linePath} L${pts[pts.length - 1].x},${H - PB} L${pts[0].x},${H - PB} Z`;
 
-  const yTicks = [0, 0.25, 0.5, 0.75, 1].map((t) => ({
-    y: PT + (1 - t) * (H - PT - PB),
-    label: `${Math.round((maxVal * t) / 1000)}k`,
-  }));
+  const step1k = maxVal > 10000 ? 5000 : maxVal > 2000 ? 1000 : maxVal > 500 ? 200 : 50;
+  const tickCount = Math.min(5, Math.ceil(maxVal / step1k));
+  const yTicks = Array.from({ length: tickCount + 1 }, (_, i) => {
+    const val = Math.round((maxVal * i) / tickCount);
+    return { y: PT + (1 - val / maxVal) * (H - PT - PB), label: val >= 1000 ? `${(val / 1000).toFixed(0)}k` : `${val}` };
+  });
 
   return (
     <div className="relative w-full" style={{ paddingBottom: `${(H / W) * 100}%` }}>
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        className="absolute inset-0 w-full h-full"
-        onMouseLeave={() => setTooltip(null)}
-      >
+      <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 w-full h-full" onMouseLeave={() => setTooltip(null)}>
         <defs>
           <linearGradient id="caGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#E8960C" stopOpacity="0.25" />
             <stop offset="100%" stopColor="#E8960C" stopOpacity="0" />
           </linearGradient>
         </defs>
-
-        {/* Grid */}
         {yTicks.map((t) => (
           <g key={t.y}>
-            <line x1={PL} y1={t.y} x2={W - PR} y2={t.y} stroke="rgba(255,255,255,0.04)" strokeDasharray="3 3" />
-            <text x={PL - 4} y={t.y + 4} textAnchor="end" fill="#8B949E" fontSize={11}>{t.label}</text>
+            <line x1={PL} y1={t.y} x2={W - PR} y2={t.y} stroke="rgba(128,128,128,0.12)" strokeDasharray="3 3" />
+            <text x={PL - 6} y={t.y + 4} textAnchor="end" fill="#8B949E" fontSize={11}>{t.label}</text>
           </g>
         ))}
-
-        {/* Area fill */}
         <path d={areaPath} fill="url(#caGrad)" />
-
-        {/* Line */}
         <path d={linePath} fill="none" stroke="#E8960C" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-
-        {/* X labels + hover zones */}
-        {pts.map((p) => (
-          <g key={p.month}>
-            <text x={p.x} y={H - 6} textAnchor="middle" fill="#8B949E" fontSize={11}>{p.month}</text>
+        {pts.map((p, i) => (
+          <g key={p.month + i}>
+            <text x={p.x} y={H - 6} textAnchor="middle" fill="#8B949E" fontSize={10}>{p.month}</text>
             <circle cx={p.x} cy={p.y} r={3} fill="#E8960C" />
-            <rect
-              x={p.x - step / 2}
-              y={PT}
-              width={step}
-              height={H - PT - PB}
-              fill="transparent"
-              onMouseEnter={() => setTooltip({ x: p.x, y: p.y, value: p.ca, label: p.month })}
-            />
+            <rect x={p.x - step / 2} y={PT} width={step} height={H - PT - PB} fill="transparent"
+              onMouseEnter={() => setTooltip({ x: p.x, y: p.y, value: p.ca, label: p.month })} />
           </g>
         ))}
-
-        {/* Tooltip */}
         {tooltip && (
           <g>
-            <line x1={tooltip.x} y1={PT} x2={tooltip.x} y2={H - PB} stroke="rgba(255,255,255,0.1)" />
-            <rect x={Math.min(tooltip.x + 8, W - 120)} y={tooltip.y - 28} width={108} height={26} rx={6} fill="var(--surface-2)" stroke="var(--border)" strokeWidth={1} />
-            <text x={Math.min(tooltip.x + 62, W - 66)} y={tooltip.y - 10} textAnchor="middle" fill="var(--text-primary)" fontSize={11} fontFamily="monospace">
+            <line x1={tooltip.x} y1={PT} x2={tooltip.x} y2={H - PB} stroke="rgba(232,150,12,0.3)" strokeWidth={1} />
+            <rect x={Math.min(tooltip.x + 8, W - 130)} y={tooltip.y - 30} width={122} height={26} rx={6} fill={TIP_BG} stroke="#E8960C" strokeWidth={1} strokeOpacity={0.4} />
+            <text x={Math.min(tooltip.x + 69, W - 65)} y={tooltip.y - 12} textAnchor="middle" fill={TIP_FG} fontSize={12} fontFamily="monospace" fontWeight="600">
               {formatCurrency(tooltip.value)}
             </text>
           </g>
@@ -134,38 +126,22 @@ function BarChartSVG({ data }: { data: { month: string; devis: number }[] }) {
       <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 w-full h-full" onMouseLeave={() => setTooltip(null)}>
         {yTicks.map((t) => (
           <g key={t.y}>
-            <line x1={PL} y1={t.y} x2={W - PR} y2={t.y} stroke="rgba(255,255,255,0.04)" strokeDasharray="3 3" />
+            <line x1={PL} y1={t.y} x2={W - PR} y2={t.y} stroke="rgba(128,128,128,0.12)" strokeDasharray="3 3" />
             <text x={PL - 4} y={t.y + 4} textAnchor="end" fill="#8B949E" fontSize={11}>{t.label}</text>
           </g>
         ))}
-
-        {bars.map((b) => (
-          <g key={b.month}>
-            <rect
-              x={b.x - barW / 2}
-              y={b.y}
-              width={barW}
-              height={b.h}
-              rx={6}
-              fill="#E8960C"
-              fillOpacity={0.85}
-            />
-            <text x={b.x} y={H - 6} textAnchor="middle" fill="#8B949E" fontSize={11}>{b.month}</text>
-            <rect
-              x={b.x - slotW / 2}
-              y={PT}
-              width={slotW}
-              height={H - PT - PB}
-              fill="transparent"
-              onMouseEnter={() => setTooltip({ x: b.x, y: b.y, value: b.devis, label: b.month })}
-            />
+        {bars.map((b, i) => (
+          <g key={b.month + i}>
+            <rect x={b.x - barW / 2} y={b.y} width={barW} height={b.h} rx={6} fill="#E8960C" fillOpacity={0.85} />
+            <text x={b.x} y={H - 6} textAnchor="middle" fill="#8B949E" fontSize={10}>{b.month}</text>
+            <rect x={b.x - slotW / 2} y={PT} width={slotW} height={H - PT - PB} fill="transparent"
+              onMouseEnter={() => setTooltip({ x: b.x, y: b.y, value: b.devis, label: b.month })} />
           </g>
         ))}
-
         {tooltip && (
           <g>
-            <rect x={Math.min(tooltip.x + 8, W - 90)} y={tooltip.y - 6} width={80} height={24} rx={6} fill="var(--surface-2)" stroke="var(--border)" strokeWidth={1} />
-            <text x={Math.min(tooltip.x + 48, W - 50)} y={tooltip.y + 10} textAnchor="middle" fill="var(--text-primary)" fontSize={11} fontFamily="monospace">
+            <rect x={Math.min(tooltip.x + 8, W - 90)} y={tooltip.y - 8} width={82} height={24} rx={6} fill={TIP_BG} stroke="#E8960C" strokeWidth={1} strokeOpacity={0.4} />
+            <text x={Math.min(tooltip.x + 49, W - 49)} y={tooltip.y + 8} textAnchor="middle" fill={TIP_FG} fontSize={11} fontFamily="monospace">
               {tooltip.value} devis
             </text>
           </g>
@@ -199,20 +175,14 @@ function DonutChartSVG({ data }: { data: { name: string; value: number; color: s
   return (
     <svg width={240} height={180} style={{ display: "block", margin: "0 auto" }}>
       {arcs.map((arc) => (
-        <path
-          key={arc.name}
-          d={arc.path}
-          fill={arc.color}
-          strokeWidth={hovered === arc.i ? 2 : 0}
-          stroke="var(--surface-1)"
+        <path key={arc.name} d={arc.path} fill={arc.color}
+          strokeWidth={hovered === arc.i ? 2 : 0} stroke="#0D1117"
           opacity={hovered === null || hovered === arc.i ? 1 : 0.6}
           style={{ cursor: "pointer", transition: "opacity 0.15s" }}
-          onMouseEnter={() => setHovered(arc.i)}
-          onMouseLeave={() => setHovered(null)}
-        />
+          onMouseEnter={() => setHovered(arc.i)} onMouseLeave={() => setHovered(null)} />
       ))}
       {hovered !== null && (
-        <text x={CX} y={CY + 5} textAnchor="middle" fill="var(--text-primary)" fontSize={13} fontWeight="bold">
+        <text x={CX} y={CY + 5} textAnchor="middle" fill="#E8960C" fontSize={13} fontWeight="bold">
           {arcs[hovered].value}%
         </text>
       )}
@@ -222,15 +192,16 @@ function DonutChartSVG({ data }: { data: { name: string; value: number; color: s
 
 // ── Main Component ──────────────────────────────────────────────────────────
 export default function KpiClient() {
-  // Sélecteurs granulaires — re-render uniquement si ces valeurs changent
   const devisList = useStore((s) => s.devisList);
   const appMode = useStore((s) => s.appMode);
   const customDishes = useStore((s) => s.customDishes);
+  const [period, setPeriod] = useState<PeriodKey>("6m");
 
   const isPro = appMode === "pro";
   const hasData = devisList.length > 0;
 
-  // Mapping dynamique incluant les plats personnalisés
+  const periodConfig = PERIOD_OPTIONS.find((p) => p.value === period)!;
+
   const dishCategory = useMemo(() => {
     const map: Record<string, string> = { ...DISH_CATEGORY };
     for (const d of customDishes) map[d.name.toLowerCase()] = d.category;
@@ -242,45 +213,34 @@ export default function KpiClient() {
     const curY = now.getFullYear();
     const curM = now.getMonth();
 
+    const nMonths = periodConfig.months ?? 60;
+
     const confirmed = devisList.filter((d) => d.status === "Confirmé");
     const sent = devisList.filter((d) => d.status === "Envoyé");
 
-    // ── Métriques période courante (30 derniers jours) ─────────────────────
     const cutCur = new Date(curY, curM, 1);
     const cutPrev = new Date(curY, curM - 1, 1);
-
     const thisPeriod = devisList.filter((d) => new Date(d.createdAt) >= cutCur);
-    const prevPeriod = devisList.filter((d) => {
-      const c = new Date(d.createdAt);
-      return c >= cutPrev && c < cutCur;
-    });
-
+    const prevPeriod = devisList.filter((d) => { const c = new Date(d.createdAt); return c >= cutPrev && c < cutCur; });
     const thisConfirmed = thisPeriod.filter((d) => d.status === "Confirmé");
     const prevConfirmed = prevPeriod.filter((d) => d.status === "Confirmé");
 
     const totalCA = confirmed.reduce((s, d) => s + d.totalTTC, 0);
     const thisCA = thisConfirmed.reduce((s, d) => s + d.totalTTC, 0);
     const prevCA = prevConfirmed.reduce((s, d) => s + d.totalTTC, 0);
-
     const avgDevis = confirmed.length ? totalCA / confirmed.length : 0;
     const thisAvg = thisConfirmed.length ? thisCA / thisConfirmed.length : 0;
     const prevAvg = prevConfirmed.length ? (prevConfirmed.reduce((s, d) => s + d.totalTTC, 0) / prevConfirmed.length) : 0;
-
     const convRate = devisList.length ? Math.round((confirmed.length / devisList.length) * 100) : 0;
     const thisConv = thisPeriod.length ? Math.round((thisConfirmed.length / thisPeriod.length) * 100) : 0;
     const prevConv = prevPeriod.length ? Math.round((prevConfirmed.length / prevPeriod.length) * 100) : 0;
 
-    // ── Deltas calculés (mois courant vs mois précédent) ──────────────────
     const pct = (cur: number, prev: number) => {
       if (prev === 0) return cur > 0 ? "+100%" : null;
       const d = Math.round(((cur - prev) / prev) * 100);
       return d >= 0 ? `+${d}%` : `${d}%`;
     };
-    const pts = (cur: number, prev: number) => {
-      const d = cur - prev;
-      if (d === 0) return null;
-      return d > 0 ? `+${d} pts` : `${d} pts`;
-    };
+    const pts = (cur: number, prev: number) => { const d = cur - prev; if (d === 0) return null; return d > 0 ? `+${d} pts` : `${d} pts`; };
 
     const deltaCA = pct(thisCA, prevCA);
     const deltaDevis = thisPeriod.length - prevPeriod.length;
@@ -288,21 +248,20 @@ export default function KpiClient() {
     const deltaConv = pts(thisConv, prevConv);
     const deltaAvg = pct(thisAvg, prevAvg);
 
-    // ── Graphique 6 mois ───────────────────────────────────────────────────
-    const slots = Array.from({ length: 6 }, (_, i) => {
-      const d = new Date(curY, curM - 5 + i, 1);
-      return { year: d.getFullYear(), month: d.getMonth(), label: MONTH_LABELS[d.getMonth()] };
+    // Graphique dynamique selon période
+    const slots = Array.from({ length: nMonths }, (_, i) => {
+      const d = new Date(curY, curM - (nMonths - 1) + i, 1);
+      const label = nMonths > 24
+        ? (i % 3 === 0 ? `${MONTH_LABELS[d.getMonth()]} ${d.getFullYear().toString().slice(2)}` : "")
+        : MONTH_LABELS[d.getMonth()];
+      return { year: d.getFullYear(), month: d.getMonth(), label };
     });
     const monthly = slots.map(({ year, month, label }) => {
-      const inMonth = devisList.filter((d) => {
-        const c = new Date(d.createdAt);
-        return c.getFullYear() === year && c.getMonth() === month;
-      });
+      const inMonth = devisList.filter((d) => { const c = new Date(d.createdAt); return c.getFullYear() === year && c.getMonth() === month; });
       const ca = inMonth.filter((d) => d.status === "Confirmé").reduce((s, d) => s + d.totalTTC, 0);
       return { month: label, devis: inMonth.length, ca };
     });
 
-    // ── Répartition catégories ─────────────────────────────────────────────
     const catQty: Record<string, number> = {};
     for (const devis of confirmed) {
       for (const item of devis.items) {
@@ -312,20 +271,14 @@ export default function KpiClient() {
     }
     const totalQty = Object.values(catQty).reduce((s, v) => s + v, 0);
     let fi = 0;
-    const categoryData = Object.entries(catQty)
-      .sort((a, b) => b[1] - a[1])
-      .map(([name, qty]) => ({
-        name,
-        value: totalQty > 0 ? Math.round((qty / totalQty) * 100) : 0,
-        color: CATEGORY_COLORS[name] ?? FALLBACK_COLORS[fi++ % FALLBACK_COLORS.length],
-      }));
+    const categoryData = Object.entries(catQty).sort((a, b) => b[1] - a[1]).map(([name, qty]) => ({
+      name, value: totalQty > 0 ? Math.round((qty / totalQty) * 100) : 0,
+      color: CATEGORY_COLORS[name] ?? FALLBACK_COLORS[fi++ % FALLBACK_COLORS.length],
+    }));
 
-    // ── Top plats ──────────────────────────────────────────────────────────
     const dishQty: Record<string, number> = {};
     for (const devis of confirmed) {
-      for (const item of devis.items) {
-        dishQty[item.dishName] = (dishQty[item.dishName] ?? 0) + item.quantity;
-      }
+      for (const item of devis.items) dishQty[item.dishName] = (dishQty[item.dishName] ?? 0) + item.quantity;
     }
     const sortedDishes = Object.entries(dishQty).sort((a, b) => b[1] - a[1]);
     const topDishes = sortedDishes.slice(0, 5).map(([name, orders], i) => {
@@ -335,30 +288,26 @@ export default function KpiClient() {
     });
 
     return {
-      metrics: {
-        totalCA, totalDevis: devisList.length, confirmed: confirmed.length,
-        convRate, avgDevis, pending: sent.length,
-        deltaCA, deltaDevisStr, deltaConv, deltaAvg,
-        deltaCAPositive: (deltaCA ?? "").startsWith("+"),
-        deltaDevisPositive: deltaDevis >= 0,
-        deltaConvPositive: (deltaConv ?? "").startsWith("+"),
-        deltaAvgPositive: (deltaAvg ?? "").startsWith("+"),
-      },
-      monthlyData: monthly,
-      categoryData,
-      topDishes,
+      metrics: { totalCA, totalDevis: devisList.length, confirmed: confirmed.length, convRate, avgDevis, pending: sent.length, deltaCA, deltaDevisStr, deltaConv, deltaAvg, deltaCAPositive: (deltaCA ?? "").startsWith("+"), deltaDevisPositive: deltaDevis >= 0, deltaConvPositive: (deltaConv ?? "").startsWith("+"), deltaAvgPositive: (deltaAvg ?? "").startsWith("+") },
+      monthlyData: monthly, categoryData, topDishes,
     };
-  }, [devisList, dishCategory]);
+  }, [devisList, dishCategory, periodConfig]);
 
   return (
     <div className="px-4 lg:px-8 py-6 lg:py-8 min-h-[100dvh] space-y-6 lg:space-y-8">
-      <div>
-        <h1 className="text-xl lg:text-2xl font-bold text-[var(--text-primary)] tracking-tight">
-          KPI & Métriques
-        </h1>
-        <p className="text-sm text-[var(--text-muted)] mt-1">
-          {isPro ? "Mode Production — données réelles" : "Performance globale — données cumulées"}
-        </p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-xl lg:text-2xl font-bold text-[var(--text-primary)] tracking-tight">KPI & Métriques</h1>
+          <p className="text-sm text-[var(--text-muted)] mt-1">
+            {isPro ? "Mode Production — données réelles" : "Performance globale — données cumulées"}
+          </p>
+        </div>
+        <Select
+          value={period}
+          onChange={(v) => setPeriod(v as PeriodKey)}
+          options={PERIOD_OPTIONS.map((p) => ({ value: p.value, label: p.label }))}
+          className="w-52 shrink-0"
+        />
       </div>
 
       {/* KPI cards */}
@@ -375,9 +324,8 @@ export default function KpiClient() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="font-bold text-[var(--text-primary)] text-sm">Évolution du CA</h3>
-              <p className="text-xs text-[var(--text-muted)] mt-0.5">6 derniers mois</p>
+              <p className="text-xs text-[var(--text-muted)] mt-0.5">{periodConfig.label}</p>
             </div>
-            {!isPro && <span className="text-xs font-semibold text-[var(--success)] bg-green-500/10 px-2.5 py-1 rounded-lg">+28.3%</span>}
           </div>
           <AreaChartSVG data={monthlyData} />
         </div>
@@ -414,7 +362,7 @@ export default function KpiClient() {
           <div className="flex items-center justify-between mb-4 lg:mb-6">
             <div>
               <h3 className="font-bold text-[var(--text-primary)] text-sm">Volume de devis</h3>
-              <p className="text-xs text-[var(--text-muted)] mt-0.5">Nombre par mois</p>
+              <p className="text-xs text-[var(--text-muted)] mt-0.5">Nombre par mois — {periodConfig.label}</p>
             </div>
           </div>
           <BarChartSVG data={monthlyData} />
