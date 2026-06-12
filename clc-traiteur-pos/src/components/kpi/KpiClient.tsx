@@ -89,15 +89,21 @@ function AreaChartSVG({ data }: { data: { month: string; ca: number }[] }) {
               onMouseEnter={() => setTooltip({ x: p.x, y: p.y, value: p.ca, label: p.month })} />
           </g>
         ))}
-        {tooltip && (
-          <g>
-            <line x1={tooltip.x} y1={PT} x2={tooltip.x} y2={H - PB} stroke="rgba(232,150,12,0.3)" strokeWidth={1} />
-            <rect x={Math.min(tooltip.x + 8, W - 130)} y={tooltip.y - 30} width={122} height={26} rx={6} fill={TIP_BG} stroke="#E8960C" strokeWidth={1} strokeOpacity={0.4} />
-            <text x={Math.min(tooltip.x + 69, W - 65)} y={tooltip.y - 12} textAnchor="middle" fill={TIP_FG} fontSize={12} fontFamily="monospace" fontWeight="600">
-              {formatCurrency(tooltip.value)}
-            </text>
-          </g>
-        )}
+        {tooltip && (() => {
+          const TW = 122, TH = 26;
+          const above = tooltip.y > PT + TH + 10;
+          const ty = above ? tooltip.y - TH - 6 : tooltip.y + 10;
+          const tx = Math.min(Math.max(tooltip.x - TW / 2, PL), W - PR - TW);
+          return (
+            <g>
+              <line x1={tooltip.x} y1={PT} x2={tooltip.x} y2={H - PB} stroke="rgba(232,150,12,0.3)" strokeWidth={1} />
+              <rect x={tx} y={ty} width={TW} height={TH} rx={6} fill={TIP_BG} stroke="#E8960C" strokeWidth={1} strokeOpacity={0.5} />
+              <text x={tx + TW / 2} y={ty + TH / 2 + 4} textAnchor="middle" fill={TIP_FG} fontSize={12} fontFamily="monospace" fontWeight="600">
+                {formatCurrency(tooltip.value)}
+              </text>
+            </g>
+          );
+        })()}
       </svg>
     </div>
   );
