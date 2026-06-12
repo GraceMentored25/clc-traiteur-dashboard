@@ -33,7 +33,7 @@ const SOURCES: { value: EntreeCapital["source"]; label: string }[] = [
 
 const TVA_RATE = 0.20;
 
-export default function ComptabiliteClient() {
+export default function ComptabiliteClientFinal() {
   const { devisList, entreesCapital, addEntreeCapital, removeEntreeCapital,
           demandesCourses, demandesLogistique } = useStore();
   const [period, setPeriod] = useState<Period>("all");
@@ -298,21 +298,20 @@ export default function ComptabiliteClient() {
               {confirmedCapital.length} entrée{confirmedCapital.length > 1 ? "s" : ""}
             </span>
           </div>
-          {/* Desktop header — même grille que encaissements pour aligner Source/Événement et Date/Montant HT */}
-          <div className="hidden md:grid grid-cols-[80px_1fr_130px_110px_110px_120px] gap-0 px-6 py-3 border-b border-[var(--border)]">
-            <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide col-span-2">Libellé</p>
+          {/* Desktop header — Libellé | Source | Date | Montant */}
+          <div className="hidden md:grid gap-0 px-6 py-3 border-b border-[var(--border)]" style={{ gridTemplateColumns: "1fr 130px 140px 120px" }}>
+            <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Libellé</p>
             <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Source</p>
             <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide text-right pr-4">Date</p>
-            <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide text-right pr-4"></p>
             <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide text-right pr-2">Montant</p>
           </div>
           {confirmedCapital.map((e) => (
             <div key={e.id}>
               {/* Desktop */}
-              <div className="hidden md:grid grid-cols-[80px_1fr_130px_110px_110px_120px] items-center gap-0 px-6 py-3 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors group">
-                <p className="text-sm font-medium text-[var(--text-primary)] truncate col-span-2">{e.libelle}</p>
+              <div className="hidden md:grid items-center gap-0 px-6 py-3 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors group" style={{ gridTemplateColumns: "1fr 130px 140px 120px" }}>
+                <p className="text-sm font-medium text-[var(--text-primary)] truncate">{e.libelle}</p>
                 <p className="text-xs text-[var(--text-secondary)] capitalize">{SOURCES.find(s => s.value === e.source)?.label}</p>
-                <div className="flex items-center justify-end gap-1 text-xs text-[var(--text-muted)] pr-4 col-span-2"><Calendar size={11}/>{formatDate(e.date)}</div>
+                <div className="flex items-center justify-end gap-1 text-xs text-[var(--text-muted)] pr-4"><Calendar size={11}/>{formatDate(e.date)}</div>
                 {/* Montant + boutons alignés à droite */}
                 <div className="flex items-center justify-end gap-1">
                   <button onClick={() => { setCapitalForm({ libelle: e.libelle, montant: String(e.montant), date: e.date, source: e.source }); setEditingCapitalId(e.id); setCapitalModal(true); }}
@@ -345,10 +344,10 @@ export default function ComptabiliteClient() {
               </div>
             </div>
           ))}
-          {/* Total en pied aligné sur la colonne Montant */}
-          <div className="hidden md:grid grid-cols-[80px_1fr_130px_110px_110px_120px] gap-0 px-6 py-3 bg-[var(--surface-2)] border-t-2 border-[var(--amber)]/20">
-            <p className="text-sm font-bold text-[var(--text-primary)] col-span-5">Total entrées de capital</p>
-            <p className="text-sm font-mono font-bold text-[var(--amber)] text-right">{formatCurrency(metrics.totalCapital)}</p>
+          {/* Total en pied */}
+          <div className="hidden md:flex items-center justify-between px-6 py-3 bg-[var(--surface-2)] border-t-2 border-[var(--amber)]/20">
+            <p className="text-sm font-bold text-[var(--text-primary)]">Total entrées de capital</p>
+            <p className="text-sm font-mono font-bold text-[var(--amber)]">{formatCurrency(metrics.totalCapital)}</p>
           </div>
           <div className="md:hidden flex items-center justify-between px-4 py-3 bg-[var(--surface-2)] border-t-2 border-[var(--amber)]/20">
             <p className="text-sm font-bold text-[var(--text-primary)]">Total entrées de capital</p>
@@ -954,3 +953,4 @@ async function handleGenerate(
   doc.save(fileName);
 }
 
+ 

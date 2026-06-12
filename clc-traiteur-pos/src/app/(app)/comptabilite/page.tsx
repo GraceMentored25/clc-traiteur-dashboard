@@ -2,7 +2,7 @@ import dynamic from "next/dynamic";
 
 export const metadata = { title: "Gestion comptable — C.LC. Traiteur" };
 
-const ComptabiliteClient = dynamic(() => import("@/components/comptabilite/ComptabiliteClient"), {
+const ComptabiliteClient = dynamic(() => import("@/components/comptabilite/ComptabiliteClientFinal"), {
   loading: () => <PageLoader />,
 });
 
