@@ -184,7 +184,7 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
             "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer",
             pathname === "/data"
               ? "text-[var(--amber)] bg-[var(--amber)]/8"
-              : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)]"
+              : "text-[var(--text-secondary)] hover:text-[var(--amber)] hover:bg-[var(--surface-2)]"
           )}>
             <Database size={17} weight={pathname === "/data" ? "fill" : "regular"} className="shrink-0" />
             Données
