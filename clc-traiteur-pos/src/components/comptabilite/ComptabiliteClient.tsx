@@ -176,8 +176,8 @@ export default function ComptabiliteClient() {
       {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
-          { label: "Total encaissé", value: formatCurrency(metrics.totalEntrees), icon: <ArrowUp size={18} weight="fill" />, accent: true },
-          { label: "Sorties confirmées", value: formatCurrency(metrics.totalSorties), icon: <ArrowDown size={18} weight="fill" />, negative: true },
+          { label: "Total encaissé", value: formatCurrency(metrics.totalEntrees), icon: <ArrowDown size={18} weight="fill" />, accent: true },
+          { label: "Sorties confirmées", value: formatCurrency(metrics.totalSorties), icon: <ArrowUp size={18} weight="fill" />, negative: true },
           { label: "Solde net", value: formatCurrency(metrics.solde), icon: <CurrencyEur size={18} weight="fill" />, accent: false },
           { label: "TVA collectée (20%)", value: formatCurrency(metrics.totalTVA), icon: <Receipt size={18} weight="fill" />, accent: false },
         ].map((card, i) => (
