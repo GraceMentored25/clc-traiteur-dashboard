@@ -48,6 +48,8 @@ export function Select({
 
   useEffect(() => {
     if (!open) return;
+
+    // Ferme si clic en dehors du trigger ET du dropdown
     const onPointer = (e: MouseEvent) => {
       if (
         triggerRef.current?.contains(e.target as Node) ||
@@ -55,12 +57,25 @@ export function Select({
       ) return;
       setOpen(false);
     };
-    const onScroll = () => setOpen(false);
+
+    // Ferme seulement si le scroll se passe en dehors du dropdown (page qui scrolle)
+    const onScroll = (e: Event) => {
+      if (dropdownRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
+    };
+
+    // Ferme sur Escape
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+
     document.addEventListener("mousedown", onPointer);
     window.addEventListener("scroll", onScroll, true);
+    document.addEventListener("keydown", onKey);
     return () => {
       document.removeEventListener("mousedown", onPointer);
       window.removeEventListener("scroll", onScroll, true);
+      document.removeEventListener("keydown", onKey);
     };
   }, [open]);
 
