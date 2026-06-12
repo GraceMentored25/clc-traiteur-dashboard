@@ -299,19 +299,19 @@ export default function ComptabiliteClient() {
             </span>
           </div>
           {/* Desktop header — Libellé | Source | Date | [actions] Montant */}
-          <div className="hidden md:grid grid-cols-[1fr_100px_120px_120px] gap-0 px-6 py-3 border-b border-[var(--border)]">
+          <div className="hidden md:grid grid-cols-[1fr_120px_120px_120px] gap-0 px-6 py-3 border-b border-[var(--border)]">
             <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Libellé</p>
             <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Source</p>
-            <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Date</p>
+            <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide text-right">Date</p>
             <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide text-right">Montant</p>
           </div>
           {confirmedCapital.map((e) => (
             <div key={e.id}>
               {/* Desktop */}
-              <div className="hidden md:grid grid-cols-[1fr_100px_120px_120px] items-center gap-0 px-6 py-3 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors group">
+              <div className="hidden md:grid grid-cols-[1fr_120px_120px_120px] items-center gap-0 px-6 py-3 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors group">
                 <p className="text-sm font-medium text-[var(--text-primary)] truncate">{e.libelle}</p>
                 <p className="text-xs text-[var(--text-secondary)] capitalize">{SOURCES.find(s => s.value === e.source)?.label}</p>
-                <div className="flex items-center gap-1 text-xs text-[var(--text-muted)]"><Calendar size={11}/>{formatDate(e.date)}</div>
+                <div className="flex items-center justify-end gap-1 text-xs text-[var(--text-muted)]"><Calendar size={11}/>{formatDate(e.date)}</div>
                 {/* Montant + boutons alignés à droite */}
                 <div className="flex items-center justify-end gap-1">
                   <button onClick={() => { setCapitalForm({ libelle: e.libelle, montant: String(e.montant), date: e.date, source: e.source }); setEditingCapitalId(e.id); setCapitalModal(true); }}
@@ -345,7 +345,7 @@ export default function ComptabiliteClient() {
             </div>
           ))}
           {/* Total en pied aligné sur la colonne Montant */}
-          <div className="hidden md:grid grid-cols-[1fr_100px_120px_120px] gap-0 px-6 py-3 bg-[var(--surface-2)] border-t-2 border-[var(--amber)]/20">
+          <div className="hidden md:grid grid-cols-[1fr_120px_120px_120px] gap-0 px-6 py-3 bg-[var(--surface-2)] border-t-2 border-[var(--amber)]/20">
             <p className="text-sm font-bold text-[var(--text-primary)] col-span-3">Total entrées de capital</p>
             <p className="text-sm font-mono font-bold text-[var(--amber)] text-right">{formatCurrency(metrics.totalCapital)}</p>
           </div>
