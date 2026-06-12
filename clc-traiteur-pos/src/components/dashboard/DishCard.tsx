@@ -325,7 +325,7 @@ const DishCard = memo(function DishCard({ dish }: Props) {
                     >
                       <Camera size={13} />
                     </button>
-                    <button onClick={() => setEditOpen(false)} className="w-7 h-7 rounded-xl bg-[var(--surface-2)] flex items-center justify-center text-[var(--text-muted)]">
+                    <button onClick={() => setEditOpen(false)} className="w-7 h-7 rounded-xl bg-[var(--surface-2)] hover:bg-[var(--amber)]/10 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--amber)] transition-colors">
                       <X size={13} />
                     </button>
                   </div>
