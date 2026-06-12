@@ -298,20 +298,20 @@ export default function ComptabiliteClientFinal() {
               {confirmedCapital.length} entrée{confirmedCapital.length > 1 ? "s" : ""}
             </span>
           </div>
-          {/* Desktop header — Libellé | Source | Date | Montant */}
-          <div className="hidden md:grid gap-0 px-6 py-3 border-b border-[var(--border)]" style={{ gridTemplateColumns: "1fr 130px 140px 120px" }}>
-            <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Libellé</p>
+          {/* Desktop header — même grille exacte que Détail encaissements */}
+          <div className="hidden md:grid gap-0 px-6 py-3 border-b border-[var(--border)]" style={{ gridTemplateColumns: "80px 1fr 130px 110px 110px 120px" }}>
+            <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide" style={{ gridColumn: "1 / 3" }}>Libellé</p>
             <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Source</p>
-            <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide text-right pr-4">Date</p>
+            <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide text-right pr-2" style={{ gridColumn: "4 / 6" }}>Date</p>
             <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide text-right pr-2">Montant</p>
           </div>
           {confirmedCapital.map((e) => (
             <div key={e.id}>
               {/* Desktop */}
-              <div className="hidden md:grid items-center gap-0 px-6 py-3 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors group" style={{ gridTemplateColumns: "1fr 130px 140px 120px" }}>
-                <p className="text-sm font-medium text-[var(--text-primary)] truncate">{e.libelle}</p>
+              <div className="hidden md:grid items-center gap-0 px-6 py-3 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors group" style={{ gridTemplateColumns: "80px 1fr 130px 110px 110px 120px" }}>
+                <p className="text-sm font-medium text-[var(--text-primary)] truncate" style={{ gridColumn: "1 / 3" }}>{e.libelle}</p>
                 <p className="text-xs text-[var(--text-secondary)] capitalize">{SOURCES.find(s => s.value === e.source)?.label}</p>
-                <div className="flex items-center justify-end gap-1 text-xs text-[var(--text-muted)] pr-4"><Calendar size={11}/>{formatDate(e.date)}</div>
+                <div className="flex items-center justify-end gap-1 text-xs text-[var(--text-muted)] pr-2" style={{ gridColumn: "4 / 6" }}><Calendar size={11}/>{formatDate(e.date)}</div>
                 {/* Montant + boutons alignés à droite */}
                 <div className="flex items-center justify-end gap-1">
                   <button onClick={() => { setCapitalForm({ libelle: e.libelle, montant: String(e.montant), date: e.date, source: e.source }); setEditingCapitalId(e.id); setCapitalModal(true); }}
