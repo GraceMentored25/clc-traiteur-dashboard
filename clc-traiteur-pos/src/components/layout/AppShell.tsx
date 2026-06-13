@@ -39,8 +39,12 @@ function deriveAccentVars(hex: string) {
   return { light, dim, r, g, b };
 }
 
+const HEX_REGEX = /^#[0-9a-fA-F]{6}$/;
+
 function applyAccent(color: string) {
   if (typeof document === "undefined") return;
+  // Validation stricte — prévient l'injection CSS
+  if (!HEX_REGEX.test(color)) return;
   const { light, dim, r, g, b } = deriveAccentVars(color);
   const root = document.documentElement;
   root.style.setProperty("--amber", color);

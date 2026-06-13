@@ -22,7 +22,7 @@ export async function loadFromSupabase() {
 export async function saveToSupabase(state: Record<string, unknown>) {
   const { error } = await supabase.from("clc_store").upsert({
     id: ROW_ID,
-    user_data: state.user,
+    // user_data intentionnellement absent — la session ne doit pas être stockée en DB
     devis_list_pro: state.devisListPro,
     devis_list_lab: state.devisListLab,
     devis_list: state.devisList,

@@ -49,7 +49,9 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
   const router = useRouter();
   const { user, logout, theme, setTheme, appMode, setAppMode, accentColor, setAccentColor } = useStore();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Supprime le cookie de session côté serveur
+    await fetch("/api/auth/login", { method: "DELETE" });
     logout();
     router.push("/");
   };

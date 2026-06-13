@@ -33,12 +33,23 @@ export default function AuthForm() {
   const onSubmit = async (data: FormData) => {
     setAuthError("");
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 700));
-    const ok = login(data.username, data.password);
-    if (ok) {
-      router.push("/dashboard");
-    } else {
-      setAuthError("Identifiant ou mot de passe incorrect.");
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: data.username, password: data.password }),
+      });
+      const json = await res.json();
+      if (res.ok && json.ok) {
+        // Stocke uniquement displayName/role côté client (pas le mot de passe)
+        login(data.username, data.password); // synchronise le store UI
+        router.push("/dashboard");
+      } else {
+        setAuthError(json.error ?? "Identifiant ou mot de passe incorrect.");
+        setLoading(false);
+      }
+    } catch {
+      setAuthError("Erreur de connexion. Réessayez.");
       setLoading(false);
     }
   };

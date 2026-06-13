@@ -6,9 +6,68 @@ import {
   DownloadSimple, UploadSimple, CheckCircle, Warning,
   Database, Trash, ClockCounterClockwise,
 } from "@phosphor-icons/react";
+import { z } from "zod";
 import { useStore } from "@/lib/store";
 import { DEFAULT_INGREDIENTS, DEFAULT_MATERIEL } from "@/lib/data/stocks";
 import { MOCK_DEVIS } from "@/lib/data/mock-events";
+
+// ── Schéma de validation des imports ────────────────────────────────────────
+const safeString = z.string().max(500).trim();
+const safeNumber = z.number().finite().nonnegative();
+
+const DevisItemSchema = z.object({
+  dishId: z.number(),
+  dishName: safeString,
+  quantity: safeNumber,
+  unitPrice: safeNumber,
+  subtotal: safeNumber,
+});
+
+const DevisSchema = z.object({
+  id: safeString,
+  clientName: safeString,
+  clientPhone: safeString,
+  eventDate: safeString,
+  eventType: safeString,
+  guestCount: safeNumber,
+  status: z.enum(["Brouillon", "Envoyé", "Confirmé", "Annulé"]),
+  items: z.array(DevisItemSchema),
+  totalHT: safeNumber,
+  totalTTC: safeNumber,
+  notes: z.string().max(2000).optional().default(""),
+  createdAt: safeString,
+});
+
+const BackupSchema = z.object({
+  _app: z.literal("clc-traiteur"),
+  _version: safeString,
+  _exportedAt: safeString,
+  devisListPro: z.array(DevisSchema).max(5000).default([]),
+  devisListLab: z.array(DevisSchema).max(5000).default([]),
+  customPrices: z.record(z.string(), z.number().nonnegative()).default({}),
+  customDishes: z.array(z.object({
+    id: z.number(),
+    name: safeString,
+    category: safeString,
+    price: safeNumber,
+    image: z.string().max(2000000).default("/dishes/ndole.jpg"),
+    description: safeString,
+    unit: safeString,
+  })).max(500).default([]),
+  customCategories: z.array(safeString).max(100).default([]),
+  entreesCapital: z.array(z.object({
+    id: safeString,
+    libelle: safeString,
+    montant: safeNumber,
+    date: safeString,
+    source: z.enum(["vente", "apport", "subvention", "autre"]),
+  })).max(5000).default([]),
+  ingredients: z.array(z.any()).max(500).default([]),
+  materiel: z.array(z.any()).max(500).default([]),
+  customRecipes: z.array(z.any()).max(500).default([]),
+  demandesCourses: z.array(z.any()).max(5000).default([]),
+  demandesLogistique: z.array(z.any()).max(5000).default([]),
+});
 
 const EXPORT_VERSION = "1.0";
 const EXPORT_KEY = "clc-traiteur-backup";
@@ -68,12 +127,15 @@ export default function DataClient() {
     reader.onload = (ev) => {
       try {
         const raw = ev.target?.result as string;
-        const data = JSON.parse(raw);
+        const parsed = JSON.parse(raw);
 
-        // Vérification basique
-        if (data._app !== "clc-traiteur") {
-          throw new Error("Ce fichier ne provient pas de C.LC. Traiteur.");
+        // Validation stricte via Zod — rejette tout champ malformé ou inattendu
+        const result = BackupSchema.safeParse(parsed);
+        if (!result.success) {
+          const firstError = result.error.issues[0];
+          throw new Error(`Fichier invalide : ${firstError.path.join(".")} — ${firstError.message}`);
         }
+        const data = result.data;
 
         // Fusionner avec l'état actuel — ne pas changer le mode ni le thème en cours
         const current = useStore.getState();

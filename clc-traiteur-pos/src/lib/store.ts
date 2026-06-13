@@ -87,23 +87,15 @@ export interface AppState {
   deleteDevis: (id: string) => void;
 }
 
-const USERS = [
-  { username: "admin", password: "4243", role: "admin" as const, displayName: "Administrateur" },
-];
-
 export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
       user: null,
-      login: (username, password) => {
-        const found = USERS.find(
-          (u) => u.username === username && u.password === password
-        );
-        if (found) {
-          set({ user: { username: found.username, role: found.role, displayName: found.displayName } });
-          return true;
-        }
-        return false;
+      // login() synchronise uniquement l'état UI — la vraie vérification est dans /api/auth/login
+      // Ne jamais appeler login() directement sans passer par l'API route
+      login: (username, _password) => {
+        set({ user: { username, role: "admin", displayName: "Administrateur" } });
+        return true;
       },
       logout: () => set({ user: null }),
 
@@ -394,7 +386,7 @@ export const useStore = create<AppState>()(
         return state as AppState;
       },
       partialize: (state) => ({
-        user: state.user,
+        // user intentionnellement absent — la session vit dans un cookie HttpOnly serveur
         devisListPro: state.devisListPro,
         devisListLab: state.devisListLab,
         devisList: state.devisList,
