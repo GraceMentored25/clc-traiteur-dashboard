@@ -8,6 +8,38 @@ import {
 } from "@phosphor-icons/react";
 import { z } from "zod";
 import { useStore } from "@/lib/store";
+
+// ── Chiffrement export AES-256-GCM (CWE-312) ─────────────────────────────
+async function encryptBackup(json: string, password: string): Promise<Blob> {
+  const enc = new TextEncoder();
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]);
+  const key = await crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt, iterations: 100_000, hash: "SHA-256" },
+    keyMaterial, { name: "AES-GCM", length: 256 }, false, ["encrypt"]
+  );
+  const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(json));
+  // Format : salt(16) + iv(12) + ciphertext
+  const combined = new Uint8Array(salt.byteLength + iv.byteLength + encrypted.byteLength);
+  combined.set(salt); combined.set(iv, 16); combined.set(new Uint8Array(encrypted), 28);
+  return new Blob([combined], { type: "application/octet-stream" });
+}
+
+async function decryptBackup(buffer: ArrayBuffer, password: string): Promise<string> {
+  const data = new Uint8Array(buffer);
+  const salt = data.slice(0, 16);
+  const iv = data.slice(16, 28);
+  const ciphertext = data.slice(28);
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]);
+  const key = await crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt, iterations: 100_000, hash: "SHA-256" },
+    keyMaterial, { name: "AES-GCM", length: 256 }, false, ["decrypt"]
+  );
+  const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+  return new TextDecoder().decode(decrypted);
+}
 import { DEFAULT_INGREDIENTS, DEFAULT_MATERIEL } from "@/lib/data/stocks";
 import { MOCK_DEVIS } from "@/lib/data/mock-events";
 
@@ -123,15 +155,23 @@ export default function DataClient() {
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
   const [confirmReset, setConfirmReset] = useState(false);
+  const [exportPassword, setExportPassword] = useState("");
+  const [importPassword, setImportPassword] = useState("");
+  const [showExportPwd, setShowExportPwd] = useState(false);
 
-  // ── Export ─────────────────────────────────────────────────────────────
-  const handleExport = () => {
+  // ── Export (chiffré AES-256-GCM) ──────────────────────────────────────
+  const handleExport = async () => {
+    if (!exportPassword.trim()) {
+      setStatus("error");
+      setMessage("Saisissez un mot de passe pour chiffrer la sauvegarde.");
+      setTimeout(() => setStatus("idle"), 4000);
+      return;
+    }
     const s = useStore.getState();
     const backup = {
       _version: EXPORT_VERSION,
       _exportedAt: new Date().toISOString(),
       _app: "clc-traiteur",
-      // Toutes les données persistées
       devisListPro: s.devisListPro,
       devisListLab: s.devisListLab,
       devisList: s.devisList,
@@ -149,26 +189,26 @@ export default function DataClient() {
     };
 
     const json = JSON.stringify(backup, null, 2);
-    const blob = new Blob([json], { type: "application/json;charset=utf-8" });
+    const blob = await encryptBackup(json, exportPassword);
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     const date = new Date().toLocaleDateString("fr-FR").replace(/\//g, "-");
-    a.download = `clc-traiteur-backup-${date}.json`;
+    a.download = `clc-traiteur-backup-${date}.clcbak`;
     a.click();
     URL.revokeObjectURL(url);
+    setExportPassword("");
 
     setStatus("success");
-    setMessage(`Sauvegarde exportée — ${backup.devisListPro.length + backup.devisListLab.length} devis, ${backup.entreesCapital.length} entrées capital`);
+    setMessage(`Sauvegarde chiffrée exportée — ${backup.devisListPro.length + backup.devisListLab.length} devis`);
     setTimeout(() => setStatus("idle"), 4000);
   };
 
-  // ── Import ─────────────────────────────────────────────────────────────
+  // ── Import (chiffré ou JSON) ───────────────────────────────────────────
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Limite de taille : 10 MB
     if (file.size > 10 * 1024 * 1024) {
       setStatus("error");
       setMessage("Fichier trop volumineux (max 10 MB).");
@@ -177,10 +217,46 @@ export default function DataClient() {
       return;
     }
 
+    const isEncrypted = file.name.endsWith(".clcbak");
+    if (isEncrypted && !importPassword.trim()) {
+      setStatus("error");
+      setMessage("Ce fichier est chiffré. Saisissez le mot de passe d'import.");
+      setTimeout(() => setStatus("idle"), 5000);
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const raw = ev.target?.result as string;
+    if (isEncrypted) {
+      reader.onload = async (ev) => {
+        try {
+          const buffer = ev.target?.result as ArrayBuffer;
+          const json = await decryptBackup(buffer, importPassword);
+          setImportPassword("");
+          processImport(json);
+        } catch {
+          setStatus("error");
+          setMessage("Mot de passe incorrect ou fichier corrompu.");
+          setTimeout(() => setStatus("idle"), 5000);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+
+    // Fallback : import JSON non chiffré (rétrocompatibilité)
+    const readerText = new FileReader();
+    readerText.onload = (ev) => {
+      const raw = ev.target?.result as string;
+      processImport(raw);
+    };
+    readerText.readAsText(file);
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const processImport = (raw: string) => {
+    try {
         const parsed = JSON.parse(raw);
 
         // Validation stricte via Zod — rejette tout champ malformé ou inattendu
@@ -236,10 +312,6 @@ export default function DataClient() {
         setMessage((err as Error).message || "Fichier invalide ou corrompu.");
         setTimeout(() => setStatus("idle"), 5000);
       }
-    };
-    reader.readAsText(file);
-    // Reset l'input pour permettre de ré-importer le même fichier
-    if (fileRef.current) fileRef.current.value = "";
   };
 
   // ── Reset ──────────────────────────────────────────────────────────────
@@ -329,41 +401,54 @@ export default function DataClient() {
 
         {/* Actions */}
         <div className="space-y-4">
-          {/* Export */}
-          <div className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] p-6">
-            <h2 className="font-bold text-[var(--text-primary)] text-sm mb-1">Exporter les données</h2>
-            <p className="text-xs text-[var(--text-muted)] mb-4">
-              Télécharge un fichier <code className="font-mono bg-[var(--surface-2)] px-1 rounded">.json</code> contenant tous vos devis, stocks, recettes, courses et entrées comptables.
-            </p>
-            <m.button
-              whileTap={{ scale: 0.97 }}
-              onClick={handleExport}
-              className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-[var(--amber)] hover:bg-[var(--amber-light)] text-[var(--surface)] font-semibold text-sm transition-colors"
-            >
+          {/* Export chiffré */}
+          <div className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] p-6 space-y-3">
+            <div>
+              <h2 className="font-bold text-[var(--text-primary)] text-sm mb-1">Exporter les données</h2>
+              <p className="text-xs text-[var(--text-muted)]">
+                Sauvegarde chiffrée AES-256 — protégée par un mot de passe. Format <code className="font-mono bg-[var(--surface-2)] px-1 rounded">.clcbak</code>.
+              </p>
+            </div>
+            <div className="relative">
+              <input
+                type={showExportPwd ? "text" : "password"}
+                value={exportPassword}
+                onChange={(e) => setExportPassword(e.target.value)}
+                placeholder="Mot de passe de chiffrement…"
+                className="w-full h-9 px-3 pr-10 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-colors"
+              />
+              <button type="button" onClick={() => setShowExportPwd(v => !v)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-secondary)]">
+                {showExportPwd ? "🙈" : "👁"}
+              </button>
+            </div>
+            <m.button whileTap={{ scale: 0.97 }} onClick={handleExport}
+              disabled={!exportPassword.trim()}
+              className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-[var(--amber)] hover:bg-[var(--amber-light)] disabled:opacity-40 text-[var(--surface)] font-semibold text-sm transition-colors">
               <DownloadSimple size={16} weight="bold" />
-              Télécharger la sauvegarde
+              Télécharger la sauvegarde chiffrée
             </m.button>
           </div>
 
-          {/* Import */}
-          <div className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] p-6">
-            <h2 className="font-bold text-[var(--text-primary)] text-sm mb-1">Importer des données</h2>
-            <p className="text-xs text-[var(--text-muted)] mb-4">
-              Fusionne les données du fichier avec les données actuelles. Les devis du fichier sont <strong>ajoutés</strong> sans écraser ceux existants. Le mode et thème actuels sont conservés.
-            </p>
+          {/* Import chiffré ou JSON */}
+          <div className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] p-6 space-y-3">
+            <div>
+              <h2 className="font-bold text-[var(--text-primary)] text-sm mb-1">Importer des données</h2>
+              <p className="text-xs text-[var(--text-muted)]">
+                Accepte les fichiers <code className="font-mono bg-[var(--surface-2)] px-1 rounded">.clcbak</code> (chiffrés) et <code className="font-mono bg-[var(--surface-2)] px-1 rounded">.json</code> (anciens backups).
+              </p>
+            </div>
             <input
-              ref={fileRef}
-              type="file"
-              accept=".json,application/json"
-              onChange={handleImport}
-              className="hidden"
-              id="import-file"
+              type="password"
+              value={importPassword}
+              onChange={(e) => setImportPassword(e.target.value)}
+              placeholder="Mot de passe (pour fichiers .clcbak)"
+              className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-colors"
             />
-            <m.button
-              whileTap={{ scale: 0.97 }}
-              onClick={() => fileRef.current?.click()}
-              className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] hover:border-[var(--amber)]/40 hover:text-[var(--amber)] font-semibold text-sm transition-all"
-            >
+            <input ref={fileRef} type="file" accept=".clcbak,.json,application/json"
+              onChange={handleImport} className="hidden" id="import-file" />
+            <m.button whileTap={{ scale: 0.97 }} onClick={() => fileRef.current?.click()}
+              className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] hover:border-[var(--amber)]/40 hover:text-[var(--amber)] font-semibold text-sm transition-all">
               <UploadSimple size={16} weight="bold" />
               Importer un fichier de sauvegarde
             </m.button>

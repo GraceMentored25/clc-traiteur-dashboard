@@ -23,14 +23,17 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",  // Next.js nécessite unsafe-inline/eval en dev
+              // unsafe-eval retiré — uniquement unsafe-inline conservé (requis par Next.js inline scripts)
+              // Migration vers nonces prévue quand Turbopack le supportera nativement
+              "script-src 'self' 'unsafe-inline'",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
-              `img-src 'self' data: blob: https://picsum.photos https://ndmpfsaqnxwznizivjcu.supabase.co`,
-              `connect-src 'self' https://ndmpfsaqnxwznizivjcu.supabase.co wss://ndmpfsaqnxwznizivjcu.supabase.co`,
+              `img-src 'self' data: blob: https://picsum.photos https://*.supabase.co`,
+              `connect-src 'self' https://*.supabase.co wss://*.supabase.co`,
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",
+              "upgrade-insecure-requests",
             ].join("; "),
           },
           {

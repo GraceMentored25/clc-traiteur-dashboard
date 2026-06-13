@@ -20,6 +20,7 @@ import {
   Database,
   ListChecks,
   PaintBrush,
+  ShieldCheck,
 } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -189,6 +190,17 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
           )}>
             <PaintBrush size={17} weight={pathname === "/personnalisation" ? "fill" : "regular"} className="shrink-0" />
             Personnalisation
+          </div>
+        </Link>
+        <Link href="/confidentialite" onClick={onClose}>
+          <div className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer",
+            pathname === "/confidentialite"
+              ? "text-[var(--amber)] bg-[var(--amber)]/8"
+              : "text-[var(--text-secondary)] hover:text-[var(--info)] hover:bg-[var(--info)]/8"
+          )}>
+            <ShieldCheck size={17} weight={pathname === "/confidentialite" ? "fill" : "regular"} className="shrink-0" />
+            Confidentialité
           </div>
         </Link>
       </div>

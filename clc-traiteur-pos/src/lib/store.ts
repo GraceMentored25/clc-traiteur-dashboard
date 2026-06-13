@@ -1,7 +1,9 @@
 "use client";
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
+import { encryptStore, decryptStore } from "@/lib/crypto";
+import { logAudit } from "@/lib/auditLog";
 import { CartItem, Devis, Dish, EntreeCapital, Ingredient, Materiel, DemandeCoursesRepas, DemandeLogistique, User } from "@/lib/types";
 import { MOCK_DEVIS } from "@/lib/data/mock-events";
 import { DEFAULT_INGREDIENTS, DEFAULT_MATERIEL } from "@/lib/data/stocks";
@@ -152,8 +154,8 @@ export const useStore = create<AppState>()(
         set((s) => ({ customCategories: s.customCategories.filter((c) => c !== name) })),
 
       entreesCapital: [],
-      addEntreeCapital: (e) => set((s) => ({ entreesCapital: [e, ...s.entreesCapital] })),
-      removeEntreeCapital: (id) => set((s) => ({ entreesCapital: s.entreesCapital.filter((e) => e.id !== id) })),
+      addEntreeCapital: (e) => { logAudit("CAPITAL_ADDED", { id: e.id, montant: e.montant, source: e.source }); set((s) => ({ entreesCapital: [e, ...s.entreesCapital] })); },
+      removeEntreeCapital: (id) => { logAudit("CAPITAL_DELETED", { id }); set((s) => ({ entreesCapital: s.entreesCapital.filter((e) => e.id !== id) })); },
 
       ingredients: DEFAULT_INGREDIENTS,
       setIngredientStock: (id, qty) =>
@@ -320,6 +322,7 @@ export const useStore = create<AppState>()(
       devisList: [],
       addDevis: (devisData) => {
         const newDevis: Devis = { ...devisData, id: generateId(), createdAt: new Date().toISOString() };
+        logAudit("DEVIS_CREATED", { id: newDevis.id, client: newDevis.clientName, total: newDevis.totalTTC });
         const mode = get().appMode;
         set((s) => ({
           devisList: [newDevis, ...s.devisList],
@@ -327,6 +330,7 @@ export const useStore = create<AppState>()(
         }));
       },
       updateDevisStatus: (id, status) => {
+        logAudit("DEVIS_STATUS_CHANGED", { id, status });
         const mode = get().appMode;
         set((s) => ({
           devisList: s.devisList.map((d) => d.id === id ? { ...d, status } : d),
@@ -345,6 +349,7 @@ export const useStore = create<AppState>()(
         }));
       },
       deleteDevis: (id) => {
+        logAudit("DEVIS_DELETED", { id });
         const mode = get().appMode;
         set((s) => ({
           devisList: s.devisList.filter((d) => d.id !== id),
@@ -360,6 +365,19 @@ export const useStore = create<AppState>()(
     {
       name: "clc-traiteur-storage",
       version: 5,
+      // Chiffrement AES-GCM des données sensibles en localStorage (CWE-311/312)
+      storage: createJSONStorage(() => ({
+        getItem: async (key: string) => {
+          const raw = localStorage.getItem(key);
+          if (!raw) return null;
+          return decryptStore(raw);
+        },
+        setItem: async (key: string, value: string) => {
+          const encrypted = await encryptStore(value);
+          localStorage.setItem(key, encrypted);
+        },
+        removeItem: async (key: string) => localStorage.removeItem(key),
+      })),
       migrate: (persisted: unknown, version: number) => {
         const state = persisted as Partial<AppState> & { devisList?: Devis[] };
         if (version < 2) {
