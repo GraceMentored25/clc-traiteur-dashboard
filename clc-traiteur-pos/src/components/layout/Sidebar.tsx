@@ -19,6 +19,7 @@ import {
   Package,
   Database,
   ListChecks,
+  PaintBrush,
 } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -128,66 +129,21 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
         })}
       </nav>
 
-      {/* Toggles */}
-      <div className="px-3 pb-3 space-y-2">
-        {/* Row: Thème + Mode */}
+      {/* Toggles rapides */}
+      <div className="px-3 pb-3">
         <div className="flex items-center gap-2">
-          {/* Toggle thème */}
-          <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            title={theme === "dark" ? "Passer en mode clair" : "Passer en mode sombre"}
-            className={cn(
-              "flex-1 flex items-center justify-center gap-1.5 h-8 rounded-xl text-xs font-semibold transition-all border",
-              theme === "light"
-                ? "bg-[var(--amber)]/10 border-[var(--amber)]/30 text-[var(--amber)]"
-                : "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-3)]"
-            )}
-          >
-            {theme === "dark"
-              ? <Moon size={13} weight="fill" />
-              : <Sun size={13} weight="fill" />
-            }
+          <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className={cn("flex-1 flex items-center justify-center gap-1.5 h-8 rounded-xl text-xs font-semibold transition-all border",
+              theme === "light" ? "bg-[var(--amber)]/10 border-[var(--amber)]/30 text-[var(--amber)]" : "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-3)]")}>
+            {theme === "dark" ? <Moon size={13} weight="fill" /> : <Sun size={13} weight="fill" />}
             <span>{theme === "dark" ? "Sombre" : "Clair"}</span>
           </button>
-
-          {/* Toggle mode Lab/Pro */}
-          <button
-            onClick={() => setAppMode(appMode === "lab" ? "pro" : "lab")}
-            title={appMode === "lab" ? "Passer en mode Pro (données réelles)" : "Passer en mode Lab (données démo)"}
-            className={cn(
-              "flex-1 flex items-center justify-center gap-1.5 h-8 rounded-xl text-xs font-semibold transition-all border",
-              appMode === "pro"
-                ? "bg-[var(--amber)]/10 border-[var(--amber)]/30 text-[var(--amber)]"
-                : "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-3)]"
-            )}
-          >
-            {appMode === "lab"
-              ? <Flask size={13} weight="fill" />
-              : <Briefcase size={13} weight="fill" />
-            }
+          <button onClick={() => setAppMode(appMode === "lab" ? "pro" : "lab")}
+            className={cn("flex-1 flex items-center justify-center gap-1.5 h-8 rounded-xl text-xs font-semibold transition-all border",
+              appMode === "pro" ? "bg-[var(--amber)]/10 border-[var(--amber)]/30 text-[var(--amber)]" : "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-3)]")}>
+            {appMode === "lab" ? <Flask size={13} weight="fill" /> : <Briefcase size={13} weight="fill" />}
             <span>{appMode === "lab" ? "Lab" : "Pro"}</span>
           </button>
-        </div>
-      </div>
-
-      {/* Couleur d'accent */}
-      <div className="px-3 pb-3">
-        <div className="px-1 mb-2 flex items-center justify-between">
-          <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-widest">Couleur</p>
-          <label className="relative w-5 h-5 cursor-pointer" title="Couleur personnalisée">
-            <input type="color" value={accentColor ?? "#E8960C"} onChange={(e) => setAccentColor(e.target.value)}
-              className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
-            <div className="w-5 h-5 rounded-full border-2 border-[var(--border)] overflow-hidden"
-              style={{ background: "conic-gradient(red, yellow, lime, cyan, blue, magenta, red)" }} />
-          </label>
-        </div>
-        <div className="grid grid-cols-8 gap-1">
-          {ACCENT_PRESETS.map(({ color, label }) => (
-            <button key={color} onClick={() => setAccentColor(color)} title={label}
-              className="w-full aspect-square rounded-full transition-transform hover:scale-110 relative"
-              style={{ background: color, outline: accentColor === color ? `2px solid ${color}` : "none", outlineOffset: 2 }}
-            />
-          ))}
         </div>
       </div>
 
@@ -220,6 +176,17 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
           )}>
             <Database size={17} weight={pathname === "/data" ? "fill" : "regular"} className="shrink-0" />
             Données
+          </div>
+        </Link>
+        <Link href="/personnalisation" onClick={onClose}>
+          <div className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer",
+            pathname === "/personnalisation"
+              ? "text-[var(--amber)] bg-[var(--amber)]/8"
+              : "text-[var(--text-secondary)] hover:text-[var(--amber)] hover:bg-[var(--surface-2)]"
+          )}>
+            <PaintBrush size={17} weight={pathname === "/personnalisation" ? "fill" : "regular"} className="shrink-0" />
+            Personnalisation
           </div>
         </Link>
       </div>
