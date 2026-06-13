@@ -15,6 +15,9 @@ export interface AppState {
   theme: "dark" | "light";
   setTheme: (t: "dark" | "light") => void;
 
+  accentColor: string;
+  setAccentColor: (color: string) => void;
+
   appMode: "lab" | "pro";
   setAppMode: (m: "lab" | "pro") => void;
 
@@ -106,6 +109,9 @@ export const useStore = create<AppState>()(
 
       theme: "dark",
       setTheme: (t) => set({ theme: t }),
+
+      accentColor: "#E8960C",
+      setAccentColor: (color) => set({ accentColor: color }),
 
       appMode: "pro",
       setAppMode: (m) => {
@@ -383,6 +389,7 @@ export const useStore = create<AppState>()(
         devisListLab: state.devisListLab,
         devisList: state.devisList,
         theme: state.theme,
+        accentColor: state.accentColor,
         appMode: state.appMode,
         customPrices: state.customPrices,
         customDishes: state.customDishes,

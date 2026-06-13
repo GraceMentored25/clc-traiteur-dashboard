@@ -32,10 +32,21 @@ const NAV_ITEMS = [
   { href: "/kpi", label: "KPI & Métriques", icon: ChartBar },
 ];
 
+const ACCENT_PRESETS = [
+  { color: "#E8960C", label: "Orange" },
+  { color: "#3FB950", label: "Vert" },
+  { color: "#58A6FF", label: "Bleu" },
+  { color: "#A855F7", label: "Violet" },
+  { color: "#EF4444", label: "Rouge" },
+  { color: "#EC4899", label: "Rose" },
+  { color: "#14B8A6", label: "Turquoise" },
+  { color: "#F97316", label: "Mandarine" },
+];
+
 export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout, theme, setTheme, appMode, setAppMode } = useStore();
+  const { user, logout, theme, setTheme, appMode, setAppMode, accentColor, setAccentColor } = useStore();
 
   const handleLogout = () => {
     logout();
@@ -156,6 +167,27 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
             }
             <span>{appMode === "lab" ? "Lab" : "Pro"}</span>
           </button>
+        </div>
+      </div>
+
+      {/* Couleur d'accent */}
+      <div className="px-3 pb-3">
+        <div className="px-1 mb-2 flex items-center justify-between">
+          <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-widest">Couleur</p>
+          <label className="relative w-5 h-5 cursor-pointer" title="Couleur personnalisée">
+            <input type="color" value={accentColor ?? "#E8960C"} onChange={(e) => setAccentColor(e.target.value)}
+              className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
+            <div className="w-5 h-5 rounded-full border-2 border-[var(--border)] overflow-hidden"
+              style={{ background: "conic-gradient(red, yellow, lime, cyan, blue, magenta, red)" }} />
+          </label>
+        </div>
+        <div className="grid grid-cols-8 gap-1">
+          {ACCENT_PRESETS.map(({ color, label }) => (
+            <button key={color} onClick={() => setAccentColor(color)} title={label}
+              className="w-full aspect-square rounded-full transition-transform hover:scale-110 relative"
+              style={{ background: color, outline: accentColor === color ? `2px solid ${color}` : "none", outlineOffset: 2 }}
+            />
+          ))}
         </div>
       </div>
 
