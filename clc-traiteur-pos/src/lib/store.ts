@@ -131,11 +131,21 @@ export const useStore = create<AppState>()(
 
       customDishes: [],
       addCustomDish: (dish) =>
-        set((s) => ({
-          customDishes: [...s.customDishes, { ...dish, id: Date.now() }],
-        })),
+        set((s) => {
+          const id = Date.now();
+          const newDish = { ...dish, id };
+          // Crée automatiquement une recette vide pour ce plat
+          const newRecipe = { dishId: id, dishName: dish.name, ingredients: [] };
+          return {
+            customDishes: [...s.customDishes, newDish],
+            customRecipes: [...s.customRecipes, newRecipe],
+          };
+        }),
       removeCustomDish: (id) =>
-        set((s) => ({ customDishes: s.customDishes.filter((d) => d.id !== id) })),
+        set((s) => ({
+          customDishes: s.customDishes.filter((d) => d.id !== id),
+          customRecipes: s.customRecipes.filter((r) => r.dishId !== id),
+        })),
       updateCustomDish: (id, patch) =>
         set((s) => ({ customDishes: s.customDishes.map((d) => d.id === id ? { ...d, ...patch } : d) })),
 

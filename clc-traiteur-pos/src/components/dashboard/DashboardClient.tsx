@@ -5,8 +5,9 @@ import Image from "next/image";
 import { m, AnimatePresence } from "framer-motion";
 import {
   MagnifyingGlass, ShoppingCart, SquaresFour, Rows,
-  SortAscending, Plus, X, Camera,
+  SortAscending, Plus, X, Camera, Trash,
 } from "@phosphor-icons/react";
+import type { RecipeIngredient } from "@/lib/types";
 import { CATEGORIES, DISHES } from "@/lib/data/dishes";
 import { useStore } from "@/lib/store";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -37,6 +38,7 @@ export default function DashboardClient() {
   const [addDishOpen, setAddDishOpen] = useState(false);
   const [newCatName, setNewCatName] = useState("");
   const [newDish, setNewDish] = useState({ name: "", price: "", unit: "portion", description: "", category: "", image: "" });
+  const [newDishIngredients, setNewDishIngredients] = useState<RecipeIngredient[]>([]);
   const sortRef = useRef<HTMLDivElement>(null);
   const newDishFileRef = useRef<HTMLInputElement>(null);
 
@@ -53,7 +55,9 @@ export default function DashboardClient() {
   const cartTotal = useStore((s) => s.cartTotal);
   const customDishes = useStore((s) => s.customDishes);
   const customCategories = useStore((s) => s.customCategories);
+  const ingredients = useStore((s) => s.ingredients);
   const addCustomDish = useStore((s) => s.addCustomDish);
+  const setRecipeIngredients = useStore((s) => s.setRecipeIngredients);
   const addCustomCategory = useStore((s) => s.addCustomCategory);
 
   const allCategories = useMemo(() => [...CATEGORIES, ...customCategories], [customCategories]);
@@ -93,6 +97,7 @@ export default function DashboardClient() {
   const handleAddDish = () => {
     const price = parseFloat(newDish.price.replace(",", "."));
     if (!newDish.name.trim() || isNaN(price) || price <= 0 || !newDish.category) return;
+    // addCustomDish crée aussi la recette vide dans le store
     addCustomDish({
       name: newDish.name.trim(),
       price,
@@ -101,7 +106,17 @@ export default function DashboardClient() {
       category: newDish.category,
       image: newDish.image || "/dishes/ndole.jpg",
     });
+    // Si des ingrédients ont été ajoutés, on les sauvegarde après que le dish ait son id
+    if (newDishIngredients.length > 0) {
+      // Le nouvel id = Date.now() au moment de addCustomDish, on récupère depuis le store
+      setTimeout(() => {
+        const state = useStore.getState();
+        const created = state.customDishes[state.customDishes.length - 1];
+        if (created) setRecipeIngredients(created.id, newDishIngredients);
+      }, 0);
+    }
     setNewDish({ name: "", price: "", unit: "portion", description: "", category: newDish.category, image: "" });
+    setNewDishIngredients([]);
     setAddDishOpen(false);
   };
 
@@ -458,14 +473,14 @@ export default function DashboardClient() {
               className="fixed inset-0 z-50 flex items-center justify-center p-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="w-full max-w-sm bg-[var(--surface-1)] rounded-2xl border border-[var(--border)] p-6 shadow-2xl">
-                <div className="flex items-center justify-between mb-5">
+              <div className="w-full max-w-sm bg-[var(--surface-1)] rounded-2xl border border-[var(--border)] shadow-2xl flex flex-col max-h-[90vh]">
+                <div className="flex items-center justify-between p-6 pb-4 border-b border-[var(--border)] shrink-0">
                   <h3 className="font-bold text-[var(--text-primary)]">Nouveau plat</h3>
-                  <button onClick={() => setAddDishOpen(false)} className="w-8 h-8 rounded-xl bg-[var(--surface-2)] flex items-center justify-center text-[var(--text-muted)]">
+                  <button onClick={() => { setAddDishOpen(false); setNewDishIngredients([]); }} className="w-8 h-8 rounded-xl bg-[var(--surface-2)] flex items-center justify-center text-[var(--text-muted)]">
                     <X size={15} />
                   </button>
                 </div>
-                <div className="space-y-3">
+                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
                   {/* Photo */}
                   <div>
                     <label className="text-xs text-[var(--text-muted)] mb-1 block">Photo</label>
@@ -523,9 +538,50 @@ export default function DashboardClient() {
                       placeholder="Brève description…"
                       className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-colors" />
                   </div>
+
+                  {/* ── Ingrédients de la recette ───────────────────── */}
+                  <div className="pt-2 border-t border-[var(--border)]">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs text-[var(--text-muted)]">Ingrédients de la recette <span className="opacity-60">(optionnel)</span></label>
+                      <button type="button"
+                        onClick={() => setNewDishIngredients(prev => [...prev, { ingredientId: ingredients[0]?.id ?? "", qtyPerPerson: 0.1 }])}
+                        className="w-6 h-6 rounded-lg bg-[var(--amber)]/10 text-[var(--amber)] hover:bg-[var(--amber)]/20 flex items-center justify-center transition-colors">
+                        <Plus size={11} weight="bold" />
+                      </button>
+                    </div>
+                    {newDishIngredients.length === 0 ? (
+                      <p className="text-xs text-[var(--text-muted)] italic">Aucun ingrédient — peut être ajouté plus tard dans Stocks → Ressources</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {newDishIngredients.map((ing, idx) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            <Select
+                              value={ing.ingredientId}
+                              onChange={(v) => setNewDishIngredients(prev => prev.map((x, i) => i === idx ? { ...x, ingredientId: v } : x))}
+                              options={ingredients.map(i => ({ value: i.id, label: i.name }))}
+                              size="sm"
+                              className="flex-1 min-w-0"
+                            />
+                            <input type="number" min="0" step="0.001" value={ing.qtyPerPerson}
+                              onChange={(e) => setNewDishIngredients(prev => prev.map((x, i) => i === idx ? { ...x, qtyPerPerson: parseFloat(e.target.value) || 0 } : x))}
+                              className="w-16 h-7 px-2 text-xs text-right bg-[var(--surface-2)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+                            <span className="text-[10px] text-[var(--text-muted)] shrink-0 w-6">
+                              {ingredients.find(i => i.id === ing.ingredientId)?.unit ?? ""}
+                            </span>
+                            <button type="button" onClick={() => setNewDishIngredients(prev => prev.filter((_, i) => i !== idx))}
+                              className="w-6 h-6 flex items-center justify-center rounded-lg text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition-colors shrink-0">
+                              <Trash size={11} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="flex gap-3 mt-5">
-                  <button onClick={() => setAddDishOpen(false)} className="flex-1 h-10 rounded-xl border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-2)] transition-colors">Annuler</button>
+
+                <div className="flex gap-3 px-6 py-4 border-t border-[var(--border)] shrink-0">
+                  <button onClick={() => { setAddDishOpen(false); setNewDishIngredients([]); }} className="flex-1 h-10 rounded-xl border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-2)] transition-colors">Annuler</button>
                   <button onClick={handleAddDish}
                     disabled={!newDish.name.trim() || !newDish.price || !newDish.category}
                     className="flex-1 h-10 rounded-xl bg-[var(--amber)] hover:bg-[var(--amber-light)] text-[var(--surface)] font-semibold text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
