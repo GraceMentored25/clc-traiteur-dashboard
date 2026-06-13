@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sessions, SESSION_COOKIE } from "@/app/api/auth/login/route";
 
+const SESSION_COOKIE = "clc_session";
 const PUBLIC_PATHS = ["/", "/auth"];
 
 export function middleware(req: NextRequest) {
@@ -20,20 +20,11 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Vérifier la présence du cookie
+  // Vérifier la présence du cookie — la validité est vérifiée côté serveur dans AppShell
+  // Note: Edge Runtime ≠ Node.js runtime, la Map sessions n'est pas partageable
   const token = req.cookies.get(SESSION_COOKIE)?.value;
   if (!token) {
     return NextResponse.redirect(new URL("/", req.url));
-  }
-
-  // Vérifier que le token existe dans le store de sessions ET n'est pas expiré
-  const session = sessions.get(token);
-  if (!session || Date.now() > session.expiresAt) {
-    // Token invalide ou expiré — supprimer et rediriger
-    if (session) sessions.delete(token);
-    const res = NextResponse.redirect(new URL("/", req.url));
-    res.cookies.delete(SESSION_COOKIE);
-    return res;
   }
 
   return NextResponse.next();

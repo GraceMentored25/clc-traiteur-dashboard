@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
   cookieStore.set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict", // était "lax" — strict pour app mono-utilisateur
+    sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
     maxAge: MAX_AGE,
     path: "/",
   });
