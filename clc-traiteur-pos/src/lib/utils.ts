@@ -22,8 +22,11 @@ export function formatDate(dateStr: string): string {
 }
 
 export function generateId(): string {
-  const num = Math.floor(Math.random() * 900) + 100;
-  return `DV-${num}`;
+  // UUID court pour les IDs de devis — 8 chars hex aléatoires
+  const arr = new Uint8Array(4);
+  crypto.getRandomValues(arr);
+  const hex = Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("").toUpperCase();
+  return `DV-${hex}`;
 }
 
 export const STATUS_COLORS: Record<string, string> = {

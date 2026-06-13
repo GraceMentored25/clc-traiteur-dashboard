@@ -14,6 +14,9 @@ const schema = z.object({
   password: z.string().min(1, "Mot de passe requis"),
 });
 
+// Politique minimale de complexité côté client (vérification UI uniquement)
+const PASSWORD_MIN_LENGTH = 8;
+
 type FormData = z.infer<typeof schema>;
 
 export default function AuthFormClient() {
@@ -32,12 +35,23 @@ export default function AuthFormClient() {
   const onSubmit = async (data: FormData) => {
     setAuthError("");
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 700));
-    const ok = login(data.username, data.password);
-    if (ok) {
-      router.push("/dashboard");
-    } else {
-      setAuthError("Identifiant ou mot de passe incorrect.");
+    try {
+      // Vérification côté serveur uniquement — jamais côté client
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: data.username, password: data.password }),
+      });
+      const json = await res.json();
+      if (res.ok && json.ok) {
+        login(data.username, data.password); // synchronise l'état UI uniquement
+        router.push("/dashboard");
+      } else {
+        setAuthError(json.error ?? "Identifiant ou mot de passe incorrect.");
+        setLoading(false);
+      }
+    } catch {
+      setAuthError("Erreur de connexion. Réessayez.");
       setLoading(false);
     }
   };

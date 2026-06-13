@@ -62,11 +62,56 @@ const BackupSchema = z.object({
     date: safeString,
     source: z.enum(["vente", "apport", "subvention", "autre"]),
   })).max(5000).default([]),
-  ingredients: z.array(z.any()).max(500).default([]),
-  materiel: z.array(z.any()).max(500).default([]),
-  customRecipes: z.array(z.any()).max(500).default([]),
-  demandesCourses: z.array(z.any()).max(5000).default([]),
-  demandesLogistique: z.array(z.any()).max(5000).default([]),
+  ingredients: z.array(z.object({
+    id: safeString,
+    name: safeString,
+    unit: safeString,
+    pricePerUnit: safeNumber,
+    stockQty: safeNumber,
+  })).max(500).default([]),
+  materiel: z.array(z.object({
+    id: safeString,
+    name: safeString,
+    unit: safeString,
+    pricePerUnit: z.number().nonnegative().finite().optional().default(0),
+    stockQty: safeNumber,
+  })).max(500).default([]),
+  customRecipes: z.array(z.object({
+    dishId: z.number(),
+    dishName: safeString,
+    ingredients: z.array(z.object({
+      ingredientId: safeString,
+      qtyPerPerson: safeNumber,
+    })).max(100),
+  })).max(500).default([]),
+  demandesCourses: z.array(z.object({
+    id: safeString,
+    devisId: safeString,
+    clientName: safeString,
+    eventDate: safeString,
+    totalEstime: safeNumber,
+    statut: z.enum(["en_attente", "confirmé"]).optional().default("en_attente"),
+    items: z.array(z.object({
+      ingredientId: safeString,
+      name: safeString,
+      qty: safeNumber,
+      unit: safeString,
+      inStock: z.boolean().optional().default(false),
+    })).max(500),
+  })).max(5000).default([]),
+  demandesLogistique: z.array(z.object({
+    id: safeString,
+    devisId: safeString,
+    clientName: safeString,
+    eventDate: safeString,
+    totalEstime: safeNumber.optional().default(0),
+    statut: z.enum(["en_attente", "confirmé"]).optional().default("en_attente"),
+    items: z.array(z.object({
+      name: safeString,
+      qty: safeNumber,
+      inStock: z.boolean().optional().default(false),
+    })).max(500),
+  })).max(5000).default([]),
 });
 
 const EXPORT_VERSION = "1.0";
@@ -122,6 +167,15 @@ export default function DataClient() {
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Limite de taille : 10 MB
+    if (file.size > 10 * 1024 * 1024) {
+      setStatus("error");
+      setMessage("Fichier trop volumineux (max 10 MB).");
+      setTimeout(() => setStatus("idle"), 4000);
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = (ev) => {

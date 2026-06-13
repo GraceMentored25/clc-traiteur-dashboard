@@ -124,7 +124,7 @@ export const useStore = create<AppState>()(
       customDishes: [],
       addCustomDish: (dish) =>
         set((s) => {
-          const id = Date.now();
+          const id = parseInt(crypto.randomUUID().replace(/-/g, "").slice(0, 12), 16);
           const newDish = { ...dish, id };
           // Crée automatiquement une recette vide pour ce plat
           const newRecipe = { dishId: id, dishName: dish.name, ingredients: [] };

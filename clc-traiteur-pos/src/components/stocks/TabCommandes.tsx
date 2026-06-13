@@ -57,7 +57,7 @@ export default function TabCommandes() {
     const totalEstime = shoppingItems.reduce((s, i) => s + i.total, 0);
 
     const demandeRepas: DemandeCoursesRepas = {
-      id: `CR-${Date.now()}`,
+      id: `CR-${crypto.randomUUID()}`,
       devisId: devis.id,
       clientName: devis.clientName,
       eventDate: devis.eventDate,
@@ -96,7 +96,7 @@ export default function TabCommandes() {
     }, 0);
 
     const demandeLog: DemandeLogistique = {
-      id: `LOG-${Date.now()}`,
+      id: `LOG-${crypto.randomUUID()}`,
       devisId: devis.id,
       clientName: devis.clientName,
       eventType: devis.eventType,

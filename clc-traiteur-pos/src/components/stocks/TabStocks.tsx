@@ -81,7 +81,7 @@ export default function TabStocks() {
   const handleAddIng = () => {
     if (!newIng.name.trim()) return;
     const price = parseFloat(newIng.pricePerUnit.replace(",", ".")) || 0;
-    addIngredient({ id: `custom-${Date.now()}`, name: newIng.name.trim(), unit: newIng.unit, pricePerUnit: price, stockQty: 0 });
+    addIngredient({ id: `custom-${crypto.randomUUID()}`, name: newIng.name.trim(), unit: newIng.unit, pricePerUnit: price, stockQty: 0 });
     setNewIng({ name: "", unit: "kg", pricePerUnit: "" });
     setAddIngOpen(false);
   };
@@ -92,7 +92,7 @@ export default function TabStocks() {
 
   const handleAddMat = () => {
     if (!newMat.name.trim()) return;
-    addMateriel({ id: `custom-${Date.now()}`, name: newMat.name.trim(), unit: newMat.unit, stockQty: 0 });
+    addMateriel({ id: `custom-${crypto.randomUUID()}`, name: newMat.name.trim(), unit: newMat.unit, stockQty: 0 });
     setNewMat({ name: "", unit: "unité" });
     setAddMatOpen(false);
   };

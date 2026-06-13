@@ -114,7 +114,7 @@ export default function ComptabiliteClientFinal() {
       addEntreeCapital({ id: editingCapitalId, libelle: capitalForm.libelle.trim(), montant, date: capitalForm.date, source: capitalForm.source });
       setEditingCapitalId(null);
     } else {
-      addEntreeCapital({ id: `CAP-${Date.now()}`, libelle: capitalForm.libelle.trim(), montant, date: capitalForm.date, source: capitalForm.source });
+      addEntreeCapital({ id: `CAP-${crypto.randomUUID()}`, libelle: capitalForm.libelle.trim(), montant, date: capitalForm.date, source: capitalForm.source });
     }
     setCapitalForm({ libelle: "", montant: "", date: new Date().toISOString().split("T")[0], source: "vente" });
     setCapitalModal(false);
