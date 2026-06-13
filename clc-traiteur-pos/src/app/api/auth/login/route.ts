@@ -6,16 +6,20 @@ const SESSION_COOKIE = "clc_session";
 const MAX_AGE = 60 * 30; // 30 min d'inactivité (était 8h)
 const INACTIVITY_RESET = true; // renouvelle le cookie à chaque requête authentifiée
 
-// ── Validation au démarrage — jamais de fallback en clair ──────────────────
+// ── Validation au démarrage ────────────────────────────────────────────────
 const VALID_USERNAME = process.env.ADMIN_USERNAME;
-const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH; // hash bcrypt
-const ADMIN_PASSWORD_PLAIN = process.env.ADMIN_PASSWORD; // mot de passe en clair (migration)
+// Le hash bcrypt est stocké en base64 pour éviter l'interprétation des $ par dotenv
+const ADMIN_PASSWORD_HASH_B64 = process.env.ADMIN_PASSWORD_HASH_B64;
+const ADMIN_PASSWORD_HASH = ADMIN_PASSWORD_HASH_B64
+  ? Buffer.from(ADMIN_PASSWORD_HASH_B64, "base64").toString("utf-8")
+  : process.env.ADMIN_PASSWORD_HASH; // fallback pour Vercel (valeur directe)
+const ADMIN_PASSWORD_PLAIN = process.env.ADMIN_PASSWORD;
 
 if (!VALID_USERNAME) {
-  throw new Error("[SECURITY] ADMIN_USERNAME est requis — définissez la variable d'environnement");
+  throw new Error("[SECURITY] ADMIN_USERNAME est requis");
 }
 if (!ADMIN_PASSWORD_HASH && !ADMIN_PASSWORD_PLAIN) {
-  throw new Error("[SECURITY] ADMIN_PASSWORD_HASH ou ADMIN_PASSWORD est requis");
+  throw new Error("[SECURITY] ADMIN_PASSWORD_HASH_B64 ou ADMIN_PASSWORD est requis");
 }
 
 // ── Rate limiting en mémoire (par IP) ─────────────────────────────────────
