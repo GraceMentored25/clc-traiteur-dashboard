@@ -154,7 +154,7 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
       <div className="px-3 pb-5 border-t border-[var(--border)] pt-4 space-y-1">
         <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[var(--surface-2)]">
           <div className="w-8 h-8 rounded-lg bg-[var(--amber)]/20 flex items-center justify-center shrink-0">
-            <User size={15} weight="fill" color="#E8960C" />
+            <User size={15} weight="fill" className="text-[var(--amber)]" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-[var(--text-primary)] truncate">
