@@ -48,7 +48,8 @@ const ACCENT_PRESETS = [
 export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout, theme, setTheme, appMode, setAppMode, accentColor, setAccentColor } = useStore();
+  const { user, logout, theme, appMode, setAppMode, accentColor, themeId, setThemeId } = useStore();
+  const isDark = !["clair","ivoire","craie"].includes(themeId ?? "nuit");
 
   const handleLogout = async () => {
     // Supprime le cookie de session côté serveur
@@ -135,11 +136,11 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
       {/* Toggles rapides */}
       <div className="px-3 pb-3">
         <div className="flex items-center gap-2">
-          <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          <button onClick={() => setThemeId(isDark ? "clair" : "nuit")}
             className={cn("flex-1 flex items-center justify-center gap-1.5 h-8 rounded-xl text-xs font-semibold transition-all border",
-              theme === "light" ? "bg-[var(--amber)]/10 border-[var(--amber)]/30 text-[var(--amber)]" : "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-3)]")}>
-            {theme === "dark" ? <Moon size={13} weight="fill" /> : <Sun size={13} weight="fill" />}
-            <span>{theme === "dark" ? "Sombre" : "Clair"}</span>
+              !isDark ? "bg-[var(--amber)]/10 border-[var(--amber)]/30 text-[var(--amber)]" : "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-3)]")}>
+            {isDark ? <Moon size={13} weight="fill" /> : <Sun size={13} weight="fill" />}
+            <span>{isDark ? "Sombre" : "Clair"}</span>
           </button>
           <button onClick={() => setAppMode(appMode === "lab" ? "pro" : "lab")}
             className={cn("flex-1 flex items-center justify-center gap-1.5 h-8 rounded-xl text-xs font-semibold transition-all border",

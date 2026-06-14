@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useStore } from "@/lib/store";
+import { applyTheme } from "@/lib/themes";
 import Sidebar from "./Sidebar";
 import { List } from "@phosphor-icons/react";
 import { loadFromSupabase, saveToSupabase, mapSupabaseToStore } from "@/lib/supabase";
@@ -29,34 +30,11 @@ function buildPayload(s: AppState) {
   };
 }
 
-// Dérive light/dim à partir d'une couleur hex
-function deriveAccentVars(hex: string) {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  const light = `#${[r + 14, g + 12, b + 12].map((v) => Math.min(255, v).toString(16).padStart(2, "0")).join("")}`;
-  const dim   = `#${[Math.max(0, r - 14), Math.max(0, g - 14), Math.max(0, b - 14)].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
-  return { light, dim, r, g, b };
-}
-
-const HEX_REGEX = /^#[0-9a-fA-F]{6}$/;
-
-function applyAccent(color: string) {
-  if (typeof document === "undefined") return;
-  // Validation stricte — prévient l'injection CSS
-  if (!HEX_REGEX.test(color)) return;
-  const { light, dim, r, g, b } = deriveAccentVars(color);
-  const root = document.documentElement;
-  root.style.setProperty("--amber", color);
-  root.style.setProperty("--amber-light", light);
-  root.style.setProperty("--amber-dim", dim);
-  root.style.setProperty("--border-accent", `rgba(${r},${g},${b},0.3)`);
-  root.style.setProperty("--shadow-amber", `0 0 0 1px rgba(${r},${g},${b},0.2), 0 8px 32px rgba(${r},${g},${b},0.08)`);
-}
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const user = useStore((s) => s.user);
   const accentColor = useStore((s) => s.accentColor);
+  const themeId = useStore((s) => s.themeId);
   const router = useRouter();
   const [hydrated, setHydrated] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -81,8 +59,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Applique la couleur d'accent dès le montage et à chaque changement
-  useEffect(() => { applyAccent(accentColor ?? "#E8960C"); }, [accentColor]);
+  // Applique le thème complet (surfaces + textes + colorScheme) puis l'accent par-dessus
+  useEffect(() => {
+    applyTheme(themeId ?? "nuit", accentColor ?? "#E8960C");
+  }, [themeId, accentColor]);
 
   // ── 1. Charger depuis Supabase au login ────────────────────────────────
   useEffect(() => {

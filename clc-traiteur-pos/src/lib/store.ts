@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { encryptStore, decryptStore } from "@/lib/crypto";
 import { logAudit } from "@/lib/auditLog";
+import type { ThemeId } from "@/lib/themes";
 import { CartItem, Devis, Dish, EntreeCapital, Ingredient, Materiel, DemandeCoursesRepas, DemandeLogistique, User } from "@/lib/types";
 import { MOCK_DEVIS } from "@/lib/data/mock-events";
 import { DEFAULT_INGREDIENTS, DEFAULT_MATERIEL } from "@/lib/data/stocks";
@@ -14,8 +15,10 @@ export interface AppState {
   login: (username: string, password: string) => boolean;
   logout: () => void;
 
-  theme: "dark" | "light";
+  theme: "dark" | "light"; // gardé pour compatibilité Supabase
   setTheme: (t: "dark" | "light") => void;
+  themeId: ThemeId;
+  setThemeId: (id: ThemeId) => void;
 
   accentColor: string;
   setAccentColor: (color: string) => void;
@@ -103,6 +106,9 @@ export const useStore = create<AppState>()(
 
       theme: "dark",
       setTheme: (t) => set({ theme: t }),
+
+      themeId: "nuit" as ThemeId,
+      setThemeId: (id) => set({ themeId: id, theme: ["clair","ivoire","craie"].includes(id) ? "light" : "dark" }),
 
       accentColor: "#E8960C",
       setAccentColor: (color) => set({ accentColor: color }),
@@ -409,6 +415,7 @@ export const useStore = create<AppState>()(
         devisListLab: state.devisListLab,
         devisList: state.devisList,
         theme: state.theme,
+        themeId: state.themeId,
         accentColor: state.accentColor,
         appMode: state.appMode,
         customPrices: state.customPrices,

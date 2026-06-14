@@ -1,7 +1,8 @@
 "use client";
 
 import { useStore } from "@/lib/store";
-import { Sun, Moon, Flask, Briefcase, Check, Palette } from "@phosphor-icons/react";
+import { Flask, Briefcase, Check, Palette } from "@phosphor-icons/react";
+import { THEMES, type ThemeId } from "@/lib/themes";
 
 const ACCENT_PRESETS = [
   { color: "#E8960C", label: "Orange (défaut)" },
@@ -25,17 +26,20 @@ const RADIUS_OPTIONS = [
   { value: "24px", label: "Très arrondi" },
 ];
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
     <div className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] p-5 lg:p-6 space-y-4">
-      <h2 className="text-sm font-bold text-[var(--text-primary)] tracking-tight">{title}</h2>
+      <div>
+        <h2 className="text-sm font-bold text-[var(--text-primary)] tracking-tight">{title}</h2>
+        {description && <p className="text-xs text-[var(--text-muted)] mt-0.5">{description}</p>}
+      </div>
       {children}
     </div>
   );
 }
 
 export default function PersonnalisationClient() {
-  const { theme, setTheme, appMode, setAppMode, accentColor, setAccentColor } = useStore();
+  const { appMode, setAppMode, accentColor, setAccentColor, themeId, setThemeId } = useStore();
 
   const applyRadius = (r: string) => {
     if (typeof document === "undefined") return;
@@ -47,6 +51,8 @@ export default function PersonnalisationClient() {
     root.style.setProperty("--radius-xl", `${base + 12}px`);
   };
 
+  const currentTheme = THEMES.find(t => t.id === (themeId ?? "nuit"));
+
   return (
     <div className="px-4 lg:px-8 py-6 lg:py-8 min-h-[100dvh]">
       <div className="mb-6">
@@ -56,10 +62,55 @@ export default function PersonnalisationClient() {
 
       <div className="space-y-5 max-w-2xl">
 
-        {/* ── Couleur d'accent ─────────────────────────────────────── */}
-        <Section title="Couleur d'accent">
-          <p className="text-xs text-[var(--text-muted)] -mt-2">Appliquée instantanément sur toute l'interface et les documents générés.</p>
-          <div className="grid grid-cols-6 sm:grid-cols-12 gap-2">
+        {/* ── Thème d'interface ─────────────────────────────── */}
+        <Section title="Thème d'interface" description="Choisissez l'ambiance visuelle de l'application.">
+          <div className="grid grid-cols-4 gap-2">
+            {THEMES.map((t) => {
+              const active = (themeId ?? "nuit") === t.id;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setThemeId(t.id as ThemeId)}
+                  className={`relative flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all hover:scale-[1.03] ${
+                    active
+                      ? "border-[var(--amber)] shadow-[0_0_0_1px_var(--amber)]"
+                      : "border-[var(--border)] hover:border-[var(--border-accent)]"
+                  }`}
+                >
+                  {/* Aperçu 3 couches de couleur */}
+                  <div className="w-full h-10 rounded-lg overflow-hidden relative flex-shrink-0"
+                    style={{ background: t.preview[0] }}>
+                    <div className="absolute bottom-0 left-0 right-0 h-6 rounded-b-lg"
+                      style={{ background: t.preview[1] }} />
+                    <div className="absolute bottom-0 left-2 right-2 h-3 rounded-b-md"
+                      style={{ background: t.preview[2] }} />
+                    {/* Dot accent simulé */}
+                    <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
+                      style={{ background: accentColor ?? "#E8960C" }} />
+                  </div>
+                  <span className={`text-[11px] font-semibold truncate w-full text-center ${
+                    active ? "text-[var(--amber)]" : "text-[var(--text-secondary)]"
+                  }`}>{t.name}</span>
+                  {active && (
+                    <div className="absolute top-1.5 left-1.5 w-4 h-4 rounded-full bg-[var(--amber)] flex items-center justify-center">
+                      <Check size={8} weight="bold" className="text-white" />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          {currentTheme && (
+            <p className="text-[11px] text-[var(--text-muted)]">
+              Thème actuel : <span className="font-semibold text-[var(--text-secondary)]">{currentTheme.name}</span>
+              {" "}— {currentTheme.isDark ? "Interface sombre" : "Interface claire"}
+            </p>
+          )}
+        </Section>
+
+        {/* ── Couleur d'accent ─────────────────────────────── */}
+        <Section title="Couleur d'accent" description="Appliquée instantanément sur toute l'interface et les documents générés.">
+          <div className="grid grid-cols-6 sm:grid-cols-13 gap-2">
             {ACCENT_PRESETS.map(({ color, label }) => (
               <button key={color} onClick={() => setAccentColor(color)} title={label}
                 className="relative aspect-square rounded-xl transition-all hover:scale-105 flex items-center justify-center"
@@ -69,8 +120,7 @@ export default function PersonnalisationClient() {
               </button>
             ))}
             {/* Couleur libre */}
-            <label className="relative aspect-square rounded-xl cursor-pointer overflow-hidden hover:scale-105 transition-all flex items-center justify-center border-2 border-dashed border-[var(--border)] hover:border-[var(--amber)]/50"
-              title="Couleur personnalisée">
+            <label className="relative aspect-square rounded-xl cursor-pointer overflow-hidden hover:scale-105 transition-all flex items-center justify-center border-2 border-dashed border-[var(--border)] hover:border-[var(--amber)]/50" title="Couleur personnalisée">
               <input type="color" value={accentColor ?? "#E8960C"} onChange={(e) => setAccentColor(e.target.value)}
                 className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
               <Palette size={16} className="text-[var(--text-muted)]" />
@@ -87,32 +137,14 @@ export default function PersonnalisationClient() {
           </div>
         </Section>
 
-        {/* ── Thème ────────────────────────────────────────────────── */}
-        <Section title="Thème d'interface">
-          <div className="grid grid-cols-2 gap-3">
-            <button onClick={() => setTheme("dark")}
-              className={`flex flex-col items-center gap-2.5 p-4 rounded-xl border-2 transition-all ${theme === "dark" ? "border-[var(--amber)] bg-[var(--amber)]/5" : "border-[var(--border)] hover:border-[var(--border-accent)]"}`}>
-              <Moon size={22} weight={theme === "dark" ? "fill" : "regular"} style={{ color: theme === "dark" ? accentColor : undefined }} />
-              <span className="text-sm font-semibold text-[var(--text-primary)]">Sombre</span>
-              <span className="text-[11px] text-[var(--text-muted)] text-center">Interface noire, idéale pour travailler en soirée</span>
-            </button>
-            <button onClick={() => setTheme("light")}
-              className={`flex flex-col items-center gap-2.5 p-4 rounded-xl border-2 transition-all ${theme === "light" ? "border-[var(--amber)] bg-[var(--amber)]/5" : "border-[var(--border)] hover:border-[var(--border-accent)]"}`}>
-              <Sun size={22} weight={theme === "light" ? "fill" : "regular"} style={{ color: theme === "light" ? accentColor : undefined }} />
-              <span className="text-sm font-semibold text-[var(--text-primary)]">Clair</span>
-              <span className="text-[11px] text-[var(--text-muted)] text-center">Interface blanche, idéale pour la journée</span>
-            </button>
-          </div>
-        </Section>
-
-        {/* ── Mode données ─────────────────────────────────────────── */}
+        {/* ── Mode de données ──────────────────────────────── */}
         <Section title="Mode de données">
           <div className="grid grid-cols-2 gap-3">
             <button onClick={() => setAppMode("lab")}
               className={`flex flex-col items-center gap-2.5 p-4 rounded-xl border-2 transition-all ${appMode === "lab" ? "border-[var(--amber)] bg-[var(--amber)]/5" : "border-[var(--border)] hover:border-[var(--border-accent)]"}`}>
               <Flask size={22} weight={appMode === "lab" ? "fill" : "regular"} style={{ color: appMode === "lab" ? accentColor : undefined }} />
               <span className="text-sm font-semibold text-[var(--text-primary)]">Lab</span>
-              <span className="text-[11px] text-[var(--text-muted)] text-center">Données de démonstration pour tester l'app</span>
+              <span className="text-[11px] text-[var(--text-muted)] text-center">Données de démonstration</span>
             </button>
             <button onClick={() => setAppMode("pro")}
               className={`flex flex-col items-center gap-2.5 p-4 rounded-xl border-2 transition-all ${appMode === "pro" ? "border-[var(--amber)] bg-[var(--amber)]/5" : "border-[var(--border)] hover:border-[var(--border-accent)]"}`}>
@@ -123,7 +155,7 @@ export default function PersonnalisationClient() {
           </div>
         </Section>
 
-        {/* ── Rayon des coins ──────────────────────────────────────── */}
+        {/* ── Style des coins ──────────────────────────────── */}
         <Section title="Style des coins">
           <div className="grid grid-cols-4 gap-2">
             {RADIUS_OPTIONS.map(({ value, label }) => (
