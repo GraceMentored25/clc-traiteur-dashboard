@@ -6,6 +6,16 @@ import { Play, Receipt, Calendar, Users, Check } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { RECIPES, LOGISTIQUE_PAR_EVENEMENT, DEFAULT_INGREDIENTS } from "@/lib/data/stocks";
+
+// Charge la config logistique depuis les Paramètres (localStorage) ou fallback statique
+function getLogistiqueConfig(): Record<string, Array<{ name: string; qtyBase: number; unit: string; perConvive: boolean; pricePerUnit?: number; note?: string }>> {
+  if (typeof window === "undefined") return LOGISTIQUE_PAR_EVENEMENT as never;
+  try {
+    const saved = localStorage.getItem("clc-logistique-config");
+    if (saved) return JSON.parse(saved);
+  } catch { /* fallback */ }
+  return LOGISTIQUE_PAR_EVENEMENT as never;
+}
 import { DemandeCoursesRepas, DemandeLogistique, ShoppingItem, LogistiqueItem } from "@/lib/types";
 
 export default function TabCommandes() {
@@ -68,9 +78,10 @@ export default function TabCommandes() {
     };
     addDemandeCoursesRepas(demandeRepas);
 
-    // ── Calcul logistique ─────────────────────────────────────
-    const baseItems = LOGISTIQUE_PAR_EVENEMENT["default"] ?? [];
-    const eventItems = LOGISTIQUE_PAR_EVENEMENT[devis.eventType] ?? [];
+    // ── Calcul logistique — utilise la config des Paramètres ──
+    const logConfig = getLogistiqueConfig();
+    const baseItems = logConfig["default"] ?? LOGISTIQUE_PAR_EVENEMENT["default"] ?? [];
+    const eventItems = logConfig[devis.eventType] ?? LOGISTIQUE_PAR_EVENEMENT[devis.eventType] ?? [];
     const allLogItems = [...baseItems, ...eventItems];
 
     const materiaux = useStore.getState().materiel;
@@ -89,10 +100,13 @@ export default function TabCommandes() {
       };
     });
 
-    const totalEstimeLog = logItems.reduce((sum, item) => {
+    const totalEstimeLog = logItems.reduce((sum, item, idx) => {
       const mat = materiaux.find((m) => m.name === item.name);
+      // Prix : store matériel > config logistique > 0
+      const configItem = allLogItems[idx];
+      const price = mat?.pricePerUnit ?? (configItem as { pricePerUnit?: number }).pricePerUnit ?? 0;
       const qtyAcheter = Math.max(0, item.qty - (item.stockUtilise ?? 0));
-      return sum + (mat?.pricePerUnit ?? 0) * qtyAcheter;
+      return sum + price * qtyAcheter;
     }, 0);
 
     const demandeLog: DemandeLogistique = {

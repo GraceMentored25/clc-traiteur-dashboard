@@ -103,7 +103,7 @@ function TabDevis() {
 }
 
 // ── Onglet Logistique ─────────────────────────────────────────────────────
-type LogItem = { name: string; qtyBase: number; unit: string; perConvive: boolean; note?: string };
+type LogItem = { name: string; qtyBase: number; unit: string; perConvive: boolean; pricePerUnit?: number; note?: string };
 
 const EVENT_TYPES_LOGISTIQUE = ["default", "Mariage", "Anniversaire", "Baptême", "Séminaire", "Réception privée"];
 
@@ -149,6 +149,7 @@ const DEFAULT_LOGISTIQUE: Record<string, LogItem[]> = {
 };
 
 function TabLogistique() {
+  const { materiel, addMateriel, setMaterielPrice } = useStore();
   const [selectedEvent, setSelectedEvent] = useState("default");
   const [config, setConfig] = useState<Record<string, LogItem[]>>(() => {
     if (typeof window !== "undefined") {
@@ -157,7 +158,7 @@ function TabLogistique() {
     }
     return DEFAULT_LOGISTIQUE;
   });
-  const [newItem, setNewItem] = useState<Partial<LogItem>>({ name: "", qtyBase: 1, unit: "unité", perConvive: false });
+  const [newItem, setNewItem] = useState<Partial<LogItem>>({ name: "", qtyBase: 1, unit: "unité", perConvive: false, pricePerUnit: 0 });
 
   const items = config[selectedEvent] ?? [];
 
@@ -166,11 +167,32 @@ function TabLogistique() {
     localStorage.setItem("clc-logistique-config", JSON.stringify(updated));
   };
 
+  // Synchronise le prix dans la section Matériel du store Zustand
+  const syncMaterielPrice = (name: string, price: number) => {
+    const existing = materiel.find((m) => m.name === name);
+    if (existing) {
+      setMaterielPrice(existing.id, price);
+    } else if (price > 0) {
+      // Créer l'entrée matériel si elle n'existe pas
+      addMateriel({ id: `log-${crypto.randomUUID()}`, name, unit: "unité", stockQty: 0, pricePerUnit: price });
+    }
+  };
+
   const addItem = () => {
     if (!newItem.name?.trim()) return;
-    const item: LogItem = { name: newItem.name.trim(), qtyBase: newItem.qtyBase ?? 1, unit: newItem.unit ?? "unité", perConvive: newItem.perConvive ?? false };
+    const item: LogItem = {
+      name: newItem.name.trim(),
+      qtyBase: newItem.qtyBase ?? 1,
+      unit: newItem.unit ?? "unité",
+      perConvive: newItem.perConvive ?? false,
+      pricePerUnit: newItem.pricePerUnit ?? 0,
+    };
     save({ ...config, [selectedEvent]: [...items, item] });
-    setNewItem({ name: "", qtyBase: 1, unit: "unité", perConvive: false });
+    // Sync prix dans le store matériel
+    if (item.pricePerUnit && item.pricePerUnit > 0) {
+      syncMaterielPrice(item.name, item.pricePerUnit);
+    }
+    setNewItem({ name: "", qtyBase: 1, unit: "unité", perConvive: false, pricePerUnit: 0 });
   };
 
   const removeItem = (i: number) => save({ ...config, [selectedEvent]: items.filter((_, idx) => idx !== i) });
@@ -179,6 +201,14 @@ function TabLogistique() {
     const updated = [...items];
     updated[i] = { ...updated[i], qtyBase: v };
     save({ ...config, [selectedEvent]: updated });
+  };
+
+  const updatePrice = (i: number, price: number) => {
+    const updated = [...items];
+    updated[i] = { ...updated[i], pricePerUnit: price };
+    save({ ...config, [selectedEvent]: updated });
+    // Sync immédiate dans le store matériel
+    syncMaterielPrice(items[i].name, price);
   };
 
   return (
@@ -219,9 +249,19 @@ function TabLogistique() {
                   {item.note && <span className="ml-1 italic">{item.note}</span>}
                 </p>
               </div>
+              {/* Quantité */}
               <input type="number" min="1" value={item.qtyBase}
                 onChange={(e) => updateQty(i, parseInt(e.target.value) || 1)}
-                className="w-14 h-7 px-2 text-xs text-right bg-[var(--surface-2)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                title="Quantité"
+                className="w-12 h-7 px-1 text-xs text-center bg-[var(--surface-2)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+              {/* Prix unitaire */}
+              <div className="flex items-center gap-0.5 shrink-0">
+                <input type="number" min="0" step="0.01" value={item.pricePerUnit ?? 0}
+                  onChange={(e) => updatePrice(i, parseFloat(e.target.value) || 0)}
+                  title="Prix unitaire (€)"
+                  className="w-16 h-7 px-1 text-xs text-right bg-[var(--surface-2)] border border-[var(--amber)]/30 rounded-lg text-[var(--amber)] font-mono outline-none focus:border-[var(--amber)]/70 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                <span className="text-[10px] text-[var(--text-muted)]">€</span>
+              </div>
               <button onClick={() => removeItem(i)}
                 className="opacity-0 group-hover:opacity-100 w-7 h-7 rounded-lg text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-500/10 flex items-center justify-center transition-all">
                 <Trash size={12} />
@@ -236,13 +276,21 @@ function TabLogistique() {
           <input value={newItem.name ?? ""} onChange={(e) => setNewItem(n => ({ ...n, name: e.target.value }))}
             placeholder="Nom du matériel…"
             className="w-full h-8 px-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-colors" />
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <input type="number" min="1" value={newItem.qtyBase ?? 1}
               onChange={(e) => setNewItem(n => ({ ...n, qtyBase: parseInt(e.target.value) || 1 }))}
-              className="w-16 h-8 px-2 text-xs text-center bg-[var(--surface-2)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+              title="Quantité"
+              className="w-14 h-8 px-2 text-xs text-center bg-[var(--surface-2)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
             <input value={newItem.unit ?? "unité"} onChange={(e) => setNewItem(n => ({ ...n, unit: e.target.value }))}
               placeholder="unité"
-              className="flex-1 h-8 px-2 text-xs bg-[var(--surface-2)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-colors" />
+              className="w-20 h-8 px-2 text-xs bg-[var(--surface-2)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-colors" />
+            <div className="flex items-center gap-1">
+              <input type="number" min="0" step="0.01" value={newItem.pricePerUnit ?? 0}
+                onChange={(e) => setNewItem(n => ({ ...n, pricePerUnit: parseFloat(e.target.value) || 0 }))}
+                title="Prix unitaire (€)"
+                className="w-16 h-8 px-2 text-xs text-right bg-[var(--surface-2)] border border-[var(--amber)]/30 rounded-lg text-[var(--amber)] font-mono outline-none focus:border-[var(--amber)]/70 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+              <span className="text-[10px] text-[var(--text-muted)]">€/u</span>
+            </div>
             <label className="flex items-center gap-1.5 cursor-pointer">
               <input type="checkbox" checked={newItem.perConvive ?? false}
                 onChange={(e) => setNewItem(n => ({ ...n, perConvive: e.target.checked }))}
