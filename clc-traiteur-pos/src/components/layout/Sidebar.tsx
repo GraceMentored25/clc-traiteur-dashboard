@@ -175,7 +175,7 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
             "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer",
             pathname === "/data"
               ? "text-[var(--amber)] bg-[var(--amber)]/8"
-              : "text-[var(--text-secondary)] hover:text-[var(--info)] hover:bg-[var(--info)]/8"
+              : "text-[var(--text-secondary)] hover:text-[var(--amber)] hover:bg-[var(--amber)]/8"
           )}>
             <Database size={17} weight={pathname === "/data" ? "fill" : "regular"} className="shrink-0" />
             Données
@@ -197,7 +197,7 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
             "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer",
             pathname === "/confidentialite"
               ? "text-[var(--amber)] bg-[var(--amber)]/8"
-              : "text-[var(--text-secondary)] hover:text-[var(--info)] hover:bg-[var(--info)]/8"
+              : "text-[var(--text-secondary)] hover:text-[var(--amber)] hover:bg-[var(--amber)]/8"
           )}>
             <ShieldCheck size={17} weight={pathname === "/confidentialite" ? "fill" : "regular"} className="shrink-0" />
             Confidentialité
