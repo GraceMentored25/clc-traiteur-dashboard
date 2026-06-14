@@ -16,7 +16,6 @@ interface Props {
 const UNITS = ["portion", "pièce", "assiette", "verre", "100g", "litre", "demi-poulet"];
 
 const DishCard = memo(function DishCard({ dish }: Props) {
-  const [quantity, setQuantity] = useState(0);
   const [editingPrice, setEditingPrice] = useState(false);
   const [priceInput, setPriceInput] = useState("");
   const [editOpen, setEditOpen] = useState(false);
@@ -38,7 +37,7 @@ const DishCard = memo(function DishCard({ dish }: Props) {
   const updateCustomDish = useStore((s) => s.updateCustomDish);
 
   const inCart = !!cartItem;
-  const displayQty = inCart ? cartItem!.quantity : quantity;
+  const displayQty = cartItem?.quantity ?? 0;
   const isPriceCustom = useStore(useCallback((s) => {
     const cp = s.customPrices[dish.id];
     return cp !== undefined && cp !== dish.price;
@@ -99,36 +98,30 @@ const DishCard = memo(function DishCard({ dish }: Props) {
   }, [confirmPrice]);
 
   const increment = useCallback(() => {
-    if (inCart) {
-      updateQuantity(dish.id, cartItem!.quantity + 1);
+    const cur = cartItem?.quantity ?? 0;
+    if (cur === 0) {
+      addToCart({ dish: { ...dish, price: effectivePrice }, quantity: 1 });
     } else {
-      const next = quantity + 1;
-      setQuantity(next);
-      addToCart({ dish: { ...dish, price: effectivePrice }, quantity: next });
+      updateQuantity(dish.id, cur + 1);
     }
-  }, [inCart, quantity, dish, cartItem, effectivePrice, addToCart, updateQuantity]);
+  }, [cartItem, dish, effectivePrice, addToCart, updateQuantity]);
 
   const decrement = useCallback(() => {
-    if (inCart) {
-      if (cartItem!.quantity === 1) removeFromCart(dish.id);
-      else updateQuantity(dish.id, cartItem!.quantity - 1);
-    } else {
-      setQuantity((q) => Math.max(0, q - 1));
-    }
-  }, [inCart, dish.id, cartItem, removeFromCart, updateQuantity]);
+    const cur = cartItem?.quantity ?? 0;
+    if (cur <= 1) removeFromCart(dish.id);
+    else updateQuantity(dish.id, cur - 1);
+  }, [cartItem, dish.id, removeFromCart, updateQuantity]);
 
   const handleManualInput = useCallback((raw: string) => {
     const n = parseInt(raw, 10);
     if (isNaN(n) || n < 0) return;
     if (n === 0) {
-      if (inCart) removeFromCart(dish.id);
-      setQuantity(0);
+      removeFromCart(dish.id);
       return;
     }
-    setQuantity(n);
-    if (inCart) updateQuantity(dish.id, n);
+    if (cartItem) updateQuantity(dish.id, n);
     else addToCart({ dish: { ...dish, price: effectivePrice }, quantity: n });
-  }, [inCart, dish, effectivePrice, addToCart, updateQuantity, removeFromCart]);
+  }, [cartItem, dish, effectivePrice, addToCart, updateQuantity, removeFromCart]);
 
   const total = displayQty * effectivePrice;
 

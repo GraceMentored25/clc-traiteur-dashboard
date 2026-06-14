@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState, useCallback } from "react";
+import { memo, useCallback } from "react";
 import Image from "next/image";
 import { Minus, Plus } from "@phosphor-icons/react";
 import { Dish } from "@/lib/types";
@@ -8,8 +8,6 @@ import { useStore } from "@/lib/store";
 import { formatCurrency, cn } from "@/lib/utils";
 
 const DishRow = memo(function DishRow({ dish }: { dish: Dish }) {
-  const [quantity, setQuantity] = useState(0);
-
   // Sélecteurs granulaires — re-render uniquement si CES données changent
   const cartItem = useStore(useCallback((s) => s.cart.find((c) => c.dish.id === dish.id), [dish.id]));
   const effectivePrice = useStore(useCallback((s) => s.customPrices[dish.id] ?? dish.price, [dish.id, dish.price]));
@@ -18,28 +16,27 @@ const DishRow = memo(function DishRow({ dish }: { dish: Dish }) {
   const removeFromCart = useStore((s) => s.removeFromCart);
 
   const inCart = !!cartItem;
-  const displayQty = inCart ? cartItem!.quantity : quantity;
+  const displayQty = cartItem?.quantity ?? 0;
 
   const increment = useCallback(() => {
-    if (inCart) updateQuantity(dish.id, cartItem!.quantity + 1);
-    else { const next = quantity + 1; setQuantity(next); addToCart({ dish: { ...dish, price: effectivePrice }, quantity: next }); }
-  }, [inCart, quantity, dish, cartItem, effectivePrice, addToCart, updateQuantity]);
+    const cur = cartItem?.quantity ?? 0;
+    if (cur === 0) addToCart({ dish: { ...dish, price: effectivePrice }, quantity: 1 });
+    else updateQuantity(dish.id, cur + 1);
+  }, [cartItem, dish, effectivePrice, addToCart, updateQuantity]);
 
   const decrement = useCallback(() => {
-    if (inCart) {
-      if (cartItem!.quantity === 1) removeFromCart(dish.id);
-      else updateQuantity(dish.id, cartItem!.quantity - 1);
-    } else setQuantity((q) => Math.max(0, q - 1));
-  }, [inCart, dish.id, cartItem, removeFromCart, updateQuantity]);
+    const cur = cartItem?.quantity ?? 0;
+    if (cur <= 1) removeFromCart(dish.id);
+    else updateQuantity(dish.id, cur - 1);
+  }, [cartItem, dish.id, removeFromCart, updateQuantity]);
 
   const handleInput = useCallback((raw: string) => {
     const n = parseInt(raw, 10);
     if (isNaN(n) || n < 0) return;
-    if (n === 0) { if (inCart) removeFromCart(dish.id); setQuantity(0); return; }
-    setQuantity(n);
-    if (inCart) updateQuantity(dish.id, n);
+    if (n === 0) { removeFromCart(dish.id); return; }
+    if (cartItem) updateQuantity(dish.id, n);
     else addToCart({ dish: { ...dish, price: effectivePrice }, quantity: n });
-  }, [inCart, dish, effectivePrice, addToCart, updateQuantity, removeFromCart]);
+  }, [cartItem, dish, effectivePrice, addToCart, updateQuantity, removeFromCart]);
 
   return (
     <div className={cn(
