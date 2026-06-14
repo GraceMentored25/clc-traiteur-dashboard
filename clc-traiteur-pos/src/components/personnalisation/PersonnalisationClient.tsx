@@ -71,7 +71,7 @@ export default function PersonnalisationClient() {
                 <button
                   key={t.id}
                   onClick={() => setThemeId(t.id as ThemeId)}
-                  className={`relative flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all hover:scale-[1.03] ${
+                  className={`relative flex flex-col items-center gap-1.5 p-2 rounded-xl border-2 transition-all hover:scale-[1.03] ${
                     active
                       ? "border-[var(--amber)] shadow-[0_0_0_1px_var(--amber)]"
                       : "border-[var(--border)] hover:border-[var(--border-accent)]"
@@ -88,7 +88,7 @@ export default function PersonnalisationClient() {
                     <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
                       style={{ background: accentColor ?? "#E8960C" }} />
                   </div>
-                  <span className={`text-[11px] font-semibold truncate w-full text-center ${
+                  <span className={`text-[10px] font-semibold w-full text-center leading-tight break-words hyphens-auto ${
                     active ? "text-[var(--amber)]" : "text-[var(--text-secondary)]"
                   }`}>{t.name}</span>
                   {active && (
