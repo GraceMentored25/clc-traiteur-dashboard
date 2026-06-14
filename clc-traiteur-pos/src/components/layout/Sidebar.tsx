@@ -134,19 +134,56 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
       </nav>
 
       {/* Toggles rapides */}
-      <div className="px-3 pb-3">
-        <div className="flex items-center gap-2">
-          <button onClick={() => setThemeId(isDark ? "clair" : "nuit")}
-            className={cn("flex-1 flex items-center justify-center gap-1.5 h-8 rounded-xl text-xs font-semibold transition-all border",
-              !isDark ? "bg-[var(--amber)]/10 border-[var(--amber)]/30 text-[var(--amber)]" : "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-3)]")}>
-            {isDark ? <Moon size={13} weight="fill" /> : <Sun size={13} weight="fill" />}
-            <span>{isDark ? "Sombre" : "Clair"}</span>
+      <div className="px-4 pb-3 space-y-2.5">
+        {/* Toggle Sombre / Clair */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {isDark ? <Moon size={13} className="text-[var(--text-muted)]" weight="fill" /> : <Sun size={13} className="text-[var(--text-muted)]" weight="fill" />}
+            <span className="text-xs text-[var(--text-secondary)] font-medium">{isDark ? "Sombre" : "Clair"}</span>
+          </div>
+          <button
+            onClick={() => setThemeId(isDark ? "clair" : "nuit")}
+            role="switch"
+            aria-checked={!isDark}
+            className={cn(
+              "relative w-11 h-6 rounded-full transition-all duration-300 focus:outline-none",
+              !isDark ? "bg-[var(--amber)]" : "bg-[var(--surface-3)]"
+            )}
+          >
+            <span className={cn(
+              "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-all duration-300 flex items-center justify-center",
+              !isDark ? "translate-x-5" : "translate-x-0"
+            )}>
+              {isDark
+                ? <Moon size={10} weight="fill" className="text-[var(--surface-3)]" />
+                : <Sun size={10} weight="fill" className="text-[var(--amber)]" />}
+            </span>
           </button>
-          <button onClick={() => setAppMode(appMode === "lab" ? "pro" : "lab")}
-            className={cn("flex-1 flex items-center justify-center gap-1.5 h-8 rounded-xl text-xs font-semibold transition-all border",
-              appMode === "pro" ? "bg-[var(--amber)]/10 border-[var(--amber)]/30 text-[var(--amber)]" : "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-3)]")}>
-            {appMode === "lab" ? <Flask size={13} weight="fill" /> : <Briefcase size={13} weight="fill" />}
-            <span>{appMode === "lab" ? "Lab" : "Pro"}</span>
+        </div>
+
+        {/* Toggle Lab / Pro */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {appMode === "lab" ? <Flask size={13} className="text-[var(--text-muted)]" weight="fill" /> : <Briefcase size={13} className="text-[var(--text-muted)]" weight="fill" />}
+            <span className="text-xs text-[var(--text-secondary)] font-medium">{appMode === "lab" ? "Lab" : "Pro"}</span>
+          </div>
+          <button
+            onClick={() => setAppMode(appMode === "lab" ? "pro" : "lab")}
+            role="switch"
+            aria-checked={appMode === "pro"}
+            className={cn(
+              "relative w-11 h-6 rounded-full transition-all duration-300 focus:outline-none",
+              appMode === "pro" ? "bg-[var(--amber)]" : "bg-[var(--surface-3)]"
+            )}
+          >
+            <span className={cn(
+              "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-all duration-300 flex items-center justify-center",
+              appMode === "pro" ? "translate-x-5" : "translate-x-0"
+            )}>
+              {appMode === "lab"
+                ? <Flask size={10} weight="fill" className="text-[var(--surface-3)]" />
+                : <Briefcase size={10} weight="fill" className="text-[var(--amber)]" />}
+            </span>
           </button>
         </div>
       </div>
