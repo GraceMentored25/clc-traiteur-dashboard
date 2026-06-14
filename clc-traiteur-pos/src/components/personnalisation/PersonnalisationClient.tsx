@@ -5,18 +5,33 @@ import { Flask, Briefcase, Check, Palette } from "@phosphor-icons/react";
 import { THEMES, type ThemeId } from "@/lib/themes";
 
 const ACCENT_PRESETS = [
+  // Chauds
   { color: "#E8960C", label: "Orange (défaut)" },
-  { color: "#3FB950", label: "Vert" },
-  { color: "#58A6FF", label: "Bleu" },
-  { color: "#A855F7", label: "Violet" },
-  { color: "#EF4444", label: "Rouge" },
-  { color: "#EC4899", label: "Rose" },
-  { color: "#14B8A6", label: "Turquoise" },
   { color: "#F97316", label: "Mandarine" },
   { color: "#EAB308", label: "Jaune" },
-  { color: "#06B6D4", label: "Cyan" },
+  { color: "#F59E0B", label: "Ambre" },
+  { color: "#EF4444", label: "Rouge" },
+  { color: "#DC2626", label: "Cramoisi" },
+  { color: "#EC4899", label: "Rose" },
+  { color: "#F472B6", label: "Rose pâle" },
+  // Froids
+  { color: "#8B5CF6", label: "Violet" },
+  { color: "#A855F7", label: "Lilas" },
   { color: "#6366F1", label: "Indigo" },
+  { color: "#3B82F6", label: "Bleu" },
+  { color: "#58A6FF", label: "Bleu ciel" },
+  { color: "#06B6D4", label: "Cyan" },
+  { color: "#14B8A6", label: "Turquoise" },
+  { color: "#10B981", label: "Émeraude" },
+  { color: "#3FB950", label: "Vert" },
   { color: "#84CC16", label: "Lime" },
+  // Neutres
+  { color: "#94A3B8", label: "Ardoise" },
+  { color: "#A78BFA", label: "Lavande" },
+  { color: "#FB923C", label: "Corail" },
+  { color: "#34D399", label: "Menthe" },
+  { color: "#F87171", label: "Saumon" },
+  { color: "#60A5FA", label: "Azure" },
 ];
 
 const RADIUS_OPTIONS = [
@@ -64,7 +79,7 @@ export default function PersonnalisationClient() {
 
         {/* ── Thème d'interface ─────────────────────────────── */}
         <Section title="Thème d'interface" description="Choisissez l'ambiance visuelle de l'application.">
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
             {THEMES.map((t) => {
               const active = (themeId ?? "nuit") === t.id;
               return (
@@ -110,7 +125,7 @@ export default function PersonnalisationClient() {
 
         {/* ── Couleur d'accent ─────────────────────────────── */}
         <Section title="Couleur d'accent" description="Appliquée instantanément sur toute l'interface et les documents générés.">
-          <div className="grid grid-cols-6 sm:grid-cols-13 gap-2">
+          <div className="grid grid-cols-8 sm:grid-cols-12 gap-2">
             {ACCENT_PRESETS.map(({ color, label }) => (
               <button key={color} onClick={() => setAccentColor(color)} title={label}
                 className="relative aspect-square rounded-xl transition-all hover:scale-105 flex items-center justify-center"
