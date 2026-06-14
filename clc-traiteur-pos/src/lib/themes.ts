@@ -1,8 +1,7 @@
 export type ThemeId =
-  | "nuit" | "clair" | "ardoise" | "foret"
-  | "ivoire" | "minuit" | "charbon" | "craie"
-  | "aubergine" | "sable" | "glacier" | "carbone"
-  | "creme" | "cosmos" | "bordeaux" | "zinc";
+  | "obsidienne" | "neige" | "dune"
+  | "oceane" | "minuit" | "foret"
+  | "cendre" | "aurore";
 
 export interface ThemeConfig {
   id: ThemeId;
@@ -15,7 +14,7 @@ export interface ThemeConfig {
     surface2: string;
     surface3: string;
     border: string;
-    borderAccent: string; // sera remplacé dynamiquement par l'accent
+    borderAccent: string;
     textPrimary: string;
     textSecondary: string;
     textMuted: string;
@@ -25,8 +24,8 @@ export interface ThemeConfig {
 
 export const THEMES: ThemeConfig[] = [
   {
-    id: "nuit",
-    name: "Nuit",
+    id: "obsidienne",
+    name: "Obsidienne",
     isDark: true,
     preview: ["#0D1117", "#161B22", "#1C2128"],
     vars: {
@@ -43,38 +42,74 @@ export const THEMES: ThemeConfig[] = [
     },
   },
   {
-    id: "clair",
-    name: "Clair",
+    id: "neige",
+    name: "Neige",
     isDark: false,
-    preview: ["#F6F8FA", "#FFFFFF", "#F0F2F5"],
+    preview: ["#F6F8FA", "#FFFFFF", "#EAEEF2"],
     vars: {
       surface: "#F6F8FA",
       surface1: "#FFFFFF",
-      surface2: "#F0F2F5",
-      surface3: "#E4E7EC",
+      surface2: "#EAEEF2",
+      surface3: "#D8DEE4",
       border: "rgba(0,0,0,0.08)",
       borderAccent: "rgba(232,150,12,0.4)",
-      textPrimary: "#1A1E24",
+      textPrimary: "#1C2128",
       textSecondary: "#57606A",
       textMuted: "#8C959F",
       colorScheme: "light",
     },
   },
   {
-    id: "ardoise",
-    name: "Ardoise",
-    isDark: true,
-    preview: ["#0F1923", "#182535", "#1E2F42"],
+    id: "dune",
+    name: "Dune",
+    isDark: false,
+    preview: ["#FAF5EB", "#FFFDF5", "#F0E8D0"],
     vars: {
-      surface: "#0F1923",
-      surface1: "#182535",
-      surface2: "#1E2F42",
-      surface3: "#263850",
-      border: "rgba(99,143,191,0.1)",
+      surface: "#FAF5EB",
+      surface1: "#FFFDF5",
+      surface2: "#F0E8D0",
+      surface3: "#E4D8B8",
+      border: "rgba(140,100,40,0.12)",
+      borderAccent: "rgba(232,150,12,0.4)",
+      textPrimary: "#2A1F08",
+      textSecondary: "#7A6030",
+      textMuted: "#B09050",
+      colorScheme: "light",
+    },
+  },
+  {
+    id: "oceane",
+    name: "Océane",
+    isDark: true,
+    preview: ["#071828", "#0D2540", "#143358"],
+    vars: {
+      surface: "#071828",
+      surface1: "#0D2540",
+      surface2: "#143358",
+      surface3: "#1C4472",
+      border: "rgba(56,140,220,0.12)",
       borderAccent: "rgba(232,150,12,0.3)",
-      textPrimary: "#E8F0F8",
-      textSecondary: "#7A9BBB",
-      textMuted: "#4A6580",
+      textPrimary: "#E0F0FF",
+      textSecondary: "#5A98CC",
+      textMuted: "#2E5E8A",
+      colorScheme: "dark",
+    },
+  },
+  {
+    id: "minuit",
+    name: "Minuit",
+    isDark: true,
+    preview: ["#07050F", "#110A20", "#1A1035"],
+    vars: {
+      surface: "#07050F",
+      surface1: "#110A20",
+      surface2: "#1A1035",
+      surface3: "#24184A",
+      border: "rgba(130,80,230,0.12)",
+      borderAccent: "rgba(232,150,12,0.3)",
+      textPrimary: "#EDE5FF",
+      textSecondary: "#8060CC",
+      textMuted: "#4A3080",
       colorScheme: "dark",
     },
   },
@@ -82,234 +117,53 @@ export const THEMES: ThemeConfig[] = [
     id: "foret",
     name: "Forêt",
     isDark: true,
-    preview: ["#0A1410", "#111F18", "#162A20"],
+    preview: ["#081510", "#0F2018", "#163028"],
     vars: {
-      surface: "#0A1410",
-      surface1: "#111F18",
-      surface2: "#162A20",
-      surface3: "#1D3828",
-      border: "rgba(63,185,80,0.08)",
+      surface: "#081510",
+      surface1: "#0F2018",
+      surface2: "#163028",
+      surface3: "#1E4035",
+      border: "rgba(40,160,80,0.1)",
       borderAccent: "rgba(232,150,12,0.3)",
-      textPrimary: "#E6F4E8",
-      textSecondary: "#6BAF7A",
-      textMuted: "#3D7A4A",
+      textPrimary: "#E0F8E8",
+      textSecondary: "#50A868",
+      textMuted: "#286840",
       colorScheme: "dark",
     },
   },
   {
-    id: "ivoire",
-    name: "Ivoire",
-    isDark: false,
-    preview: ["#FAF8F2", "#FFFFF8", "#F2EFE5"],
-    vars: {
-      surface: "#FAF8F2",
-      surface1: "#FFFFF8",
-      surface2: "#F2EFE5",
-      surface3: "#E8E4D8",
-      border: "rgba(120,100,60,0.1)",
-      borderAccent: "rgba(232,150,12,0.4)",
-      textPrimary: "#2C2416",
-      textSecondary: "#7A6A50",
-      textMuted: "#A89A80",
-      colorScheme: "light",
-    },
-  },
-  {
-    id: "minuit",
-    name: "Minuit",
+    id: "cendre",
+    name: "Cendre",
     isDark: true,
-    preview: ["#050B18", "#091428", "#0D1E3A"],
+    preview: ["#17171A", "#222226", "#2E2E34"],
     vars: {
-      surface: "#050B18",
-      surface1: "#091428",
-      surface2: "#0D1E3A",
-      surface3: "#12294F",
-      border: "rgba(58,106,210,0.12)",
+      surface: "#17171A",
+      surface1: "#222226",
+      surface2: "#2E2E34",
+      surface3: "#3C3C44",
+      border: "rgba(200,200,220,0.07)",
       borderAccent: "rgba(232,150,12,0.3)",
-      textPrimary: "#E8EFF8",
-      textSecondary: "#6B8AAF",
-      textMuted: "#3D5A7A",
+      textPrimary: "#F2F2F5",
+      textSecondary: "#9090A0",
+      textMuted: "#505060",
       colorScheme: "dark",
     },
   },
   {
-    id: "charbon",
-    name: "Charbon",
+    id: "aurore",
+    name: "Aurore",
     isDark: true,
-    preview: ["#141414", "#1E1E1E", "#282828"],
+    preview: ["#150A08", "#221008", "#330C08"],
     vars: {
-      surface: "#141414",
-      surface1: "#1E1E1E",
-      surface2: "#282828",
-      surface3: "#333333",
-      border: "rgba(255,255,255,0.07)",
+      surface: "#150A08",
+      surface1: "#221008",
+      surface2: "#330C08",
+      surface3: "#481008",
+      border: "rgba(220,60,40,0.12)",
       borderAccent: "rgba(232,150,12,0.3)",
-      textPrimary: "#EFEFEF",
-      textSecondary: "#999999",
-      textMuted: "#555555",
-      colorScheme: "dark",
-    },
-  },
-  {
-    id: "craie",
-    name: "Craie",
-    isDark: false,
-    preview: ["#F5F3EF", "#FBFAF8", "#EEEAE3"],
-    vars: {
-      surface: "#F5F3EF",
-      surface1: "#FBFAF8",
-      surface2: "#EEEAE3",
-      surface3: "#E2DDD4",
-      border: "rgba(80,70,50,0.09)",
-      borderAccent: "rgba(232,150,12,0.4)",
-      textPrimary: "#2A2520",
-      textSecondary: "#6E6358",
-      textMuted: "#9E9080",
-      colorScheme: "light",
-    },
-  },
-  // ── 8 nouveaux thèmes ─────────────────────────────────────────────────
-  {
-    id: "aubergine",
-    name: "Aubergine",
-    isDark: true,
-    preview: ["#1A0F1F", "#261530", "#31203F"],
-    vars: {
-      surface: "#1A0F1F",
-      surface1: "#261530",
-      surface2: "#31203F",
-      surface3: "#3E2D50",
-      border: "rgba(168,85,247,0.1)",
-      borderAccent: "rgba(232,150,12,0.3)",
-      textPrimary: "#F0E8F8",
-      textSecondary: "#B48FD4",
-      textMuted: "#7A5A9A",
-      colorScheme: "dark",
-    },
-  },
-  {
-    id: "sable",
-    name: "Sable",
-    isDark: false,
-    preview: ["#F2EDE4", "#FBF8F2", "#EAE3D6"],
-    vars: {
-      surface: "#F2EDE4",
-      surface1: "#FBF8F2",
-      surface2: "#EAE3D6",
-      surface3: "#DDD5C4",
-      border: "rgba(120,95,55,0.1)",
-      borderAccent: "rgba(232,150,12,0.4)",
-      textPrimary: "#28200F",
-      textSecondary: "#7A6545",
-      textMuted: "#A8916A",
-      colorScheme: "light",
-    },
-  },
-  {
-    id: "glacier",
-    name: "Glacier",
-    isDark: false,
-    preview: ["#EEF4FA", "#F8FBFF", "#E2EDF6"],
-    vars: {
-      surface: "#EEF4FA",
-      surface1: "#F8FBFF",
-      surface2: "#E2EDF6",
-      surface3: "#D2E3F0",
-      border: "rgba(30,100,180,0.09)",
-      borderAccent: "rgba(232,150,12,0.4)",
-      textPrimary: "#0F2035",
-      textSecondary: "#406080",
-      textMuted: "#7A9AB8",
-      colorScheme: "light",
-    },
-  },
-  {
-    id: "carbone",
-    name: "Carbone",
-    isDark: true,
-    preview: ["#0A0A0A", "#111111", "#1A1A1A"],
-    vars: {
-      surface: "#0A0A0A",
-      surface1: "#111111",
-      surface2: "#1A1A1A",
-      surface3: "#242424",
-      border: "rgba(255,255,255,0.05)",
-      borderAccent: "rgba(232,150,12,0.3)",
-      textPrimary: "#F5F5F5",
-      textSecondary: "#8A8A8A",
-      textMuted: "#4A4A4A",
-      colorScheme: "dark",
-    },
-  },
-  {
-    id: "creme",
-    name: "Crème",
-    isDark: false,
-    preview: ["#FDF9F0", "#FFFEF8", "#F5F0E4"],
-    vars: {
-      surface: "#FDF9F0",
-      surface1: "#FFFEF8",
-      surface2: "#F5F0E4",
-      surface3: "#EDE6D4",
-      border: "rgba(160,130,70,0.1)",
-      borderAccent: "rgba(232,150,12,0.4)",
-      textPrimary: "#251E0A",
-      textSecondary: "#7A6A40",
-      textMuted: "#B0A070",
-      colorScheme: "light",
-    },
-  },
-  {
-    id: "cosmos",
-    name: "Cosmos",
-    isDark: true,
-    preview: ["#07050F", "#0F0A1E", "#17122E"],
-    vars: {
-      surface: "#07050F",
-      surface1: "#0F0A1E",
-      surface2: "#17122E",
-      surface3: "#20193E",
-      border: "rgba(120,80,220,0.1)",
-      borderAccent: "rgba(232,150,12,0.3)",
-      textPrimary: "#EAE5FF",
-      textSecondary: "#8070CC",
-      textMuted: "#4A3A80",
-      colorScheme: "dark",
-    },
-  },
-  {
-    id: "bordeaux",
-    name: "Bordeaux",
-    isDark: true,
-    preview: ["#120508", "#1E0810", "#2A0C18"],
-    vars: {
-      surface: "#120508",
-      surface1: "#1E0810",
-      surface2: "#2A0C18",
-      surface3: "#381224",
-      border: "rgba(220,50,80,0.1)",
-      borderAccent: "rgba(232,150,12,0.3)",
-      textPrimary: "#F8E8EC",
-      textSecondary: "#C07080",
-      textMuted: "#7A3848",
-      colorScheme: "dark",
-    },
-  },
-  {
-    id: "zinc",
-    name: "Zinc",
-    isDark: true,
-    preview: ["#18181B", "#27272A", "#3F3F46"],
-    vars: {
-      surface: "#18181B",
-      surface1: "#27272A",
-      surface2: "#3F3F46",
-      surface3: "#52525B",
-      border: "rgba(255,255,255,0.07)",
-      borderAccent: "rgba(232,150,12,0.3)",
-      textPrimary: "#FAFAFA",
-      textSecondary: "#A1A1AA",
-      textMuted: "#71717A",
+      textPrimary: "#FFF0EC",
+      textSecondary: "#CC6050",
+      textMuted: "#803030",
       colorScheme: "dark",
     },
   },
@@ -322,46 +176,35 @@ export function applyTheme(themeId: ThemeId, accentColor: string) {
   const root = document.documentElement;
   const v = theme.vars;
 
-  // Surfaces
   root.style.setProperty("--surface", v.surface);
   root.style.setProperty("--surface-1", v.surface1);
   root.style.setProperty("--surface-2", v.surface2);
   root.style.setProperty("--surface-3", v.surface3);
-
-  // Borders
   root.style.setProperty("--border", v.border);
-
-  // Textes
   root.style.setProperty("--text-primary", v.textPrimary);
   root.style.setProperty("--text-secondary", v.textSecondary);
   root.style.setProperty("--text-muted", v.textMuted);
-
-  // Color scheme (pour le scroll, les scrollbars, etc.)
   root.style.setProperty("color-scheme", v.colorScheme);
 
-  // Appliquer la classe html pour les overrides Tailwind existants
   if (theme.isDark) {
     root.classList.remove("light");
   } else {
     root.classList.add("light");
   }
 
-  // Appliquer la couleur d'accent (toutes les vars --amber)
   if (/^#[0-9a-fA-F]{6}$/.test(accentColor)) {
     const r = parseInt(accentColor.slice(1, 3), 16);
     const g = parseInt(accentColor.slice(3, 5), 16);
     const b = parseInt(accentColor.slice(5, 7), 16);
     const clamp = (v: number) => Math.min(255, Math.max(0, v));
     const toHex = (v: number) => clamp(v).toString(16).padStart(2, "0");
-    const light = `#${toHex(r+14)}${toHex(g+12)}${toHex(b+12)}`;
-    const dim   = `#${toHex(r-14)}${toHex(g-14)}${toHex(b-14)}`;
-
+    const light = `#${toHex(r + 14)}${toHex(g + 12)}${toHex(b + 12)}`;
+    const dim   = `#${toHex(r - 14)}${toHex(g - 14)}${toHex(b - 14)}`;
     root.style.setProperty("--amber", accentColor);
     root.style.setProperty("--amber-light", light);
     root.style.setProperty("--amber-dim", dim);
     root.style.setProperty("--border-accent", `rgba(${r},${g},${b},0.3)`);
     root.style.setProperty("--shadow-amber",
-      `0 0 0 1px rgba(${r},${g},${b},0.2), 0 8px 32px rgba(${r},${g},${b},0.08)`
-    );
+      `0 0 0 1px rgba(${r},${g},${b},0.2), 0 8px 32px rgba(${r},${g},${b},0.08)`);
   }
 }

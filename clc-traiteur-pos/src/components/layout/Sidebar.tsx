@@ -49,7 +49,8 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout, theme, appMode, setAppMode, accentColor, themeId, setThemeId } = useStore();
-  const isDark = !["clair","ivoire","craie"].includes(themeId ?? "nuit");
+  // Thèmes clairs : neige, dune
+  const isDark = !["neige","dune"].includes(themeId ?? "obsidienne");
 
   const handleLogout = async () => {
     // Supprime le cookie de session côté serveur
@@ -134,55 +135,39 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
       </nav>
 
       {/* Toggles rapides */}
-      <div className="px-4 pb-3 space-y-2.5">
-        {/* Toggle Sombre / Clair */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {isDark ? <Moon size={13} className="text-[var(--text-muted)]" weight="fill" /> : <Sun size={13} className="text-[var(--text-muted)]" weight="fill" />}
-            <span className="text-xs text-[var(--text-secondary)] font-medium">{isDark ? "Sombre" : "Clair"}</span>
-          </div>
+      <div className="px-4 pb-3 space-y-2">
+        {/* Toggle Thème */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-[var(--text-secondary)] flex-1 leading-tight">
+            <span className="text-[var(--text-muted)]">Thème :</span> <span className="font-semibold">{isDark ? "Sombre" : "Clair"}</span>
+          </span>
           <button
-            onClick={() => setThemeId(isDark ? "clair" : "nuit")}
-            role="switch"
-            aria-checked={!isDark}
-            className={cn(
-              "relative w-11 h-6 rounded-full transition-all duration-300 focus:outline-none",
-              !isDark ? "bg-[var(--amber)]" : "bg-[var(--surface-3)]"
-            )}
+            onClick={() => setThemeId(isDark ? "neige" : "obsidienne")}
+            role="switch" aria-checked={!isDark}
+            className={cn("relative w-11 h-6 rounded-full transition-all duration-300 focus:outline-none shrink-0",
+              !isDark ? "bg-[var(--amber)]" : "bg-[var(--surface-3)]")}
           >
-            <span className={cn(
-              "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-all duration-300 flex items-center justify-center",
-              !isDark ? "translate-x-5" : "translate-x-0"
-            )}>
-              {isDark
-                ? <Moon size={10} weight="fill" className="text-[var(--surface-3)]" />
-                : <Sun size={10} weight="fill" className="text-[var(--amber)]" />}
+            <span className={cn("absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-all duration-300 flex items-center justify-center",
+              !isDark ? "translate-x-5" : "translate-x-0")}>
+              {isDark ? <Moon size={10} weight="fill" className="text-[var(--surface-3)]" /> : <Sun size={10} weight="fill" className="text-[var(--amber)]" />}
             </span>
           </button>
         </div>
 
-        {/* Toggle Lab / Pro */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {appMode === "lab" ? <Flask size={13} className="text-[var(--text-muted)]" weight="fill" /> : <Briefcase size={13} className="text-[var(--text-muted)]" weight="fill" />}
-            <span className="text-xs text-[var(--text-secondary)] font-medium">{appMode === "lab" ? "Lab" : "Pro"}</span>
-          </div>
+        {/* Toggle Mode */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-[var(--text-secondary)] flex-1 leading-tight">
+            <span className="text-[var(--text-muted)]">Mode :</span> <span className="font-semibold">{appMode === "pro" ? "Pro" : "Test"}</span>
+          </span>
           <button
             onClick={() => setAppMode(appMode === "lab" ? "pro" : "lab")}
-            role="switch"
-            aria-checked={appMode === "pro"}
-            className={cn(
-              "relative w-11 h-6 rounded-full transition-all duration-300 focus:outline-none",
-              appMode === "pro" ? "bg-[var(--amber)]" : "bg-[var(--surface-3)]"
-            )}
+            role="switch" aria-checked={appMode === "pro"}
+            className={cn("relative w-11 h-6 rounded-full transition-all duration-300 focus:outline-none shrink-0",
+              appMode === "pro" ? "bg-[var(--amber)]" : "bg-[var(--surface-3)]")}
           >
-            <span className={cn(
-              "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-all duration-300 flex items-center justify-center",
-              appMode === "pro" ? "translate-x-5" : "translate-x-0"
-            )}>
-              {appMode === "lab"
-                ? <Flask size={10} weight="fill" className="text-[var(--surface-3)]" />
-                : <Briefcase size={10} weight="fill" className="text-[var(--amber)]" />}
+            <span className={cn("absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-all duration-300 flex items-center justify-center",
+              appMode === "pro" ? "translate-x-5" : "translate-x-0")}>
+              {appMode === "lab" ? <Flask size={10} weight="fill" className="text-[var(--surface-3)]" /> : <Briefcase size={10} weight="fill" className="text-[var(--amber)]" />}
             </span>
           </button>
         </div>
@@ -219,15 +204,15 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
             Données
           </div>
         </Link>
-        <Link href="/personnalisation" onClick={onClose}>
+        <Link href="/parametres" onClick={onClose}>
           <div className={cn(
             "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer",
-            pathname === "/personnalisation"
+            pathname.startsWith("/parametres") || pathname === "/personnalisation"
               ? "text-[var(--amber)] bg-[var(--amber)]/8"
               : "text-[var(--text-secondary)] hover:text-[var(--amber)] hover:bg-[var(--surface-2)]"
           )}>
-            <PaintBrush size={17} weight={pathname === "/personnalisation" ? "fill" : "regular"} className="shrink-0" />
-            Personnalisation
+            <PaintBrush size={17} weight={pathname.startsWith("/parametres") ? "fill" : "regular"} className="shrink-0" />
+            Paramètres
           </div>
         </Link>
         <Link href="/confidentialite" onClick={onClose}>

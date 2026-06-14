@@ -107,8 +107,12 @@ export const useStore = create<AppState>()(
       theme: "dark",
       setTheme: (t) => set({ theme: t }),
 
-      themeId: "nuit" as ThemeId,
-      setThemeId: (id) => set({ themeId: id, theme: ["clair","ivoire","craie"].includes(id) ? "light" : "dark" }),
+      themeId: "obsidienne" as ThemeId,
+      setThemeId: (id) => {
+        const { THEMES } = require("@/lib/themes");
+        const t = THEMES.find((t: { id: string }) => t.id === id);
+        set({ themeId: id, theme: t?.isDark === false ? "light" : "dark" });
+      },
 
       accentColor: "#E8960C",
       setAccentColor: (color) => set({ accentColor: color }),
@@ -117,11 +121,26 @@ export const useStore = create<AppState>()(
       setAppMode: (m) => {
         const s = get();
         if (m === "pro") {
-          // Sauvegarder les devis lab, charger les devis pro
-          set({ appMode: "pro", devisListLab: s.devisList, devisList: s.devisListPro });
+          const proDevisIds = new Set(s.devisListPro.map((d) => d.id));
+          set({
+            appMode: "pro",
+            devisListLab: s.devisList,
+            devisList: s.devisListPro,
+            // Supprimer les courses/logistique qui ne correspondent à aucun devis pro
+            demandesCourses: s.demandesCourses.filter((d) => proDevisIds.has(d.devisId)),
+            demandesLogistique: s.demandesLogistique.filter((d) => proDevisIds.has(d.devisId)),
+          });
         } else {
-          // Sauvegarder les devis pro, charger les devis lab (mock)
-          set({ appMode: "lab", devisListPro: s.devisList, devisList: s.devisListLab.length ? s.devisListLab : MOCK_DEVIS });
+          const labDevis = s.devisListLab.length ? s.devisListLab : MOCK_DEVIS;
+          const labDevisIds = new Set(labDevis.map((d) => d.id));
+          set({
+            appMode: "lab",
+            devisListPro: s.devisList,
+            devisList: labDevis,
+            // Supprimer les courses/logistique qui ne correspondent à aucun devis lab
+            demandesCourses: s.demandesCourses.filter((d) => labDevisIds.has(d.devisId)),
+            demandesLogistique: s.demandesLogistique.filter((d) => labDevisIds.has(d.devisId)),
+          });
         }
       },
 
