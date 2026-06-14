@@ -62,7 +62,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const cloudReadyRef = useRef(false); // true une fois le chargement Supabase terminé
 
-  useEffect(() => { setHydrated(true); }, []);
+  useEffect(() => {
+    // Restaurer l'user depuis le cookie de session (store chiffré async ne persiste plus user)
+    if (!user) {
+      fetch("/api/auth/session")
+        .then((res) => res.ok ? res.json() : null)
+        .then((data) => {
+          if (data?.authenticated) {
+            useStore.setState({
+              user: { username: data.username, role: "admin", displayName: "Administrateur" }
+            });
+          }
+          setHydrated(true);
+        })
+        .catch(() => setHydrated(true));
+    } else {
+      setHydrated(true);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Applique la couleur d'accent dès le montage et à chaque changement
   useEffect(() => { applyAccent(accentColor ?? "#E8960C"); }, [accentColor]);
