@@ -19,7 +19,7 @@ import {
   Package,
   Database,
   ListChecks,
-  PaintBrush,
+  Gear,
   ShieldCheck,
 } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
@@ -50,7 +50,7 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
   const router = useRouter();
   const { user, logout, theme, appMode, setAppMode, accentColor, themeId, setThemeId } = useStore();
   // Thèmes clairs : neige, dune
-  const isDark = !["neige","dune"].includes(themeId ?? "obsidienne");
+  const isDark = !["neige","dune"].includes(themeId ?? "obsidian");
 
   const handleLogout = async () => {
     // Supprime le cookie de session côté serveur
@@ -142,7 +142,7 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
             <span className="text-[var(--text-muted)]">Thème :</span> <span className="font-semibold">{isDark ? "Sombre" : "Clair"}</span>
           </span>
           <button
-            onClick={() => setThemeId(isDark ? "neige" : "obsidienne")}
+            onClick={() => setThemeId(isDark ? "neige" : "obsidian")}
             role="switch" aria-checked={!isDark}
             className={cn("relative w-11 h-6 rounded-full transition-all duration-300 focus:outline-none shrink-0",
               !isDark ? "bg-[var(--amber)]" : "bg-[var(--surface-3)]")}
@@ -211,7 +211,7 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
               ? "text-[var(--amber)] bg-[var(--amber)]/8"
               : "text-[var(--text-secondary)] hover:text-[var(--amber)] hover:bg-[var(--surface-2)]"
           )}>
-            <PaintBrush size={17} weight={pathname.startsWith("/parametres") ? "fill" : "regular"} className="shrink-0" />
+            <Gear size={17} weight={pathname.startsWith("/parametres") ? "fill" : "regular"} className="shrink-0" />
             Paramètres
           </div>
         </Link>

@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { m, AnimatePresence } from "framer-motion";
 import {
   Plus, Trash, Check, X, CheckSquare, Note, CalendarBlank,
-  TextAlignLeft, Tag, ArrowsClockwise, DotsSixVertical,
+  TextAlignLeft, Table, PencilSimple,
 } from "@phosphor-icons/react";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -13,13 +13,14 @@ interface Checklist { id: string; title: string; items: ChecklistItem[]; created
 interface NoteItem { id: string; title: string; content: string; color: string; createdAt: string; }
 interface Rappel { id: string; text: string; date: string; done: boolean; }
 
-type Tab = "checklists" | "notes" | "rappels";
+type Tab = "checklists" | "notes" | "rappels" | "tableaux";
 
 const NOTE_COLORS = ["#E8960C", "#3FB950", "#58A6FF", "#A855F7", "#EF4444", "#EC4899"];
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "checklists", label: "Checklists", icon: CheckSquare },
   { id: "notes",      label: "Notes",      icon: Note },
   { id: "rappels",    label: "Rappels",    icon: CalendarBlank },
+  { id: "tableaux",   label: "Tableaux",   icon: Table },
 ];
 
 // ── Checklist Tab ─────────────────────────────────────────────────────────────
@@ -357,6 +358,215 @@ function TabRappels() {
   );
 }
 
+// ── Tableaux Tab ─────────────────────────────────────────────────────────────
+interface CustomTable {
+  id: string;
+  title: string;
+  columns: string[];
+  rows: string[][];
+}
+
+function TabTableaux() {
+  const [tables, setTables] = useState<CustomTable[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [editingCell, setEditingCell] = useState<{ row: number; col: number } | null>(null);
+  const [editingHeader, setEditingHeader] = useState<number | null>(null);
+  const [editVal, setEditVal] = useState("");
+
+  const active = tables.find((t) => t.id === activeId);
+
+  const createTable = () => {
+    if (!newTitle.trim()) return;
+    const t: CustomTable = {
+      id: crypto.randomUUID(),
+      title: newTitle.trim(),
+      columns: ["Colonne 1", "Colonne 2"],
+      rows: [["", ""]],
+    };
+    setTables((ts) => [...ts, t]);
+    setActiveId(t.id);
+    setNewTitle("");
+    setCreating(false);
+  };
+
+  const update = (patch: Partial<CustomTable>) =>
+    setTables((ts) => ts.map((t) => t.id === activeId ? { ...t, ...patch } : t));
+
+  const addColumn = () => {
+    if (!active) return;
+    update({
+      columns: [...active.columns, `Colonne ${active.columns.length + 1}`],
+      rows: active.rows.map((r) => [...r, ""]),
+    });
+  };
+
+  const addRow = () => {
+    if (!active) return;
+    update({ rows: [...active.rows, active.columns.map(() => "")] });
+  };
+
+  const deleteRow = (ri: number) => {
+    if (!active) return;
+    update({ rows: active.rows.filter((_, i) => i !== ri) });
+  };
+
+  const deleteCol = (ci: number) => {
+    if (!active) return;
+    update({
+      columns: active.columns.filter((_, i) => i !== ci),
+      rows: active.rows.map((r) => r.filter((_, i) => i !== ci)),
+    });
+  };
+
+  const setCell = (ri: number, ci: number, val: string) => {
+    if (!active) return;
+    const rows = active.rows.map((r, i) => i === ri ? r.map((c, j) => j === ci ? val : c) : r);
+    update({ rows });
+  };
+
+  const setHeader = (ci: number, val: string) => {
+    if (!active) return;
+    update({ columns: active.columns.map((c, i) => i === ci ? val : c) });
+  };
+
+  const commitCell = () => {
+    if (editingCell) { setCell(editingCell.row, editingCell.col, editVal); setEditingCell(null); }
+    if (editingHeader !== null) { setHeader(editingHeader, editVal); setEditingHeader(null); }
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-4">
+      {/* Liste des tableaux */}
+      <div className="space-y-2">
+        <button onClick={() => setCreating(true)}
+          className="w-full flex items-center gap-2 h-9 px-3 rounded-xl bg-[var(--amber)] hover:bg-[var(--amber-light)] text-[var(--surface)] text-sm font-semibold transition-colors">
+          <Plus size={14} weight="bold" /> Nouveau tableau
+        </button>
+        <AnimatePresence>
+          {creating && (
+            <m.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex gap-2">
+              <input autoFocus value={newTitle} onChange={(e) => setNewTitle(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") createTable(); if (e.key === "Escape") setCreating(false); }}
+                placeholder="Nom du tableau…"
+                className="flex-1 h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--amber)]/50 text-sm text-[var(--text-primary)] outline-none" />
+              <button onClick={createTable} className="w-9 h-9 rounded-xl bg-[var(--amber)] text-white flex items-center justify-center"><Check size={13} weight="bold" /></button>
+              <button onClick={() => setCreating(false)} className="w-9 h-9 rounded-xl bg-[var(--surface-2)] text-[var(--text-muted)] flex items-center justify-center"><X size={13} /></button>
+            </m.div>
+          )}
+        </AnimatePresence>
+        {tables.length === 0 && !creating && (
+          <p className="text-xs text-[var(--text-muted)] italic text-center py-6">Aucun tableau — créez-en un</p>
+        )}
+        {tables.map((t) => (
+          <div key={t.id} className="flex items-center gap-1 group">
+            <button onClick={() => setActiveId(t.id)}
+              className={`flex-1 text-left px-3 py-2 rounded-xl text-sm transition-colors ${activeId === t.id ? "bg-[var(--amber)]/10 text-[var(--amber)] font-semibold" : "bg-[var(--surface-2)] text-[var(--text-primary)] hover:border-[var(--border-accent)]"}`}>
+              {t.title}
+            </button>
+            <button onClick={() => { setTables((ts) => ts.filter((x) => x.id !== t.id)); if (activeId === t.id) setActiveId(null); }}
+              className="opacity-0 group-hover:opacity-100 w-7 h-7 rounded-lg text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-500/10 flex items-center justify-center transition-all shrink-0">
+              <Trash size={12} />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* Éditeur de tableau */}
+      <div className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] overflow-hidden min-h-[300px]">
+        {!active ? (
+          <div className="flex flex-col items-center justify-center h-full py-16">
+            <Table size={36} className="text-[var(--text-muted)] mb-3 opacity-40" />
+            <p className="text-sm text-[var(--text-muted)]">Sélectionnez ou créez un tableau</p>
+          </div>
+        ) : (
+          <>
+            {/* Header du tableau */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
+              <h3 className="font-bold text-[var(--text-primary)] text-sm">{active.title}</h3>
+              <div className="flex gap-2">
+                <button onClick={addColumn}
+                  className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-xs bg-[var(--surface-2)] text-[var(--text-secondary)] hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 transition-colors">
+                  <Plus size={10} weight="bold" /> Colonne
+                </button>
+                <button onClick={addRow}
+                  className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-xs bg-[var(--surface-2)] text-[var(--text-secondary)] hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 transition-colors">
+                  <Plus size={10} weight="bold" /> Ligne
+                </button>
+              </div>
+            </div>
+
+            {/* Tableau scrollable */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr>
+                    {active.columns.map((col, ci) => (
+                      <th key={ci} className="border-b border-r border-[var(--border)] bg-[var(--surface-2)] px-2 py-2 text-left font-semibold text-[var(--text-muted)] text-[11px] uppercase tracking-wide min-w-[120px] group relative">
+                        {editingHeader === ci ? (
+                          <input autoFocus value={editVal}
+                            onChange={(e) => setEditVal(e.target.value)}
+                            onBlur={commitCell}
+                            onKeyDown={(e) => { if (e.key === "Enter" || e.key === "Escape") commitCell(); }}
+                            className="w-full bg-transparent outline-none text-[var(--text-primary)] text-xs font-bold" />
+                        ) : (
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="truncate">{col}</span>
+                            <div className="opacity-0 group-hover:opacity-100 flex gap-0.5 shrink-0">
+                              <button onClick={() => { setEditingHeader(ci); setEditingCell(null); setEditVal(col); }}
+                                className="w-5 h-5 rounded flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--amber)]">
+                                <PencilSimple size={9} />
+                              </button>
+                              {active.columns.length > 1 && (
+                                <button onClick={() => deleteCol(ci)}
+                                  className="w-5 h-5 rounded flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--danger)]">
+                                  <X size={9} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </th>
+                    ))}
+                    <th className="border-b border-[var(--border)] bg-[var(--surface-2)] w-8" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {active.rows.map((row, ri) => (
+                    <tr key={ri} className="group hover:bg-[var(--surface-2)]/50 transition-colors">
+                      {row.map((cell, ci) => (
+                        <td key={ci} className="border-b border-r border-[var(--border)] px-2 py-1.5 text-[var(--text-primary)] min-w-[120px]"
+                          onClick={() => { setEditingCell({ row: ri, col: ci }); setEditingHeader(null); setEditVal(cell); }}>
+                          {editingCell?.row === ri && editingCell?.col === ci ? (
+                            <input autoFocus value={editVal}
+                              onChange={(e) => setEditVal(e.target.value)}
+                              onBlur={commitCell}
+                              onKeyDown={(e) => { if (e.key === "Enter") commitCell(); if (e.key === "Tab") { commitCell(); } }}
+                              className="w-full bg-transparent outline-none text-[var(--text-primary)] text-sm" />
+                          ) : (
+                            <span className="block truncate min-h-[1.25rem]">{cell || <span className="text-[var(--text-muted)] opacity-40">—</span>}</span>
+                          )}
+                        </td>
+                      ))}
+                      <td className="border-b border-[var(--border)] px-1">
+                        <button onClick={() => deleteRow(ri)}
+                          className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--danger)] transition-all">
+                          <Trash size={11} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function OrganisationClient() {
   const [tab, setTab] = useState<Tab>("checklists");
@@ -384,6 +594,7 @@ export default function OrganisationClient() {
           {tab === "checklists" && <TabChecklists />}
           {tab === "notes" && <TabNotes />}
           {tab === "rappels" && <TabRappels />}
+          {tab === "tableaux" && <TabTableaux />}
         </m.div>
       </AnimatePresence>
     </div>

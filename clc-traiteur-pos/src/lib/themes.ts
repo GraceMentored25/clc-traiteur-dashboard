@@ -1,5 +1,5 @@
 export type ThemeId =
-  | "obsidienne" | "neige" | "dune"
+  | "obsidian" | "neige" | "dune"
   | "oceane" | "minuit" | "foret"
   | "cendre" | "aurore";
 
@@ -24,8 +24,8 @@ export interface ThemeConfig {
 
 export const THEMES: ThemeConfig[] = [
   {
-    id: "obsidienne",
-    name: "Obsidienne",
+    id: "obsidian",
+    name: "Obsidian",
     isDark: true,
     preview: ["#0D1117", "#161B22", "#1C2128"],
     vars: {

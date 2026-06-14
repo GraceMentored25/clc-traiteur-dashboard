@@ -107,7 +107,7 @@ export const useStore = create<AppState>()(
       theme: "dark",
       setTheme: (t) => set({ theme: t }),
 
-      themeId: "obsidienne" as ThemeId,
+      themeId: "obsidian" as ThemeId,
       setThemeId: (id) => {
         const { THEMES } = require("@/lib/themes");
         const t = THEMES.find((t: { id: string }) => t.id === id);
