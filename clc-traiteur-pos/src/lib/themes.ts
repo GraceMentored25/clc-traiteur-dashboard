@@ -199,12 +199,22 @@ export function applyTheme(themeId: ThemeId, accentColor: string) {
     root.classList.add("light");
   }
 
-  // Réappliquer l'accent par-dessus (il sera recalculé avec borderAccent)
-  const r = parseInt(accentColor.slice(1, 3), 16);
-  const g = parseInt(accentColor.slice(3, 5), 16);
-  const b = parseInt(accentColor.slice(5, 7), 16);
-  root.style.setProperty("--border-accent", `rgba(${r},${g},${b},0.3)`);
-  root.style.setProperty("--shadow-amber",
-    `0 0 0 1px rgba(${r},${g},${b},0.2), 0 8px 32px rgba(${r},${g},${b},0.08)`
-  );
+  // Appliquer la couleur d'accent (toutes les vars --amber)
+  if (/^#[0-9a-fA-F]{6}$/.test(accentColor)) {
+    const r = parseInt(accentColor.slice(1, 3), 16);
+    const g = parseInt(accentColor.slice(3, 5), 16);
+    const b = parseInt(accentColor.slice(5, 7), 16);
+    const clamp = (v: number) => Math.min(255, Math.max(0, v));
+    const toHex = (v: number) => clamp(v).toString(16).padStart(2, "0");
+    const light = `#${toHex(r+14)}${toHex(g+12)}${toHex(b+12)}`;
+    const dim   = `#${toHex(r-14)}${toHex(g-14)}${toHex(b-14)}`;
+
+    root.style.setProperty("--amber", accentColor);
+    root.style.setProperty("--amber-light", light);
+    root.style.setProperty("--amber-dim", dim);
+    root.style.setProperty("--border-accent", `rgba(${r},${g},${b},0.3)`);
+    root.style.setProperty("--shadow-amber",
+      `0 0 0 1px rgba(${r},${g},${b},0.2), 0 8px 32px rgba(${r},${g},${b},0.08)`
+    );
+  }
 }
