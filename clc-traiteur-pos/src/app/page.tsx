@@ -66,7 +66,7 @@ export default function Home() {
             <span className="font-semibold text-white drop-shadow">Chez La Camerounaise</span>
           </div>
 
-          <p className="text-sm font-semibold mb-1 tracking-widest uppercase" style={{ color: "rgba(26,26,26,0.6)" }}>
+          <p className="text-sm font-semibold mb-1 tracking-widest uppercase" style={{ color: "#7A4F1E" }}>
             Espace administration
           </p>
           <h1 className="text-3xl font-bold tracking-tight mb-8" style={{ color: "var(--amber)" }}>
