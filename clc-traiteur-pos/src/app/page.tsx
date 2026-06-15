@@ -11,14 +11,13 @@ const AuthFormClient = dynamic(() => import("@/components/auth/AuthFormClient"),
 
 export default function Home() {
   return (
-    <div className="min-h-[100dvh] flex">
-      {/* Left panel — image */}
+    <div className="min-h-[100dvh] flex relative overflow-hidden">
+      <div className="absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: "url(/auth.jpeg)" }} />
+
+      {/* Left panel — overlay sombre sur l'image */}
       <div className="hidden md:flex md:w-1/2 relative overflow-hidden">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url(/auth.jpeg)" }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
         <div className="relative z-10 flex flex-col justify-end p-12">
           <div className="flex items-center gap-3 mb-6">
             <Image
@@ -55,8 +54,9 @@ export default function Home() {
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
       </div>
 
-      {/* Right panel — form */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 bg-[var(--surface)]">
+      {/* Right panel — glassmorphism sur l'image */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 relative"
+        style={{ background: "rgba(13,17,23,0.72)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)" }}>
         <div className="w-full max-w-[400px]">
           {/* Mobile logo */}
           <div className="md:hidden flex items-center gap-3 mb-10">
