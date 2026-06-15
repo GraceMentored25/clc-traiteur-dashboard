@@ -31,6 +31,7 @@ const DishRow = memo(function DishRow({ dish }: { dish: Dish }) {
   }, [cartItem, dish.id, removeFromCart, updateQuantity]);
 
   const handleInput = useCallback((raw: string) => {
+    if (raw === "") { removeFromCart(dish.id); return; }
     const n = parseInt(raw, 10);
     if (isNaN(n) || n < 0) return;
     if (n === 0) { removeFromCart(dish.id); return; }

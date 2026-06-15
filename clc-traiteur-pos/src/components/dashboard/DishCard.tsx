@@ -113,12 +113,10 @@ const DishCard = memo(function DishCard({ dish }: Props) {
   }, [cartItem, dish.id, removeFromCart, updateQuantity]);
 
   const handleManualInput = useCallback((raw: string) => {
+    if (raw === "") { removeFromCart(dish.id); return; }
     const n = parseInt(raw, 10);
     if (isNaN(n) || n < 0) return;
-    if (n === 0) {
-      removeFromCart(dish.id);
-      return;
-    }
+    if (n === 0) { removeFromCart(dish.id); return; }
     if (cartItem) updateQuantity(dish.id, n);
     else addToCart({ dish: { ...dish, price: effectivePrice }, quantity: n });
   }, [cartItem, dish, effectivePrice, addToCart, updateQuantity, removeFromCart]);
