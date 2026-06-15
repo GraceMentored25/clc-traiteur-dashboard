@@ -60,7 +60,7 @@ export default function AuthFormClient() {
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
       {/* Username */}
       <div className="space-y-1.5">
-        <label className="block text-sm font-medium" style={{ color: "#1A1A1A" }}>
+        <label className="block text-sm font-medium" style={{ color: "rgba(26,26,26,0.6)" }}>
           Identifiant
         </label>
         <input
@@ -79,7 +79,7 @@ export default function AuthFormClient() {
 
       {/* Password */}
       <div className="space-y-1.5">
-        <label className="block text-sm font-medium" style={{ color: "#1A1A1A" }}>
+        <label className="block text-sm font-medium" style={{ color: "rgba(26,26,26,0.6)" }}>
           Mot de passe
         </label>
         <div className="relative">
