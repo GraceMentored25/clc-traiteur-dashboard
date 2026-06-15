@@ -66,16 +66,17 @@ export default function Home() {
             <span className="font-semibold text-white drop-shadow">Chez La Camerounaise</span>
           </div>
 
-          <p className="text-sm font-semibold mb-1 tracking-widest uppercase drop-shadow" style={{ color: "#F2DEC4" }}>
+          <p className="text-white/70 text-sm font-semibold mb-1 tracking-widest uppercase drop-shadow">
             Espace administration
           </p>
-          <h1 className="text-3xl font-bold tracking-tight mb-8" style={{ color: "#F2DEC4", textShadow: "0 2px 12px rgba(0,0,0,0.4)" }}>
+          <h1 className="text-3xl font-bold text-white tracking-tight mb-8"
+            style={{ textShadow: "0 2px 12px rgba(0,0,0,0.5)" }}>
             Bienvenue
           </h1>
 
           <AuthFormClient />
 
-          <p className="text-center text-xs mt-8" style={{ color: "#F2DEC4", opacity: 0.7 }}>
+          <p className="text-center text-xs text-white/50 mt-8">
             Accès réservé au personnel autorisé C.LC. Traiteur
           </p>
 
