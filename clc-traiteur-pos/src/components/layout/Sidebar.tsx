@@ -19,7 +19,7 @@ import {
   Package,
   Database,
   ListChecks,
-  Gear,
+  SlidersHorizontal,
   ShieldCheck,
 } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
@@ -211,7 +211,7 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
               ? "text-[var(--amber)] bg-[var(--amber)]/8"
               : "text-[var(--text-secondary)] hover:text-[var(--amber)] hover:bg-[var(--surface-2)]"
           )}>
-            <Gear size={17} weight={pathname.startsWith("/parametres") ? "fill" : "regular"} className="shrink-0" />
+            <SlidersHorizontal size={17} weight={pathname.startsWith("/parametres") ? "fill" : "regular"} className="shrink-0" />
             Paramètres
           </div>
         </Link>

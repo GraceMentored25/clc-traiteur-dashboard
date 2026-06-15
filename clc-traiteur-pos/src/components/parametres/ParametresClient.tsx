@@ -103,48 +103,56 @@ function TabDevis() {
 }
 
 // ── Onglet Logistique ─────────────────────────────────────────────────────
-type LogItem = { name: string; qtyBase: number; unit: string; perConvive: boolean; pricePerUnit?: number; note?: string };
+// conviveDiviseur: 0 = quantité fixe | 1 = 1 par convive | N>1 = 1 pour N convives (ex: 1 table/10 convives)
+type LogItem = { name: string; qtyBase: number; unit: string; perConvive: boolean; conviveDiviseur?: number; pricePerUnit?: number; note?: string };
+
+// Calcule la quantité réelle selon les convives
+function calcQty(item: LogItem, guestCount: number): number {
+  const d = item.conviveDiviseur ?? (item.perConvive ? 1 : 0);
+  if (d === 0) return item.qtyBase;
+  return Math.ceil((guestCount / d) * item.qtyBase);
+}
 
 const EVENT_TYPES_LOGISTIQUE = ["default", "Mariage", "Anniversaire", "Baptême", "Séminaire", "Réception privée"];
 
 const DEFAULT_LOGISTIQUE: Record<string, LogItem[]> = {
   default: [
-    { name: "Grande marmite 40L", qtyBase: 1, unit: "unité", perConvive: false },
-    { name: "Plaque chauffante",  qtyBase: 1, unit: "unité", perConvive: false },
-    { name: "Bouteille de gaz",   qtyBase: 2, unit: "unité", perConvive: false },
-    { name: "Louche de service",  qtyBase: 4, unit: "unité", perConvive: false },
-    { name: "Gants de cuisine",   qtyBase: 6, unit: "paire", perConvive: false },
+    { name: "Grande marmite 40L", qtyBase: 1, unit: "unité", perConvive: false, conviveDiviseur: 0 },
+    { name: "Plaque chauffante",  qtyBase: 1, unit: "unité", perConvive: false, conviveDiviseur: 0 },
+    { name: "Bouteille de gaz",   qtyBase: 2, unit: "unité", perConvive: false, conviveDiviseur: 0 },
+    { name: "Louche de service",  qtyBase: 4, unit: "unité", perConvive: false, conviveDiviseur: 0 },
+    { name: "Gants de cuisine",   qtyBase: 6, unit: "paire", perConvive: false, conviveDiviseur: 0 },
   ],
   Mariage: [
-    { name: "Tente de réception",  qtyBase: 1,  unit: "unité",      perConvive: false, note: "À réserver" },
-    { name: "Table pliante",       qtyBase: 10, unit: "unité",      perConvive: false },
-    { name: "Chaise pliante",      qtyBase: 1,  unit: "par convive",perConvive: true },
-    { name: "Assiette de service", qtyBase: 1,  unit: "par convive",perConvive: true },
-    { name: "Marmite chauffante",  qtyBase: 4,  unit: "unité",      perConvive: false },
-    { name: "Système sonore",      qtyBase: 1,  unit: "unité",      perConvive: false, note: "À louer" },
+    { name: "Tente de réception",  qtyBase: 1, unit: "unité", perConvive: false, conviveDiviseur: 0, note: "À réserver" },
+    { name: "Table pliante",       qtyBase: 1, unit: "unité", perConvive: false, conviveDiviseur: 10 },
+    { name: "Chaise pliante",      qtyBase: 1, unit: "unité", perConvive: true,  conviveDiviseur: 1 },
+    { name: "Assiette de service", qtyBase: 1, unit: "unité", perConvive: true,  conviveDiviseur: 1 },
+    { name: "Marmite chauffante",  qtyBase: 4, unit: "unité", perConvive: false, conviveDiviseur: 0 },
+    { name: "Système sonore",      qtyBase: 1, unit: "unité", perConvive: false, conviveDiviseur: 0, note: "À louer" },
   ],
   Anniversaire: [
-    { name: "Table pliante",       qtyBase: 5, unit: "unité",      perConvive: false },
-    { name: "Chaise pliante",      qtyBase: 1, unit: "par convive",perConvive: true },
-    { name: "Marmite chauffante",  qtyBase: 2, unit: "unité",      perConvive: false },
-    { name: "Assiette de service", qtyBase: 1, unit: "par convive",perConvive: true },
+    { name: "Table pliante",       qtyBase: 1, unit: "unité", perConvive: false, conviveDiviseur: 10 },
+    { name: "Chaise pliante",      qtyBase: 1, unit: "unité", perConvive: true,  conviveDiviseur: 1 },
+    { name: "Marmite chauffante",  qtyBase: 2, unit: "unité", perConvive: false, conviveDiviseur: 0 },
+    { name: "Assiette de service", qtyBase: 1, unit: "unité", perConvive: true,  conviveDiviseur: 1 },
   ],
   Baptême: [
-    { name: "Table pliante",      qtyBase: 4, unit: "unité",      perConvive: false },
-    { name: "Chaise pliante",     qtyBase: 1, unit: "par convive",perConvive: true },
-    { name: "Marmite chauffante", qtyBase: 2, unit: "unité",      perConvive: false },
+    { name: "Table pliante",      qtyBase: 1, unit: "unité", perConvive: false, conviveDiviseur: 10 },
+    { name: "Chaise pliante",     qtyBase: 1, unit: "unité", perConvive: true,  conviveDiviseur: 1 },
+    { name: "Marmite chauffante", qtyBase: 2, unit: "unité", perConvive: false, conviveDiviseur: 0 },
   ],
   Séminaire: [
-    { name: "Table pliante",      qtyBase: 6, unit: "unité",      perConvive: false },
-    { name: "Chaise pliante",     qtyBase: 1, unit: "par convive",perConvive: true },
-    { name: "Système sonore",     qtyBase: 1, unit: "unité",      perConvive: false, note: "Micro + enceinte" },
+    { name: "Table pliante",      qtyBase: 1, unit: "unité", perConvive: false, conviveDiviseur: 8 },
+    { name: "Chaise pliante",     qtyBase: 1, unit: "unité", perConvive: true,  conviveDiviseur: 1 },
+    { name: "Système sonore",     qtyBase: 1, unit: "unité", perConvive: false, conviveDiviseur: 0, note: "Micro + enceinte" },
   ],
   "Réception privée": [
-    { name: "Tente de réception",  qtyBase: 1, unit: "unité",      perConvive: false, note: "À réserver" },
-    { name: "Table pliante",       qtyBase: 8, unit: "unité",      perConvive: false },
-    { name: "Chaise pliante",      qtyBase: 1, unit: "par convive",perConvive: true },
-    { name: "Marmite chauffante",  qtyBase: 3, unit: "unité",      perConvive: false },
-    { name: "Assiette de service", qtyBase: 1, unit: "par convive",perConvive: true },
+    { name: "Tente de réception",  qtyBase: 1, unit: "unité", perConvive: false, conviveDiviseur: 0, note: "À réserver" },
+    { name: "Table pliante",       qtyBase: 1, unit: "unité", perConvive: false, conviveDiviseur: 10 },
+    { name: "Chaise pliante",      qtyBase: 1, unit: "unité", perConvive: true,  conviveDiviseur: 1 },
+    { name: "Marmite chauffante",  qtyBase: 3, unit: "unité", perConvive: false, conviveDiviseur: 0 },
+    { name: "Assiette de service", qtyBase: 1, unit: "unité", perConvive: true,  conviveDiviseur: 1 },
   ],
 };
 
@@ -158,7 +166,7 @@ function TabLogistique() {
     }
     return DEFAULT_LOGISTIQUE;
   });
-  const [newItem, setNewItem] = useState<Partial<LogItem>>({ name: "", qtyBase: 1, unit: "unité", perConvive: false, pricePerUnit: 0 });
+  const [newItem, setNewItem] = useState<Partial<LogItem>>({ name: "", qtyBase: 1, unit: "unité", perConvive: false, conviveDiviseur: 0, pricePerUnit: 0 });
 
   const items = config[selectedEvent] ?? [];
 
@@ -180,19 +188,18 @@ function TabLogistique() {
 
   const addItem = () => {
     if (!newItem.name?.trim()) return;
+    const diviseur = newItem.conviveDiviseur ?? 0;
     const item: LogItem = {
       name: newItem.name.trim(),
       qtyBase: newItem.qtyBase ?? 1,
       unit: newItem.unit ?? "unité",
-      perConvive: newItem.perConvive ?? false,
+      perConvive: diviseur > 0,
+      conviveDiviseur: diviseur,
       pricePerUnit: newItem.pricePerUnit ?? 0,
     };
     save({ ...config, [selectedEvent]: [...items, item] });
-    // Sync prix dans le store matériel
-    if (item.pricePerUnit && item.pricePerUnit > 0) {
-      syncMaterielPrice(item.name, item.pricePerUnit);
-    }
-    setNewItem({ name: "", qtyBase: 1, unit: "unité", perConvive: false, pricePerUnit: 0 });
+    if (item.pricePerUnit && item.pricePerUnit > 0) syncMaterielPrice(item.name, item.pricePerUnit);
+    setNewItem({ name: "", qtyBase: 1, unit: "unité", perConvive: false, conviveDiviseur: 0, pricePerUnit: 0 });
   };
 
   const removeItem = (i: number) => save({ ...config, [selectedEvent]: items.filter((_, idx) => idx !== i) });
@@ -240,26 +247,30 @@ function TabLogistique() {
           {items.length === 0 && (
             <p className="text-xs text-[var(--text-muted)] italic text-center py-4">Aucun élément — ajoutez du matériel ci-dessous.</p>
           )}
-          {items.map((item, i) => (
+          {items.map((item, i) => {
+            const d = item.conviveDiviseur ?? (item.perConvive ? 1 : 0);
+            const modeLabel = d === 0 ? `${item.qtyBase} ${item.unit} (fixe)` : d === 1 ? `${item.qtyBase} par convive` : `${item.qtyBase} / ${d} convives`;
+            return (
             <div key={i} className="flex items-center gap-2 group">
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-[var(--text-primary)] truncate">{item.name}</p>
                 <p className="text-[11px] text-[var(--text-muted)]">
-                  {item.perConvive ? `${item.qtyBase} × nb convives` : `${item.qtyBase} ${item.unit}`}
-                  {item.note && <span className="ml-1 italic">{item.note}</span>}
+                  {modeLabel}{item.note && <span className="ml-1 italic"> — {item.note}</span>}
                 </p>
               </div>
               {/* Quantité */}
-              <input type="number" min="1" value={item.qtyBase}
-                onChange={(e) => updateQty(i, parseInt(e.target.value) || 1)}
+              <input type="text" inputMode="decimal" value={item.qtyBase === 0 ? "" : item.qtyBase}
+                placeholder="qté"
+                onChange={(e) => { const v = parseFloat(e.target.value); updateQty(i, isNaN(v) ? 0 : v); }}
                 title="Quantité"
-                className="w-12 h-7 px-1 text-xs text-center bg-[var(--surface-2)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                className="w-12 h-7 px-1 text-xs text-center bg-[var(--surface-2)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50" />
               {/* Prix unitaire */}
               <div className="flex items-center gap-0.5 shrink-0">
-                <input type="number" min="0" step="0.01" value={item.pricePerUnit ?? 0}
-                  onChange={(e) => updatePrice(i, parseFloat(e.target.value) || 0)}
+                <input type="text" inputMode="decimal" value={(item.pricePerUnit ?? 0) === 0 ? "" : item.pricePerUnit}
+                  placeholder="prix"
+                  onChange={(e) => { const v = parseFloat(e.target.value); updatePrice(i, isNaN(v) ? 0 : v); }}
                   title="Prix unitaire (€)"
-                  className="w-16 h-7 px-1 text-xs text-right bg-[var(--surface-2)] border border-[var(--amber)]/30 rounded-lg text-[var(--amber)] font-mono outline-none focus:border-[var(--amber)]/70 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                  className="w-14 h-7 px-1 text-xs text-right bg-[var(--surface-2)] border border-[var(--amber)]/30 rounded-lg text-[var(--amber)] font-mono outline-none focus:border-[var(--amber)]/70" />
                 <span className="text-[10px] text-[var(--text-muted)]">€</span>
               </div>
               <button onClick={() => removeItem(i)}
@@ -267,7 +278,7 @@ function TabLogistique() {
                 <Trash size={12} />
               </button>
             </div>
-          ))}
+          );})}
         </div>
 
         {/* Formulaire ajout */}
@@ -276,27 +287,43 @@ function TabLogistique() {
           <input value={newItem.name ?? ""} onChange={(e) => setNewItem(n => ({ ...n, name: e.target.value }))}
             placeholder="Nom du matériel…"
             className="w-full h-8 px-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-colors" />
-          <div className="flex gap-2 flex-wrap">
-            <input type="number" min="1" value={newItem.qtyBase ?? 1}
-              onChange={(e) => setNewItem(n => ({ ...n, qtyBase: parseInt(e.target.value) || 1 }))}
-              title="Quantité"
-              className="w-14 h-8 px-2 text-xs text-center bg-[var(--surface-2)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+          <div className="flex gap-2 flex-wrap items-center">
+            {/* Quantité */}
+            <input type="text" inputMode="decimal"
+              value={(newItem.qtyBase ?? 1) === 0 ? "" : newItem.qtyBase}
+              placeholder="qté"
+              onChange={(e) => { const v = parseFloat(e.target.value); setNewItem(n => ({ ...n, qtyBase: isNaN(v) ? 0 : v })); }}
+              title="Quantité de base"
+              className="w-14 h-8 px-2 text-xs text-center bg-[var(--surface-2)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50" />
+            {/* Unité */}
             <input value={newItem.unit ?? "unité"} onChange={(e) => setNewItem(n => ({ ...n, unit: e.target.value }))}
               placeholder="unité"
-              className="w-20 h-8 px-2 text-xs bg-[var(--surface-2)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-colors" />
+              className="w-20 h-8 px-2 text-xs bg-[var(--surface-2)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50" />
+            {/* Prix */}
             <div className="flex items-center gap-1">
-              <input type="number" min="0" step="0.01" value={newItem.pricePerUnit ?? 0}
-                onChange={(e) => setNewItem(n => ({ ...n, pricePerUnit: parseFloat(e.target.value) || 0 }))}
+              <input type="text" inputMode="decimal"
+                value={(newItem.pricePerUnit ?? 0) === 0 ? "" : newItem.pricePerUnit}
+                placeholder="prix"
+                onChange={(e) => { const v = parseFloat(e.target.value); setNewItem(n => ({ ...n, pricePerUnit: isNaN(v) ? 0 : v })); }}
                 title="Prix unitaire (€)"
-                className="w-16 h-8 px-2 text-xs text-right bg-[var(--surface-2)] border border-[var(--amber)]/30 rounded-lg text-[var(--amber)] font-mono outline-none focus:border-[var(--amber)]/70 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-              <span className="text-[10px] text-[var(--text-muted)]">€/u</span>
+                className="w-14 h-8 px-2 text-xs text-right bg-[var(--surface-2)] border border-[var(--amber)]/30 rounded-lg text-[var(--amber)] font-mono outline-none focus:border-[var(--amber)]/70" />
+              <span className="text-[10px] text-[var(--text-muted)]">€</span>
             </div>
-            <label className="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" checked={newItem.perConvive ?? false}
-                onChange={(e) => setNewItem(n => ({ ...n, perConvive: e.target.checked }))}
-                className="w-3.5 h-3.5 accent-[var(--amber)]" />
-              <span className="text-xs text-[var(--text-secondary)] whitespace-nowrap">Par convive</span>
-            </label>
+            {/* Mode calcul : fixe / par convive / tous les N convives */}
+            <div className="flex items-center gap-1.5">
+              <select value={newItem.conviveDiviseur ?? 0}
+                onChange={(e) => setNewItem(n => ({ ...n, conviveDiviseur: parseInt(e.target.value) }))}
+                className="h-8 px-2 text-xs bg-[var(--surface-2)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50">
+                <option value={0}>Fixe</option>
+                <option value={1}>Par convive</option>
+                <option value={2}>1 / 2 conv.</option>
+                <option value={5}>1 / 5 conv.</option>
+                <option value={8}>1 / 8 conv.</option>
+                <option value={10}>1 / 10 conv.</option>
+                <option value={15}>1 / 15 conv.</option>
+                <option value={20}>1 / 20 conv.</option>
+              </select>
+            </div>
             <button onClick={addItem} disabled={!newItem.name?.trim()}
               className="w-8 h-8 rounded-lg bg-[var(--amber)]/10 text-[var(--amber)] hover:bg-[var(--amber)]/20 flex items-center justify-center disabled:opacity-40 transition-colors shrink-0">
               <Plus size={13} weight="bold" />

@@ -87,7 +87,9 @@ export default function TabCommandes() {
     const materiaux = useStore.getState().materiel;
 
     const logItems: LogistiqueItem[] = allLogItems.map((item) => {
-      const qty = item.unit === "par convive" ? devis.guestCount : item.qtyBase;
+      // Calcul quantité : conviveDiviseur=0 → fixe | 1 → par convive | N → 1 pour N convives
+      const d = (item as { conviveDiviseur?: number }).conviveDiviseur ?? (item.unit === "par convive" ? 1 : 0);
+      const qty = d === 0 ? item.qtyBase : Math.ceil((devis.guestCount / d) * item.qtyBase);
       const mat = materiaux.find((m) => m.name === item.name);
       // Utiliser automatiquement le stock disponible (sans dépasser la quantité demandée)
       const stockUtilise = Math.min(mat?.stockQty ?? 0, qty);
