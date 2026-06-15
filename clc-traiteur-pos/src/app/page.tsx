@@ -69,7 +69,7 @@ export default function Home() {
           <p className="text-sm font-semibold mb-1 tracking-widest uppercase" style={{ color: "rgba(26,26,26,0.6)" }}>
             Espace administration
           </p>
-          <h1 className="text-3xl font-bold tracking-tight mb-8" style={{ color: "rgba(26,26,26,0.6)" }}>
+          <h1 className="text-3xl font-bold tracking-tight mb-8" style={{ color: "var(--amber)" }}>
             Bienvenue
           </h1>
 
