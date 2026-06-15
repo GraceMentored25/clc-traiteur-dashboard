@@ -54,9 +54,8 @@ export default function Home() {
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
       </div>
 
-      {/* Right panel — glassmorphism sur l'image */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 relative"
-        style={{ background: "rgba(13,17,23,0.72)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)" }}>
+      {/* Right panel — transparent */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 relative">
         <div className="w-full max-w-[400px]">
           {/* Mobile logo */}
           <div className="md:hidden flex items-center gap-3 mb-10">
