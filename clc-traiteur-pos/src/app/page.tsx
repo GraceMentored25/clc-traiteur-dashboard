@@ -56,34 +56,30 @@ export default function Home() {
 
       {/* Right panel — transparent */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 relative">
-        <div className="w-full max-w-[400px]">
+        <div className="w-full" style={{ maxWidth: "400px" }}>
           {/* Mobile logo */}
           <div className="md:hidden flex items-center gap-3 mb-10">
-            <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 bg-[var(--surface-3)]">
-              <Image
-                src="/logo.png"
-                alt="Chez La Camerounaise"
-                width={40}
-                height={40}
-                className="w-full h-full object-cover"
-                priority
-              />
+            <div className="w-10 h-10 rounded-full overflow-hidden shrink-0">
+              <Image src="/logo.png" alt="Chez La Camerounaise" width={40} height={40}
+                className="w-full h-full object-cover" priority />
             </div>
-            <span className="font-semibold text-[var(--text-primary)]">Chez La Camerounaise</span>
+            <span className="font-semibold text-white drop-shadow">Chez La Camerounaise</span>
           </div>
 
-          <p className="text-[var(--text-secondary)] text-sm font-medium mb-1 tracking-wide uppercase">
+          <p className="text-white/70 text-sm font-semibold mb-1 tracking-widest uppercase drop-shadow">
             Espace administration
           </p>
-          <h1 className="text-3xl font-bold text-[var(--text-primary)] tracking-tight mb-8">
+          <h1 className="text-3xl font-bold text-white tracking-tight mb-8"
+            style={{ textShadow: "0 2px 12px rgba(0,0,0,0.5)" }}>
             Bienvenue
           </h1>
 
           <AuthFormClient />
 
-          <p className="text-center text-xs text-[var(--text-muted)] mt-8">
+          <p className="text-center text-xs text-white/50 mt-8">
             Accès réservé au personnel autorisé C.LC. Traiteur
           </p>
+
         </div>
       </div>
     </div>
