@@ -13,7 +13,7 @@ export default function Home() {
   return (
     <div className="min-h-[100dvh] flex relative overflow-hidden">
       <div className="absolute inset-0 bg-cover"
-        style={{ backgroundImage: "url(/auth.jpeg)", backgroundPosition: "left center" }} />
+        style={{ backgroundImage: "url(/auth.jpeg)", backgroundPosition: "35% center" }} />
 
       {/* Left panel — overlay sombre sur l'image */}
       <div className="hidden md:flex md:w-1/2 relative overflow-hidden">
