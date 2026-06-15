@@ -67,8 +67,9 @@ export default function AuthFormClient() {
           {...register("username")}
           type="text"
           autoComplete="username"
-          placeholder="admin"
-          className="w-full h-11 px-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] text-sm outline-none transition-all focus:border-[var(--amber)] focus:ring-2 focus:ring-[var(--amber)]/15"
+          placeholder="Votre identifiant"
+          style={{ background: "rgba(255,255,255,0.75)", borderColor: "rgba(180,140,80,0.3)", color: "#2A1F08" }}
+          className="w-full h-11 px-4 rounded-xl border text-sm outline-none transition-all focus:ring-2 placeholder:text-[#B09050]/60"
         />
         {errors.username && (
           <p className="text-xs text-[var(--danger)] flex items-center gap-1 mt-1">
@@ -87,13 +88,14 @@ export default function AuthFormClient() {
             {...register("password")}
             type={showPwd ? "text" : "password"}
             autoComplete="current-password"
-            placeholder="••••••"
-            className="w-full h-11 px-4 pr-11 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] text-sm outline-none transition-all focus:border-[var(--amber)] focus:ring-2 focus:ring-[var(--amber)]/15"
+            placeholder="Votre mot de passe"
+            style={{ background: "rgba(255,255,255,0.75)", borderColor: "rgba(180,140,80,0.3)", color: "#2A1F08" }}
+            className="w-full h-11 px-4 pr-11 rounded-xl border text-sm outline-none transition-all focus:ring-2 placeholder:text-[#B09050]/60"
           />
           <button
             type="button"
             onClick={() => setShowPwd((v) => !v)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors" style={{ color: "#B09050" }}
           >
             {showPwd ? <EyeSlash size={18} /> : <Eye size={18} />}
           </button>
