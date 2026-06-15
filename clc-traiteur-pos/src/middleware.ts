@@ -15,7 +15,7 @@ export function middleware(req: NextRequest) {
     pathname.startsWith("/dishes/") ||
     pathname === "/logo.png" ||
     pathname === "/auth.jpeg" ||
-    pathname === "/auth.png" ||
+    pathname === "/auth4x.png" ||
     pathname === "/favicon.ico"
   ) {
     return NextResponse.next();
