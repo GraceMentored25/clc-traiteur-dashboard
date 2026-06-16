@@ -109,7 +109,7 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
                   "relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer group",
                   active
                     ? "text-[var(--amber)] bg-[var(--amber)]/8"
-                    : "text-[var(--text-secondary)] hover:text-[var(--secondary-text-hover)] hover:bg-[var(--secondary-bg)]"
+                    : "text-[var(--text-secondary)] hover:text-[var(--secondary-color)] hover:bg-[var(--secondary-bg)]"
                 )}
               >
                 {active && (
@@ -203,7 +203,7 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
               "relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer",
               active
                 ? "text-[var(--amber)] bg-[var(--amber)]/8"
-                : "text-[var(--text-secondary)] hover:text-[var(--secondary-text-hover)] hover:bg-[var(--secondary-bg)]"
+                : "text-[var(--text-secondary)] hover:text-[var(--secondary-color)] hover:bg-[var(--secondary-bg)]"
             )}>
               <Icon size={17} weight={active ? "fill" : "regular"} className="relative z-10 shrink-0" />
               <span className="relative z-10">{label}</span>
