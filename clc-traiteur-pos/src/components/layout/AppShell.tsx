@@ -79,13 +79,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     const isDark = !root.classList.contains("light");
     const mix = isDark ? 0.07 : 0.06;
     const tint = [r, g, b];
-    const blend = (base: number[], op: number) => base.map((v, i) => Math.round(v * (1 - op) + tint[i] * op));
-    if (isDark) {
-      root.style.setProperty("--surface-2", `rgb(${blend([28,33,40], 0.14).join(",")})`);
-      root.style.setProperty("--surface-3", `rgb(${blend([37,43,52], 0.20).join(",")})`);
-    } else {
-      root.style.setProperty("--surface-2", `rgb(${blend([248,248,248], 0.20).join(",")})`);
-      root.style.setProperty("--surface-3", `rgb(${blend([232,234,237], 0.28).join(",")})`);
+    root.style.setProperty("--surface-2", `rgba(${r},${g},${b},0.10)`);
+    root.style.setProperty("--surface-3", `rgba(${r},${g},${b},0.18)`);
+    if (!isDark) {
+      root.style.setProperty("--surface-2", `rgba(${r},${g},${b},0.13)`);
+      root.style.setProperty("--surface-3", `rgba(${r},${g},${b},0.22)`);
       root.style.setProperty("--text-secondary", `rgba(${Math.round(r*0.35)},${Math.round(g*0.35)},${Math.round(b*0.35)},0.9)`);
     }
     const dark = [Math.round(r*0.25), Math.round(g*0.25), Math.round(b*0.25)];

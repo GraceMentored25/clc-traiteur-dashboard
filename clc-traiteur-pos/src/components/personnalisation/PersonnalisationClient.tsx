@@ -71,19 +71,16 @@ function applySecondaryColor(color: string) {
   const blend = (base: number[], tR: number, tG: number, tB: number, opacity: number) =>
     [Math.round(base[0]*(1-opacity)+tR*opacity), Math.round(base[1]*(1-opacity)+tG*opacity), Math.round(base[2]*(1-opacity)+tB*opacity)];
 
-  if (isDark) {
-    // Sombre : surface-2 léger (catégories lisibles), surface-3 un peu plus marqué
-    const s2 = blend([28,33,40], r, g, b, 0.14);
-    const s3 = blend([37,43,52], r, g, b, 0.20);
-    root.style.setProperty("--surface-2", `rgb(${s2.join(",")})`);
-    root.style.setProperty("--surface-3", `rgb(${s3.join(",")})`);
-  } else {
-    // Clair : surface-2 très léger pour que les catégories restent claires
-    // mais clairement teintées de la couleur secondaire
-    const s2 = blend([248,248,248], r, g, b, 0.20);
-    const s3 = blend([232,234,237], r, g, b, 0.28);
-    root.style.setProperty("--surface-2", `rgb(${s2.join(",")})`);
-    root.style.setProperty("--surface-3", `rgb(${s3.join(",")})`);
+  // Glass + couleur secondaire pure — pas de mélange avec du gris
+  // surface-2 : couleur secondaire transparente (glass léger)
+  // surface-3 : couleur secondaire un peu plus opaque (glass hover)
+  root.style.setProperty("--surface-2", `rgba(${r},${g},${b},0.10)`);
+  root.style.setProperty("--surface-3", `rgba(${r},${g},${b},0.18)`);
+
+  if (!isDark) {
+    // En mode clair, légèrement plus opaque pour bien se voir sur fond blanc
+    root.style.setProperty("--surface-2", `rgba(${r},${g},${b},0.13)`);
+    root.style.setProperty("--surface-3", `rgba(${r},${g},${b},0.22)`);
     root.style.setProperty("--text-secondary", `rgba(${Math.round(r*0.35)},${Math.round(g*0.35)},${Math.round(b*0.35)},0.9)`);
   }
 
