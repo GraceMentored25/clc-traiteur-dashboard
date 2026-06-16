@@ -109,7 +109,7 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
                   "relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer group",
                   active
                     ? "text-[var(--amber)] bg-[var(--amber)]/8"
-                    : "text-[var(--text-secondary)] hover:text-[var(--secondary-color)] hover:bg-[var(--secondary-bg)] hover:border hover:border-[var(--secondary-border)]"
+                    : "text-[var(--text-secondary)] border border-transparent hover:text-[var(--secondary-color)] hover:bg-[var(--secondary-bg)] hover:border-[var(--secondary-border)]"
                 )}
               >
                 {active && (
