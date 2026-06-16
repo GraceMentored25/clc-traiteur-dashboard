@@ -72,20 +72,21 @@ function applySecondaryColor(color: string) {
     [Math.round(base[0]*(1-opacity)+tR*opacity), Math.round(base[1]*(1-opacity)+tG*opacity), Math.round(base[2]*(1-opacity)+tB*opacity)];
 
   if (isDark) {
-    // Sombre : mélange léger (7%) — déjà bon contraste
-    const s2 = blend([28,33,40], r, g, b, 0.10);
-    const s3 = blend([37,43,52], r, g, b, 0.12);
+    const s2 = blend([28,33,40], r, g, b, 0.22);
+    const s3 = blend([37,43,52], r, g, b, 0.28);
     root.style.setProperty("--surface-2", `rgb(${s2.join(",")})`);
     root.style.setProperty("--surface-3", `rgb(${s3.join(",")})`);
   } else {
-    // Clair : mélange plus fort (18%) pour que la teinte soit visible
-    const s2 = blend([240,242,245], r, g, b, 0.18);
-    const s3 = blend([228,231,236], r, g, b, 0.22);
+    const s2 = blend([240,242,245], r, g, b, 0.32);
+    const s3 = blend([228,231,236], r, g, b, 0.38);
     root.style.setProperty("--surface-2", `rgb(${s2.join(",")})`);
     root.style.setProperty("--surface-3", `rgb(${s3.join(",")})`);
-    // Forcer le texte secondaire suffisamment foncé en mode clair
-    root.style.setProperty("--text-secondary", `rgba(${Math.round(r*0.4)},${Math.round(g*0.4)},${Math.round(b*0.4)},0.85)`);
+    root.style.setProperty("--text-secondary", `rgba(${Math.round(r*0.35)},${Math.round(g*0.35)},${Math.round(b*0.35)},0.9)`);
   }
+
+  // Texte hover nav : version très foncée de la couleur secondaire
+  const dark = [Math.round(r*0.25), Math.round(g*0.25), Math.round(b*0.25)];
+  root.style.setProperty("--secondary-text-hover", `rgb(${dark.join(",")})`);
 }
 
 export default function PersonnalisationClient() {
