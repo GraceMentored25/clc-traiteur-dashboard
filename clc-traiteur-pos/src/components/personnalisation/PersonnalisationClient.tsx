@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useStore } from "@/lib/store";
 import { Flask, Briefcase, Check, Palette } from "@phosphor-icons/react";
 import { THEMES, type ThemeId } from "@/lib/themes";
@@ -38,8 +39,45 @@ function Section({ title, description, children }: { title: string; description?
   );
 }
 
+const SECONDARY_PRESETS = [
+  { color: "#8B949E", label: "Gris (défaut)" },
+  { color: "#E8D5B0", label: "Crème" },
+  { color: "#C8B99A", label: "Sable" },
+  { color: "#A8C5DA", label: "Glacier" },
+  { color: "#B8D4BE", label: "Sauge" },
+  { color: "#D4C5E2", label: "Lavande" },
+  { color: "#E8C5C5", label: "Rose poudré" },
+  { color: "#C5D4E8", label: "Pervenche" },
+  { color: "#C5E8D4", label: "Menthe" },
+  { color: "#E8E0C5", label: "Ivoire" },
+];
+
+function applySecondaryColor(color: string) {
+  if (typeof document === "undefined") return;
+  document.documentElement.style.setProperty("--secondary-color", color);
+  // Variante transparente pour hover/fond léger
+  const r = parseInt(color.slice(1, 3), 16);
+  const g = parseInt(color.slice(3, 5), 16);
+  const b = parseInt(color.slice(5, 7), 16);
+  document.documentElement.style.setProperty("--secondary-bg", `rgba(${r},${g},${b},0.12)`);
+  document.documentElement.style.setProperty("--secondary-border", `rgba(${r},${g},${b},0.35)`);
+}
+
 export default function PersonnalisationClient() {
   const { appMode, setAppMode, accentColor, setAccentColor, themeId, setThemeId } = useStore();
+  const [secondaryColor, setSecondaryColorState] = useState(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("clc-secondary-color") ?? "#8B949E";
+    return "#8B949E";
+  });
+
+  const setSecondaryColor = (c: string) => {
+    setSecondaryColorState(c);
+    localStorage.setItem("clc-secondary-color", c);
+    applySecondaryColor(c);
+  };
+
+  // Appliquer au montage
+  useEffect(() => { applySecondaryColor(secondaryColor); }, []);
 
   const applyRadius = (r: string) => {
     if (typeof document === "undefined") return;
@@ -152,6 +190,33 @@ export default function PersonnalisationClient() {
               <span className="text-sm font-semibold text-[var(--text-primary)]">Production</span>
               <span className="text-[11px] text-[var(--text-muted)] text-center">Vos vraies données métier</span>
             </button>
+          </div>
+        </Section>
+
+        {/* ── Couleur secondaire ───────────────────────────── */}
+        <Section title="Couleur secondaire" description="Appliquée aux textes, onglets survolés et catégories de plats.">
+          <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
+            {SECONDARY_PRESETS.map(({ color, label }) => (
+              <button key={color} onClick={() => setSecondaryColor(color)} title={label}
+                className="relative aspect-square rounded-xl transition-all hover:scale-105 flex items-center justify-center"
+                style={{ background: color, boxShadow: secondaryColor === color ? `0 0 0 2px var(--surface-1), 0 0 0 4px ${color}` : "none" }}>
+                {secondaryColor === color && <Check size={12} weight="bold" className="text-white drop-shadow" />}
+              </button>
+            ))}
+            <label className="relative aspect-square rounded-xl cursor-pointer overflow-hidden hover:scale-105 transition-all flex items-center justify-center border-2 border-dashed border-[var(--border)]" title="Personnalisée">
+              <input type="color" value={secondaryColor} onChange={(e) => setSecondaryColor(e.target.value)}
+                className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
+              <Palette size={14} className="text-[var(--text-muted)]" />
+            </label>
+          </div>
+          <div className="flex items-center gap-3 mt-1">
+            <div className="w-7 h-7 rounded-xl shrink-0" style={{ background: secondaryColor }} />
+            <div>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">
+                {SECONDARY_PRESETS.find(p => p.color === secondaryColor)?.label ?? "Personnalisée"}
+              </p>
+              <p className="text-xs text-[var(--text-muted)] font-mono">{secondaryColor.toUpperCase()}</p>
+            </div>
           </div>
         </Section>
 

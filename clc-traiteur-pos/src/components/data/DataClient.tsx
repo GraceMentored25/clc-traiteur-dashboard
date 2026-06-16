@@ -131,6 +131,7 @@ const BackupSchema = z.object({
       inStock: z.boolean().optional().default(false),
     })).max(500),
   })).max(5000).default([]),
+  _parametres: z.record(z.string(), z.unknown()).optional().default({}),
   demandesLogistique: z.array(z.object({
     id: safeString,
     devisId: safeString,
@@ -168,6 +169,12 @@ export default function DataClient() {
       return;
     }
     const s = useStore.getState();
+    // Inclure les paramètres localStorage (logistique, facturation, types d'événements, organisation)
+    const lsKeys = ["clc-logistique-config", "clc-facturation-config", "clc-event-types",
+                    "clc-org-checklists", "clc-org-notes", "clc-org-rappels"];
+    const lsData: Record<string, unknown> = {};
+    lsKeys.forEach(k => { try { const v = localStorage.getItem(k); if (v) lsData[k] = JSON.parse(v); } catch {} });
+
     const backup = {
       _version: EXPORT_VERSION,
       _exportedAt: new Date().toISOString(),
@@ -177,6 +184,8 @@ export default function DataClient() {
       devisList: s.devisList,
       appMode: s.appMode,
       theme: s.theme,
+      themeId: s.themeId,
+      accentColor: s.accentColor,
       customPrices: s.customPrices,
       customDishes: s.customDishes,
       customCategories: s.customCategories,
@@ -186,6 +195,7 @@ export default function DataClient() {
       customRecipes: s.customRecipes,
       demandesCourses: s.demandesCourses,
       demandesLogistique: s.demandesLogistique,
+      _parametres: lsData,
     };
 
     const json = JSON.stringify(backup, null, 2);
@@ -302,6 +312,13 @@ export default function DataClient() {
           demandesCourses: mergeById(current.demandesCourses, data.demandesCourses ?? []),
           demandesLogistique: mergeById(current.demandesLogistique, data.demandesLogistique ?? []),
         });
+
+        // Restaurer les paramètres localStorage du backup
+        if (data._parametres && typeof data._parametres === "object") {
+          Object.entries(data._parametres).forEach(([k, v]) => {
+            try { localStorage.setItem(k, JSON.stringify(v)); } catch {}
+          });
+        }
 
         const nbDevis = importedPro.length + importedLab.length;
         setStatus("success");

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Package, Wrench, Plus, Minus, X, Check } from "@phosphor-icons/react";
+import { useState, useRef } from "react";
+import { Package, Wrench, Plus, Minus, X, Check, UploadSimple } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
 
 type Rubrique = "ingredients" | "materiel";
@@ -100,6 +100,42 @@ export default function TabStocks() {
   const filteredIng = ingredients.filter((i) => i.name.toLowerCase().includes(search.toLowerCase()));
   const filteredMat = materiel.filter((m) => m.name.toLowerCase().includes(search.toLowerCase()));
 
+  // Import Excel/CSV
+  const importRef = useRef<HTMLInputElement>(null);
+  const [importMsg, setImportMsg] = useState("");
+
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (importRef.current) importRef.current.value = "";
+    try {
+      const XLSX = await import("xlsx");
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: "array" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
+      let added = 0;
+      rows.forEach((row) => {
+        const name = String(row["Nom"] ?? row["name"] ?? row["Article"] ?? "").trim();
+        if (!name) return;
+        const qty = parseFloat(String(row["Stock"] ?? row["Quantité"] ?? row["qty"] ?? "0")) || 0;
+        const price = parseFloat(String(row["Prix"] ?? row["price"] ?? row["PrixUnitaire"] ?? "0")) || 0;
+        const unit = String(row["Unité"] ?? row["unit"] ?? "unité").trim() || "unité";
+        if (rubrique === "ingredients") {
+          addIngredient({ id: `csv-${crypto.randomUUID()}`, name, unit, pricePerUnit: price, stockQty: qty });
+        } else {
+          addMateriel({ id: `csv-${crypto.randomUUID()}`, name, unit, stockQty: qty, pricePerUnit: price });
+        }
+        added++;
+      });
+      setImportMsg(`${added} élément${added > 1 ? "s" : ""} importé${added > 1 ? "s" : ""}`);
+      setTimeout(() => setImportMsg(""), 4000);
+    } catch {
+      setImportMsg("Erreur de lecture du fichier.");
+      setTimeout(() => setImportMsg(""), 4000);
+    }
+  };
+
   return (
     <div>
       {/* Sous-onglets */}
@@ -124,7 +160,14 @@ export default function TabStocks() {
           className="flex items-center gap-1.5 h-9 px-3 rounded-xl bg-[var(--amber)]/10 border border-[var(--amber)]/30 text-[var(--amber)] text-xs font-semibold hover:bg-[var(--amber)]/20 transition-all shrink-0">
           <Plus size={13} weight="bold" />Ajouter
         </button>
+        <input ref={importRef} type="file" accept=".xlsx,.xls,.csv,.ods" className="hidden" onChange={handleImportExcel} />
+        <button onClick={() => importRef.current?.click()}
+          title="Importer depuis Excel / CSV"
+          className="flex items-center gap-1.5 h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-secondary)] text-xs font-semibold hover:text-[var(--amber)] hover:border-[var(--amber)]/40 transition-all shrink-0">
+          <UploadSimple size={13} weight="bold" />Excel
+        </button>
       </div>
+      {importMsg && <p className="text-xs text-[var(--success)] mb-3 font-medium">{importMsg}</p>}
 
       {/* Formulaire ajout ingrédient */}
       {addIngOpen && (

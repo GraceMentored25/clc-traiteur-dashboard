@@ -59,10 +59,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Applique le thème complet (surfaces + textes + colorScheme) puis l'accent par-dessus
+  // Applique le thème complet puis l'accent et la couleur secondaire
   useEffect(() => {
     applyTheme(themeId ?? "nuit", accentColor ?? "#E8960C");
   }, [themeId, accentColor]);
+
+  useEffect(() => {
+    const saved = typeof window !== "undefined" ? localStorage.getItem("clc-secondary-color") : null;
+    const c = saved ?? "#8B949E";
+    const r = parseInt(c.slice(1, 3), 16);
+    const g = parseInt(c.slice(3, 5), 16);
+    const b = parseInt(c.slice(5, 7), 16);
+    document.documentElement.style.setProperty("--secondary-color", c);
+    document.documentElement.style.setProperty("--secondary-bg", `rgba(${r},${g},${b},0.12)`);
+    document.documentElement.style.setProperty("--secondary-border", `rgba(${r},${g},${b},0.35)`);
+  }, []);
 
   // ── 1. Charger depuis Supabase au login ────────────────────────────────
   useEffect(() => {
