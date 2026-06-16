@@ -18,12 +18,14 @@ import DevisModal from "./DevisModal";
 import { Select } from "@/components/ui/SelectV2";
 
 type ViewMode = "grid" | "list";
-type SortMode = "default" | "alpha-asc" | "alpha-desc";
+type SortMode = "default" | "alpha-asc" | "alpha-desc" | "most-ordered" | "least-ordered";
 
 const SORT_OPTIONS: { value: SortMode; label: string }[] = [
-  { value: "default", label: "Sans tri" },
-  { value: "alpha-asc", label: "A → Z" },
-  { value: "alpha-desc", label: "Z → A" },
+  { value: "default",       label: "Sans tri" },
+  { value: "alpha-asc",     label: "A → Z" },
+  { value: "alpha-desc",    label: "Z → A" },
+  { value: "most-ordered",  label: "Plus commandés" },
+  { value: "least-ordered", label: "Moins commandés" },
 ];
 
 export default function DashboardClient() {
@@ -53,6 +55,7 @@ export default function DashboardClient() {
 
   const cartCount = useStore((s) => s.cart.length);
   const cartTotal = useStore((s) => s.cartTotal);
+  const devisList = useStore((s) => s.devisList);
   const customDishes = useStore((s) => s.customDishes);
   const customCategories = useStore((s) => s.customCategories);
   const ingredients = useStore((s) => s.ingredients);
@@ -63,6 +66,15 @@ export default function DashboardClient() {
   const allCategories = useMemo(() => [...CATEGORIES, ...customCategories], [customCategories]);
   const allDishes = useMemo(() => [...DISHES, ...customDishes], [customDishes]);
 
+  // Calcul des quantités commandées par plat (depuis tous les devis)
+  const orderCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    devisList.forEach((d) => d.items.forEach((item) => {
+      counts[item.dishName] = (counts[item.dishName] ?? 0) + item.quantity;
+    }));
+    return counts;
+  }, [devisList]);
+
   const filtered = useMemo(() => {
     let list = allDishes.filter((d) => {
       const matchCat = activeCategory === "Tous" || d.category === activeCategory;
@@ -71,8 +83,10 @@ export default function DashboardClient() {
     });
     if (sortMode === "alpha-asc") list = [...list].sort((a, b) => a.name.localeCompare(b.name, "fr"));
     if (sortMode === "alpha-desc") list = [...list].sort((a, b) => b.name.localeCompare(a.name, "fr"));
+    if (sortMode === "most-ordered") list = [...list].sort((a, b) => (orderCounts[b.name] ?? 0) - (orderCounts[a.name] ?? 0));
+    if (sortMode === "least-ordered") list = [...list].sort((a, b) => (orderCounts[a.name] ?? 0) - (orderCounts[b.name] ?? 0));
     return list;
-  }, [activeCategory, search, sortMode, allDishes]);
+  }, [activeCategory, search, sortMode, allDishes, orderCounts]);
 
   const handleAddCategory = () => {
     const name = newCatName.trim();

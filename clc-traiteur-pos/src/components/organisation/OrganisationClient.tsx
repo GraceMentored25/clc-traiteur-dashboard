@@ -13,6 +13,27 @@ interface Checklist { id: string; title: string; items: ChecklistItem[]; created
 interface NoteItem { id: string; title: string; content: string; color: string; createdAt: string; }
 interface Rappel { id: string; text: string; date: string; done: boolean; }
 
+// Helper pour formater la date + heure
+function formatCreatedAt(iso: string) {
+  return new Date(iso).toLocaleString("fr-FR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+// Hook localStorage générique
+function useLocalStorage<T>(key: string, initial: T): [T, (v: T | ((prev: T) => T)) => void] {
+  const [state, setState] = useState<T>(() => {
+    if (typeof window === "undefined") return initial;
+    try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : initial; } catch { return initial; }
+  });
+  const set = (v: T | ((prev: T) => T)) => {
+    setState(prev => {
+      const next = typeof v === "function" ? (v as (p: T) => T)(prev) : v;
+      try { localStorage.setItem(key, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+  return [state, set];
+}
+
 type Tab = "checklists" | "notes" | "rappels" | "tableaux";
 
 const NOTE_COLORS = ["#E8960C", "#3FB950", "#58A6FF", "#A855F7", "#EF4444", "#EC4899"];
@@ -25,7 +46,7 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
 
 // ── Checklist Tab ─────────────────────────────────────────────────────────────
 function TabChecklists() {
-  const [lists, setLists] = useState<Checklist[]>([]);
+  const [lists, setLists] = useLocalStorage<Checklist[]>("clc-org-checklists", []);
   const [newTitle, setNewTitle] = useState("");
   const [creating, setCreating] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -109,7 +130,10 @@ function TabChecklists() {
         ) : (
           <>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-[var(--text-primary)]">{active.title}</h3>
+              <div>
+                <h3 className="font-bold text-[var(--text-primary)]">{active.title}</h3>
+                <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{formatCreatedAt(active.createdAt)}</p>
+              </div>
               <button onClick={() => deleteList(active.id)} className="w-7 h-7 rounded-lg text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-500/10 flex items-center justify-center transition-colors"><Trash size={13} /></button>
             </div>
 
@@ -155,7 +179,7 @@ function TabChecklists() {
 
 // ── Notes Tab ─────────────────────────────────────────────────────────────────
 function TabNotes() {
-  const [notes, setNotes] = useState<NoteItem[]>([]);
+  const [notes, setNotes] = useLocalStorage<NoteItem[]>("clc-org-notes", []);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({ title: "", content: "", color: NOTE_COLORS[0] });
   const [editing, setEditing] = useState<string | null>(null);
@@ -254,6 +278,7 @@ function TabNotes() {
             ) : (
               <p className="text-xs text-[var(--text-secondary)] line-clamp-4 whitespace-pre-wrap">{note.content || <span className="italic opacity-50">Vide</span>}</p>
             )}
+            <p className="text-[10px] text-[var(--text-muted)] mt-1.5">{formatCreatedAt(note.createdAt)}</p>
           </m.div>
         ))}
       </div>
@@ -263,7 +288,7 @@ function TabNotes() {
 
 // ── Rappels Tab ───────────────────────────────────────────────────────────────
 function TabRappels() {
-  const [rappels, setRappels] = useState<Rappel[]>([]);
+  const [rappels, setRappels] = useLocalStorage<Rappel[]>("clc-org-rappels", []);
   const [form, setForm] = useState({ text: "", date: "" });
   const [creating, setCreating] = useState(false);
   const today = new Date().toISOString().split("T")[0];

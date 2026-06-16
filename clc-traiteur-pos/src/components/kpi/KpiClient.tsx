@@ -272,11 +272,38 @@ export default function KpiClient() {
     };
     const pts = (cur: number, prev: number) => { const d = cur - prev; if (d === 0) return null; return d > 0 ? `+${d} pts` : `${d} pts`; };
 
-    const deltaCA = pct(thisCA, prevCA);
-    const deltaDevis = thisPeriod.length - prevPeriod.length;
-    const deltaDevisStr = deltaDevis === 0 ? null : deltaDevis > 0 ? `+${deltaDevis}` : `${deltaDevis}`;
-    const deltaConv = pts(thisConv, prevConv);
-    const deltaAvg = pct(thisAvg, prevAvg);
+    // En mode Lab ou quand aucune donnée récente, calculer sur 1ère vs 2ème moitié des données
+    const noRecentData = thisPeriod.length === 0 && prevPeriod.length === 0;
+    let deltaCA: string | null, deltaDevisStr: string | null, deltaConv: string | null, deltaAvg: string | null;
+    let deltaDevisPositive = false;
+
+    if (!noRecentData) {
+      deltaCA = pct(thisCA, prevCA);
+      const deltaDevis = thisPeriod.length - prevPeriod.length;
+      deltaDevisStr = deltaDevis === 0 ? null : deltaDevis > 0 ? `+${deltaDevis}` : `${deltaDevis}`;
+      deltaDevisPositive = thisPeriod.length >= prevPeriod.length;
+      deltaConv = pts(thisConv, prevConv);
+      deltaAvg = pct(thisAvg, prevAvg);
+    } else {
+      // Fallback : comparer 1ère moitié vs 2ème moitié de tous les devis disponibles
+      const half = Math.floor(devisList.length / 2);
+      const firstHalf = devisList.slice(0, half);
+      const secondHalf = devisList.slice(half);
+      const fhConf = firstHalf.filter((d) => d.status === "Confirmé");
+      const shConf = secondHalf.filter((d) => d.status === "Confirmé");
+      const fhCA = fhConf.reduce((s, d) => s + d.totalTTC, 0);
+      const shCA = shConf.reduce((s, d) => s + d.totalTTC, 0);
+      deltaCA = pct(shCA, fhCA);
+      const dD = secondHalf.length - firstHalf.length;
+      deltaDevisStr = dD === 0 ? null : dD > 0 ? `+${dD}` : `${dD}`;
+      deltaDevisPositive = secondHalf.length >= firstHalf.length;
+      const fhConv = firstHalf.length ? Math.round((fhConf.length / firstHalf.length) * 100) : 0;
+      const shConv = secondHalf.length ? Math.round((shConf.length / secondHalf.length) * 100) : 0;
+      deltaConv = pts(shConv, fhConv);
+      const fhAvg = fhConf.length ? fhCA / fhConf.length : 0;
+      const shAvg = shConf.length ? shCA / shConf.length : 0;
+      deltaAvg = pct(shAvg, fhAvg);
+    }
 
     // Graphique dynamique selon période
     const allYears = Array.from(new Set(
@@ -327,7 +354,7 @@ export default function KpiClient() {
     });
 
     return {
-      metrics: { totalCA, totalDevis: devisList.length, confirmed: confirmed.length, convRate, avgDevis, pending: sent.length, deltaCA, deltaDevisStr, deltaConv, deltaAvg, deltaCAPositive: (deltaCA ?? "").startsWith("+"), deltaDevisPositive: deltaDevis >= 0, deltaConvPositive: (deltaConv ?? "").startsWith("+"), deltaAvgPositive: (deltaAvg ?? "").startsWith("+") },
+      metrics: { totalCA, totalDevis: devisList.length, confirmed: confirmed.length, convRate, avgDevis, pending: sent.length, deltaCA, deltaDevisStr, deltaConv, deltaAvg, deltaCAPositive: (deltaCA ?? "").startsWith("+"), deltaDevisPositive, deltaConvPositive: (deltaConv ?? "").startsWith("+"), deltaAvgPositive: (deltaAvg ?? "").startsWith("+") },
       monthlyData: monthly, categoryData, topDishes,
     };
   }, [devisList, dishCategory, periodConfig]);
