@@ -61,8 +61,8 @@ function applySecondaryColor(color: string) {
   const b = parseInt(color.slice(5, 7), 16);
 
   root.style.setProperty("--secondary-color", color);
-  root.style.setProperty("--secondary-bg", `rgba(${r},${g},${b},0.10)`);
-  root.style.setProperty("--secondary-border", `rgba(${r},${g},${b},0.30)`);
+  root.style.setProperty("--secondary-bg", `rgba(${r},${g},${b},0.08)`);
+  root.style.setProperty("--secondary-border", `rgba(${r},${g},${b},0.25)`);
 
   // Teinte les surfaces avec la couleur secondaire (mélange très léger)
   // Détecte si le thème est clair ou sombre

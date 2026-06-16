@@ -74,8 +74,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     const g = parseInt(c.slice(3, 5), 16);
     const b = parseInt(c.slice(5, 7), 16);
     root.style.setProperty("--secondary-color", c);
-    root.style.setProperty("--secondary-bg", `rgba(${r},${g},${b},0.10)`);
-    root.style.setProperty("--secondary-border", `rgba(${r},${g},${b},0.30)`);
+    root.style.setProperty("--secondary-bg", `rgba(${r},${g},${b},0.08)`);
+    root.style.setProperty("--secondary-border", `rgba(${r},${g},${b},0.25)`);
     const isDark = !root.classList.contains("light");
     const mix = isDark ? 0.07 : 0.06;
     const tint = [r, g, b];
