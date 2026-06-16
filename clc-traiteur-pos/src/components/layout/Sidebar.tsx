@@ -193,39 +193,24 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
           <SignOut size={17} />
           Déconnexion
         </button>
-        <Link href="/data" onClick={onClose}>
-          <div className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer",
-            pathname === "/data"
-              ? "text-[var(--amber)] bg-[var(--amber)]/8"
-              : "text-[var(--text-secondary)] border border-transparent hover:text-[var(--secondary-text-hover)] hover:bg-[var(--secondary-bg)] hover:border-[var(--secondary-border)]"
-          )}>
-            <Database size={17} weight={pathname === "/data" ? "fill" : "regular"} className="shrink-0" />
-            Données
-          </div>
-        </Link>
-        <Link href="/parametres" onClick={onClose}>
-          <div className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer",
-            pathname.startsWith("/parametres") || pathname === "/personnalisation"
-              ? "text-[var(--amber)] bg-[var(--amber)]/8"
-              : "text-[var(--text-secondary)] border border-transparent hover:text-[var(--secondary-text-hover)] hover:bg-[var(--secondary-bg)] hover:border-[var(--secondary-border)]"
-          )}>
-            <SlidersHorizontal size={17} weight={pathname.startsWith("/parametres") ? "fill" : "regular"} className="shrink-0" />
-            Paramètres
-          </div>
-        </Link>
-        <Link href="/confidentialite" onClick={onClose}>
-          <div className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer",
-            pathname === "/confidentialite"
-              ? "text-[var(--amber)] bg-[var(--amber)]/8"
-              : "text-[var(--text-secondary)] border border-transparent hover:text-[var(--secondary-text-hover)] hover:bg-[var(--secondary-bg)] hover:border-[var(--secondary-border)]"
-          )}>
-            <ShieldCheck size={17} weight={pathname === "/confidentialite" ? "fill" : "regular"} className="shrink-0" />
-            Confidentialité
-          </div>
-        </Link>
+        {[
+          { href: "/data", label: "Données", icon: Database, active: pathname === "/data" },
+          { href: "/parametres", label: "Paramètres", icon: SlidersHorizontal, active: pathname.startsWith("/parametres") || pathname === "/personnalisation" },
+          { href: "/confidentialite", label: "Confidentialité", icon: ShieldCheck, active: pathname === "/confidentialite" },
+        ].map(({ href, label, icon: Icon, active }) => (
+          <Link key={href} href={href} onClick={onClose}>
+            <div className={cn(
+              "relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer",
+              active
+                ? "text-[var(--amber)] bg-[var(--amber)]/8"
+                : "text-[var(--text-secondary)] hover:text-[var(--secondary-text-hover)] hover:bg-[var(--secondary-bg)]"
+            )}>
+              <Icon size={17} weight={active ? "fill" : "regular"} className="relative z-10 shrink-0" />
+              <span className="relative z-10">{label}</span>
+              {active && <div className="absolute right-2.5 w-1.5 h-1.5 rounded-full bg-[var(--amber)] z-10" />}
+            </div>
+          </Link>
+        ))}
       </div>
     </aside>
   );
