@@ -40,16 +40,24 @@ function Section({ title, description, children }: { title: string; description?
 }
 
 const SECONDARY_PRESETS = [
-  { color: "#8B949E", label: "Gris (défaut)" },
+  // Neutres
+  { color: "#8B949E", label: "Gris" },
   { color: "#E8D5B0", label: "Crème" },
-  { color: "#C8B99A", label: "Sable" },
-  { color: "#A8C5DA", label: "Glacier" },
-  { color: "#B8D4BE", label: "Sauge" },
-  { color: "#D4C5E2", label: "Lavande" },
-  { color: "#E8C5C5", label: "Rose poudré" },
-  { color: "#C5D4E8", label: "Pervenche" },
-  { color: "#C5E8D4", label: "Menthe" },
-  { color: "#E8E0C5", label: "Ivoire" },
+  // Vifs
+  { color: "#FF6B6B", label: "Corail vif" },
+  { color: "#FF8C42", label: "Orange brûlé" },
+  { color: "#FFD166", label: "Soleil" },
+  { color: "#06D6A0", label: "Émeraude" },
+  { color: "#4ECDC4", label: "Turquoise" },
+  { color: "#45B7D1", label: "Ciel" },
+  { color: "#7B68EE", label: "Mauve" },
+  { color: "#E040FB", label: "Fuchsia" },
+  { color: "#FF4081", label: "Rose vif" },
+  { color: "#69F0AE", label: "Menthe vive" },
+  { color: "#40C4FF", label: "Azur" },
+  { color: "#B388FF", label: "Lilas" },
+  { color: "#F06292", label: "Pivoine" },
+  { color: "#AED581", label: "Lime" },
 ];
 
 function applySecondaryColor(color: string) {
@@ -201,27 +209,9 @@ export default function PersonnalisationClient() {
           </div>
         </Section>
 
-        {/* ── Mode de données ──────────────────────────────── */}
-        <Section title="Mode de données">
-          <div className="grid grid-cols-2 gap-3">
-            <button onClick={() => setAppMode("lab")}
-              className={`flex flex-col items-center gap-2.5 p-4 rounded-xl border-2 transition-all ${appMode === "lab" ? "border-[var(--amber)] bg-[var(--amber)]/5" : "border-[var(--border)] hover:border-[var(--border-accent)]"}`}>
-              <Flask size={22} weight={appMode === "lab" ? "fill" : "regular"} style={{ color: appMode === "lab" ? accentColor : undefined }} />
-              <span className="text-sm font-semibold text-[var(--text-primary)]">Lab</span>
-              <span className="text-[11px] text-[var(--text-muted)] text-center">Données de démonstration</span>
-            </button>
-            <button onClick={() => setAppMode("pro")}
-              className={`flex flex-col items-center gap-2.5 p-4 rounded-xl border-2 transition-all ${appMode === "pro" ? "border-[var(--amber)] bg-[var(--amber)]/5" : "border-[var(--border)] hover:border-[var(--border-accent)]"}`}>
-              <Briefcase size={22} weight={appMode === "pro" ? "fill" : "regular"} style={{ color: appMode === "pro" ? accentColor : undefined }} />
-              <span className="text-sm font-semibold text-[var(--text-primary)]">Production</span>
-              <span className="text-[11px] text-[var(--text-muted)] text-center">Vos vraies données métier</span>
-            </button>
-          </div>
-        </Section>
-
         {/* ── Couleur secondaire ───────────────────────────── */}
-        <Section title="Couleur secondaire" description="Appliquée aux textes, onglets survolés et catégories de plats.">
-          <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
+        <Section title="Couleur secondaire" description="Teinte les blocs, onglets survolés et catégories.">
+          <div className="grid grid-cols-6 sm:grid-cols-9 gap-2">
             {SECONDARY_PRESETS.map(({ color, label }) => (
               <button key={color} onClick={() => setSecondaryColor(color)} title={label}
                 className="relative aspect-square rounded-xl transition-all hover:scale-105 flex items-center justify-center"
@@ -243,6 +233,24 @@ export default function PersonnalisationClient() {
               </p>
               <p className="text-xs text-[var(--text-muted)] font-mono">{secondaryColor.toUpperCase()}</p>
             </div>
+          </div>
+        </Section>
+
+        {/* ── Mode de données ──────────────────────────────── */}
+        <Section title="Mode de données">
+          <div className="grid grid-cols-2 gap-3">
+            <button onClick={() => setAppMode("lab")}
+              className={`flex flex-col items-center gap-2.5 p-4 rounded-xl border-2 transition-all ${appMode === "lab" ? "border-[var(--amber)] bg-[var(--amber)]/5" : "border-[var(--border)] hover:border-[var(--border-accent)]"}`}>
+              <Flask size={22} weight={appMode === "lab" ? "fill" : "regular"} style={{ color: appMode === "lab" ? accentColor : undefined }} />
+              <span className="text-sm font-semibold text-[var(--text-primary)]">Lab</span>
+              <span className="text-[11px] text-[var(--text-muted)] text-center">Données de démonstration</span>
+            </button>
+            <button onClick={() => setAppMode("pro")}
+              className={`flex flex-col items-center gap-2.5 p-4 rounded-xl border-2 transition-all ${appMode === "pro" ? "border-[var(--amber)] bg-[var(--amber)]/5" : "border-[var(--border)] hover:border-[var(--border-accent)]"}`}>
+              <Briefcase size={22} weight={appMode === "pro" ? "fill" : "regular"} style={{ color: appMode === "pro" ? accentColor : undefined }} />
+              <span className="text-sm font-semibold text-[var(--text-primary)]">Production</span>
+              <span className="text-[11px] text-[var(--text-muted)] text-center">Vos vraies données métier</span>
+            </button>
           </div>
         </Section>
 
