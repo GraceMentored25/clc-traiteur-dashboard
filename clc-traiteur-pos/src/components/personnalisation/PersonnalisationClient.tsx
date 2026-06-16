@@ -54,13 +54,37 @@ const SECONDARY_PRESETS = [
 
 function applySecondaryColor(color: string) {
   if (typeof document === "undefined") return;
-  document.documentElement.style.setProperty("--secondary-color", color);
-  // Variante transparente pour hover/fond léger
+  if (!/^#[0-9a-fA-F]{6}$/.test(color)) return;
+  const root = document.documentElement;
   const r = parseInt(color.slice(1, 3), 16);
   const g = parseInt(color.slice(3, 5), 16);
   const b = parseInt(color.slice(5, 7), 16);
-  document.documentElement.style.setProperty("--secondary-bg", `rgba(${r},${g},${b},0.12)`);
-  document.documentElement.style.setProperty("--secondary-border", `rgba(${r},${g},${b},0.35)`);
+
+  root.style.setProperty("--secondary-color", color);
+  root.style.setProperty("--secondary-bg", `rgba(${r},${g},${b},0.10)`);
+  root.style.setProperty("--secondary-border", `rgba(${r},${g},${b},0.30)`);
+
+  // Teinte les surfaces avec la couleur secondaire (mélange très léger)
+  // Détecte si le thème est clair ou sombre
+  const isDark = !root.classList.contains("light");
+  const mix = isDark ? 0.07 : 0.06; // opacité du mélange
+
+  const blend = (base: number[], tint: [number,number,number], opacity: number) =>
+    base.map((c, i) => Math.round(c * (1 - opacity) + tint[i] * opacity));
+
+  const tint: [number,number,number] = [r, g, b];
+
+  if (isDark) {
+    const s2 = blend([28, 33, 40], tint, mix);
+    const s3 = blend([37, 43, 52], tint, mix);
+    root.style.setProperty("--surface-2", `rgb(${s2.join(",")})`);
+    root.style.setProperty("--surface-3", `rgb(${s3.join(",")})`);
+  } else {
+    const s2 = blend([240, 242, 245], tint, mix);
+    const s3 = blend([228, 231, 236], tint, mix);
+    root.style.setProperty("--surface-2", `rgb(${s2.join(",")})`);
+    root.style.setProperty("--surface-3", `rgb(${s3.join(",")})`);
+  }
 }
 
 export default function PersonnalisationClient() {

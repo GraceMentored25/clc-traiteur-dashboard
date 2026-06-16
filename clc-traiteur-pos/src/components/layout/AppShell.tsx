@@ -64,16 +64,30 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     applyTheme(themeId ?? "nuit", accentColor ?? "#E8960C");
   }, [themeId, accentColor]);
 
+  // Applique la couleur secondaire (après le thème, pour recalculer les bonnes bases)
   useEffect(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem("clc-secondary-color") : null;
     const c = saved ?? "#8B949E";
+    if (!/^#[0-9a-fA-F]{6}$/.test(c)) return;
+    const root = document.documentElement;
     const r = parseInt(c.slice(1, 3), 16);
     const g = parseInt(c.slice(3, 5), 16);
     const b = parseInt(c.slice(5, 7), 16);
-    document.documentElement.style.setProperty("--secondary-color", c);
-    document.documentElement.style.setProperty("--secondary-bg", `rgba(${r},${g},${b},0.12)`);
-    document.documentElement.style.setProperty("--secondary-border", `rgba(${r},${g},${b},0.35)`);
-  }, []);
+    root.style.setProperty("--secondary-color", c);
+    root.style.setProperty("--secondary-bg", `rgba(${r},${g},${b},0.10)`);
+    root.style.setProperty("--secondary-border", `rgba(${r},${g},${b},0.30)`);
+    const isDark = !root.classList.contains("light");
+    const mix = isDark ? 0.07 : 0.06;
+    const tint = [r, g, b];
+    const blend = (base: number[]) => base.map((v, i) => Math.round(v * (1 - mix) + tint[i] * mix));
+    if (isDark) {
+      root.style.setProperty("--surface-2", `rgb(${blend([28,33,40]).join(",")})`);
+      root.style.setProperty("--surface-3", `rgb(${blend([37,43,52]).join(",")})`);
+    } else {
+      root.style.setProperty("--surface-2", `rgb(${blend([240,242,245]).join(",")})`);
+      root.style.setProperty("--surface-3", `rgb(${blend([228,231,236]).join(",")})`);
+    }
+  }, [themeId]); // recalcule quand le thème change
 
   // ── 1. Charger depuis Supabase au login ────────────────────────────────
   useEffect(() => {
