@@ -67,23 +67,24 @@ function applySecondaryColor(color: string) {
   // Teinte les surfaces avec la couleur secondaire (mélange très léger)
   // Détecte si le thème est clair ou sombre
   const isDark = !root.classList.contains("light");
-  const mix = isDark ? 0.07 : 0.06; // opacité du mélange
 
-  const blend = (base: number[], tint: [number,number,number], opacity: number) =>
-    base.map((c, i) => Math.round(c * (1 - opacity) + tint[i] * opacity));
-
-  const tint: [number,number,number] = [r, g, b];
+  const blend = (base: number[], tR: number, tG: number, tB: number, opacity: number) =>
+    [Math.round(base[0]*(1-opacity)+tR*opacity), Math.round(base[1]*(1-opacity)+tG*opacity), Math.round(base[2]*(1-opacity)+tB*opacity)];
 
   if (isDark) {
-    const s2 = blend([28, 33, 40], tint, mix);
-    const s3 = blend([37, 43, 52], tint, mix);
+    // Sombre : mélange léger (7%) — déjà bon contraste
+    const s2 = blend([28,33,40], r, g, b, 0.10);
+    const s3 = blend([37,43,52], r, g, b, 0.12);
     root.style.setProperty("--surface-2", `rgb(${s2.join(",")})`);
     root.style.setProperty("--surface-3", `rgb(${s3.join(",")})`);
   } else {
-    const s2 = blend([240, 242, 245], tint, mix);
-    const s3 = blend([228, 231, 236], tint, mix);
+    // Clair : mélange plus fort (18%) pour que la teinte soit visible
+    const s2 = blend([240,242,245], r, g, b, 0.18);
+    const s3 = blend([228,231,236], r, g, b, 0.22);
     root.style.setProperty("--surface-2", `rgb(${s2.join(",")})`);
     root.style.setProperty("--surface-3", `rgb(${s3.join(",")})`);
+    // Forcer le texte secondaire suffisamment foncé en mode clair
+    root.style.setProperty("--text-secondary", `rgba(${Math.round(r*0.4)},${Math.round(g*0.4)},${Math.round(b*0.4)},0.85)`);
   }
 }
 

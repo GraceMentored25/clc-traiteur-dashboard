@@ -79,13 +79,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     const isDark = !root.classList.contains("light");
     const mix = isDark ? 0.07 : 0.06;
     const tint = [r, g, b];
-    const blend = (base: number[]) => base.map((v, i) => Math.round(v * (1 - mix) + tint[i] * mix));
+    const blend = (base: number[], op: number) => base.map((v, i) => Math.round(v * (1 - op) + tint[i] * op));
     if (isDark) {
-      root.style.setProperty("--surface-2", `rgb(${blend([28,33,40]).join(",")})`);
-      root.style.setProperty("--surface-3", `rgb(${blend([37,43,52]).join(",")})`);
+      root.style.setProperty("--surface-2", `rgb(${blend([28,33,40], 0.10).join(",")})`);
+      root.style.setProperty("--surface-3", `rgb(${blend([37,43,52], 0.12).join(",")})`);
     } else {
-      root.style.setProperty("--surface-2", `rgb(${blend([240,242,245]).join(",")})`);
-      root.style.setProperty("--surface-3", `rgb(${blend([228,231,236]).join(",")})`);
+      root.style.setProperty("--surface-2", `rgb(${blend([240,242,245], 0.18).join(",")})`);
+      root.style.setProperty("--surface-3", `rgb(${blend([228,231,236], 0.22).join(",")})`);
+      root.style.setProperty("--text-secondary", `rgba(${Math.round(r*0.4)},${Math.round(g*0.4)},${Math.round(b*0.4)},0.85)`);
     }
   }, [themeId]); // recalcule quand le thème change
 
