@@ -72,13 +72,16 @@ function applySecondaryColor(color: string) {
     [Math.round(base[0]*(1-opacity)+tR*opacity), Math.round(base[1]*(1-opacity)+tG*opacity), Math.round(base[2]*(1-opacity)+tB*opacity)];
 
   if (isDark) {
-    const s2 = blend([28,33,40], r, g, b, 0.22);
-    const s3 = blend([37,43,52], r, g, b, 0.28);
+    // Sombre : surface-2 léger (catégories lisibles), surface-3 un peu plus marqué
+    const s2 = blend([28,33,40], r, g, b, 0.14);
+    const s3 = blend([37,43,52], r, g, b, 0.20);
     root.style.setProperty("--surface-2", `rgb(${s2.join(",")})`);
     root.style.setProperty("--surface-3", `rgb(${s3.join(",")})`);
   } else {
-    const s2 = blend([240,242,245], r, g, b, 0.32);
-    const s3 = blend([228,231,236], r, g, b, 0.38);
+    // Clair : surface-2 très léger pour que les catégories restent claires
+    // mais clairement teintées de la couleur secondaire
+    const s2 = blend([248,248,248], r, g, b, 0.20);
+    const s3 = blend([232,234,237], r, g, b, 0.28);
     root.style.setProperty("--surface-2", `rgb(${s2.join(",")})`);
     root.style.setProperty("--surface-3", `rgb(${s3.join(",")})`);
     root.style.setProperty("--text-secondary", `rgba(${Math.round(r*0.35)},${Math.round(g*0.35)},${Math.round(b*0.35)},0.9)`);
