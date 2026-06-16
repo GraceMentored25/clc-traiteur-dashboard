@@ -177,7 +177,7 @@ export default function DashboardClient() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -4, scale: 0.97 }}
                 transition={{ duration: 0.15 }}
-                className="absolute right-0 top-11 w-44 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl shadow-xl z-[100] overflow-hidden"
+                className="absolute right-0 top-11 w-44 border border-[var(--border)] rounded-xl shadow-xl z-[100] overflow-hidden" style={{ background: "var(--surface-1)" }}
               >
                 {SORT_OPTIONS.map((opt) => (
                   <button

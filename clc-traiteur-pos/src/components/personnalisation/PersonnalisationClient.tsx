@@ -92,9 +92,11 @@ function applySecondaryColor(color: string) {
     root.style.setProperty("--text-secondary", `rgba(${Math.round(r*0.35)},${Math.round(g*0.35)},${Math.round(b*0.35)},0.9)`);
   }
 
-  // Texte hover nav : version très foncée de la couleur secondaire
-  const dark = [Math.round(r*0.25), Math.round(g*0.25), Math.round(b*0.25)];
-  root.style.setProperty("--secondary-text-hover", `rgb(${dark.join(",")})`);
+  // Hover texte : foncé en mode clair, couleur pure en mode sombre
+  const darkHover = isDark
+    ? `rgb(${r},${g},${b})`
+    : `rgb(${Math.round(r*0.3)},${Math.round(g*0.3)},${Math.round(b*0.3)})`;
+  root.style.setProperty("--secondary-text-hover", darkHover);
 }
 
 export default function PersonnalisationClient() {
@@ -211,15 +213,15 @@ export default function PersonnalisationClient() {
 
         {/* ── Couleur secondaire ───────────────────────────── */}
         <Section title="Couleur secondaire" description="Teinte les blocs, onglets survolés et catégories.">
-          <div className="grid grid-cols-6 sm:grid-cols-9 gap-2">
+          <div className="grid grid-cols-6 sm:grid-cols-12 gap-2">
             {SECONDARY_PRESETS.map(({ color, label }) => (
               <button key={color} onClick={() => setSecondaryColor(color)} title={label}
-                className="relative aspect-square rounded-xl transition-all hover:scale-105 flex items-center justify-center"
+                className="relative aspect-square rounded-md transition-all hover:scale-105 flex items-center justify-center"
                 style={{ background: color, boxShadow: secondaryColor === color ? `0 0 0 2px var(--surface-1), 0 0 0 4px ${color}` : "none" }}>
-                {secondaryColor === color && <Check size={12} weight="bold" className="text-white drop-shadow" />}
+                {secondaryColor === color && <Check size={11} weight="bold" className="text-white drop-shadow" />}
               </button>
             ))}
-            <label className="relative aspect-square rounded-xl cursor-pointer overflow-hidden hover:scale-105 transition-all flex items-center justify-center border-2 border-dashed border-[var(--border)]" title="Personnalisée">
+            <label className="relative aspect-square rounded-md cursor-pointer overflow-hidden hover:scale-105 transition-all flex items-center justify-center border-2 border-dashed border-[var(--border)]" title="Personnalisée">
               <input type="color" value={secondaryColor} onChange={(e) => setSecondaryColor(e.target.value)}
                 className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
               <Palette size={14} className="text-[var(--text-muted)]" />

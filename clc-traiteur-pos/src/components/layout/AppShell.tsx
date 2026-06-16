@@ -86,8 +86,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       root.style.setProperty("--surface-3", `rgba(${r},${g},${b},0.22)`);
       root.style.setProperty("--text-secondary", `rgba(${Math.round(r*0.35)},${Math.round(g*0.35)},${Math.round(b*0.35)},0.9)`);
     }
-    const dark = [Math.round(r*0.25), Math.round(g*0.25), Math.round(b*0.25)];
-    root.style.setProperty("--secondary-text-hover", `rgb(${dark.join(",")})`);
+    // Hover texte : version très foncée en mode clair, couleur pure en mode sombre
+    const darkHover = isDark
+      ? `rgb(${r},${g},${b})`
+      : `rgb(${Math.round(r*0.3)},${Math.round(g*0.3)},${Math.round(b*0.3)})`;
+    root.style.setProperty("--secondary-text-hover", darkHover);
   }, [themeId]); // recalcule quand le thème change
 
   // ── 1. Charger depuis Supabase au login ────────────────────────────────
