@@ -198,7 +198,7 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
             "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer",
             pathname === "/data"
               ? "text-[var(--amber)] bg-[var(--amber)]/8"
-              : "text-[var(--text-secondary)] hover:text-[var(--amber)] hover:bg-[var(--amber)]/8"
+              : "text-[var(--text-secondary)] border border-transparent hover:text-[var(--secondary-text-hover)] hover:bg-[var(--secondary-bg)] hover:border-[var(--secondary-border)]"
           )}>
             <Database size={17} weight={pathname === "/data" ? "fill" : "regular"} className="shrink-0" />
             Données
@@ -209,7 +209,7 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
             "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer",
             pathname.startsWith("/parametres") || pathname === "/personnalisation"
               ? "text-[var(--amber)] bg-[var(--amber)]/8"
-              : "text-[var(--text-secondary)] hover:text-[var(--amber)] hover:bg-[var(--surface-2)]"
+              : "text-[var(--text-secondary)] border border-transparent hover:text-[var(--secondary-text-hover)] hover:bg-[var(--secondary-bg)] hover:border-[var(--secondary-border)]"
           )}>
             <SlidersHorizontal size={17} weight={pathname.startsWith("/parametres") ? "fill" : "regular"} className="shrink-0" />
             Paramètres
@@ -220,7 +220,7 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
             "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer",
             pathname === "/confidentialite"
               ? "text-[var(--amber)] bg-[var(--amber)]/8"
-              : "text-[var(--text-secondary)] hover:text-[var(--amber)] hover:bg-[var(--amber)]/8"
+              : "text-[var(--text-secondary)] border border-transparent hover:text-[var(--secondary-text-hover)] hover:bg-[var(--secondary-bg)] hover:border-[var(--secondary-border)]"
           )}>
             <ShieldCheck size={17} weight={pathname === "/confidentialite" ? "fill" : "regular"} className="shrink-0" />
             Confidentialité
