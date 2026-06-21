@@ -206,7 +206,8 @@ function DonutChartSVG({ data }: { data: { name: string; value: number; color: s
     <svg width={240} height={180} style={{ display: "block", margin: "0 auto" }}>
       {arcs.map((arc) => (
         <path key={arc.name} d={arc.path} fill={arc.color}
-          strokeWidth={hovered === arc.i ? 2 : 0} stroke="#0D1117"
+          strokeWidth={hovered === arc.i ? 3 : 0}
+          stroke={hovered === arc.i ? "var(--secondary-color)" : "none"}
           opacity={hovered === null || hovered === arc.i ? 1 : 0.6}
           style={{ cursor: "pointer", transition: "opacity 0.15s" }}
           onMouseEnter={() => setHovered(arc.i)} onMouseLeave={() => setHovered(null)} />
@@ -243,7 +244,21 @@ export default function KpiClient() {
     const curY = now.getFullYear();
     const curM = now.getMonth();
 
-    const nMonths = periodConfig.months ?? 60;
+    // "Cette année" = depuis janvier de l'année courante
+    // "2 dernières années" = depuis janvier N-1, etc.
+    let nMonths: number;
+    if (period === "1y") {
+      // Jan de cette année → maintenant
+      nMonths = curM + 1;
+    } else if (period === "2y") {
+      // Jan de l'année précédente → maintenant
+      nMonths = curM + 1 + 12;
+    } else if (period === "3y") {
+      // Jan de il y a 2 ans → maintenant
+      nMonths = curM + 1 + 24;
+    } else {
+      nMonths = periodConfig.months ?? 60;
+    }
 
     const confirmed = devisList.filter((d) => d.status === "Confirmé");
     const sent = devisList.filter((d) => d.status === "Envoyé");
@@ -307,13 +322,18 @@ export default function KpiClient() {
 
     // Graphique dynamique selon période
     const allYears = Array.from(new Set(
-      Array.from({ length: nMonths }, (_, i) => new Date(curY, curM - (nMonths - 1) + i, 1).getFullYear())
+      Array.from({ length: nMonths }, (_, i) => new Date(curY, curM + startOffset + i, 1).getFullYear())
     )).sort();
     const yearColorMap: Record<number, string> = {};
     allYears.forEach((y, idx) => { yearColorMap[y] = YEAR_COLORS[idx % YEAR_COLORS.length]; });
 
+    // Calcul du mois de départ : pour 1y/2y/3y, on commence en janvier
+    const startOffset = ["1y","2y","3y"].includes(period)
+      ? -(nMonths - 1)   // = -curM pour "1y" → commence en jan curY
+      : -(nMonths - 1);
+
     const slots = Array.from({ length: nMonths }, (_, i) => {
-      const d = new Date(curY, curM - (nMonths - 1) + i, 1);
+      const d = new Date(curY, curM + startOffset + i, 1);
       const y = d.getFullYear();
       const m = d.getMonth();
       // Affiche l'année uniquement au 1er mois de chaque année (ou 1er point)
@@ -357,7 +377,7 @@ export default function KpiClient() {
       metrics: { totalCA, totalDevis: devisList.length, confirmed: confirmed.length, convRate, avgDevis, pending: sent.length, deltaCA, deltaDevisStr, deltaConv, deltaAvg, deltaCAPositive: (deltaCA ?? "").startsWith("+"), deltaDevisPositive, deltaConvPositive: (deltaConv ?? "").startsWith("+"), deltaAvgPositive: (deltaAvg ?? "").startsWith("+") },
       monthlyData: monthly, categoryData, topDishes,
     };
-  }, [devisList, dishCategory, periodConfig]);
+  }, [devisList, dishCategory, periodConfig, period]);
 
   return (
     <div className="px-4 lg:px-8 py-6 lg:py-8 min-h-[100dvh] space-y-6 lg:space-y-8">
