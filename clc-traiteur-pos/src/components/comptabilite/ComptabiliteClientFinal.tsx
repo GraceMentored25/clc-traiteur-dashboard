@@ -8,6 +8,7 @@ import {
   TrendUp,
   CheckCircle,
   FilePdf,
+  Eye,
   Download,
   Calendar,
   X,
@@ -144,6 +145,14 @@ export default function ComptabiliteClientFinal() {
             <Plus size={14} weight="bold" />
             <span className="hidden sm:inline">Entrée de capital</span>
             <span className="sm:hidden">Capital</span>
+          </m.button>
+          <m.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => handleGenerate("summary", confirmed, metrics, confirmedCapital, sortiesRepas, sortiesLogistique, true)}
+            className="flex items-center gap-2 h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--amber)] hover:border-[var(--amber)]/40 text-xs font-semibold transition-colors"
+          >
+            <Eye size={14} weight="fill" />
+            <span className="hidden sm:inline">Visualiser</span>
           </m.button>
           <m.button
             whileTap={{ scale: 0.97 }}
@@ -673,7 +682,8 @@ async function handleGenerate(
   metrics: { totalHT: number; totalTVA: number; totalTTC: number; count: number; avgDevis: number; totalCapital?: number; totalEntrees?: number; totalSorties?: number; solde?: number },
   entreesCapital: EntreeCapital[] = [],
   sortiesRepas: import("@/lib/types").DemandeCoursesRepas[] = [],
-  sortiesLogistique: import("@/lib/types").DemandeLogistique[] = []
+  sortiesLogistique: import("@/lib/types").DemandeLogistique[] = [],
+  preview = false
 ) {
   const { jsPDF } = await import("jspdf");
   const autoTable = (await import("jspdf-autotable")).default;
@@ -993,7 +1003,12 @@ async function handleGenerate(
     addFooter(1, 1);
   }
 
-  doc.save(fileName);
+  if (preview) {
+    const url = doc.output("bloburl");
+    window.open(url as unknown as string, "_blank");
+  } else {
+    doc.save(fileName);
+  }
 }
 
  
