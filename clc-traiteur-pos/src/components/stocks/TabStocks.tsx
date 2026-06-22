@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Package, Wrench, Plus, Minus, X, Check, UploadSimple } from "@phosphor-icons/react";
+import { Package, Wrench, Plus, Minus, X, Check, DownloadSimple } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
 
 type Rubrique = "ingredients" | "materiel";
@@ -164,7 +164,7 @@ export default function TabStocks() {
         <button onClick={() => importRef.current?.click()}
           title="Importer depuis Excel / CSV"
           className="flex items-center gap-1.5 h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-secondary)] text-xs font-semibold hover:text-[var(--amber)] hover:border-[var(--amber)]/40 transition-all shrink-0">
-          <UploadSimple size={13} weight="bold" />Excel
+          <DownloadSimple size={13} weight="bold" />Excel
         </button>
       </div>
       {importMsg && <p className="text-xs text-[var(--success)] mb-3 font-medium">{importMsg}</p>}
