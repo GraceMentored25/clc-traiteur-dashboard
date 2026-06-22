@@ -392,7 +392,7 @@ interface CustomTable {
 }
 
 function TabTableaux() {
-  const [tables, setTables] = useState<CustomTable[]>([]);
+  const [tables, setTables] = useLocalStorage<CustomTable[]>("clc-org-tableaux", []);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [newTitle, setNewTitle] = useState("");
@@ -614,14 +614,11 @@ export default function OrganisationClient() {
         ))}
       </div>
 
-      <AnimatePresence mode="wait">
-        <m.div key={tab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-          {tab === "checklists" && <TabChecklists />}
-          {tab === "notes" && <TabNotes />}
-          {tab === "rappels" && <TabRappels />}
-          {tab === "tableaux" && <TabTableaux />}
-        </m.div>
-      </AnimatePresence>
+      {/* Tous les onglets restent montés — seule la visibilité change (pas de perte de state) */}
+      <div style={{ display: tab === "checklists" ? "block" : "none" }}><TabChecklists /></div>
+      <div style={{ display: tab === "notes" ? "block" : "none" }}><TabNotes /></div>
+      <div style={{ display: tab === "rappels" ? "block" : "none" }}><TabRappels /></div>
+      <div style={{ display: tab === "tableaux" ? "block" : "none" }}><TabTableaux /></div>
     </div>
   );
 }
