@@ -754,7 +754,7 @@ async function handleGenerate(
         5: { cellWidth: 24, halign: "right" },
         6: { cellWidth: 28, halign: "right", fontStyle: "bold" },
       },
-      styles: { fontSize: 9, cellPadding: 2.5 }, margin: { left: 14, right: 14 }, tableWidth: "auto",
+      styles: { fontSize: 9, cellPadding: 2.5 }, margin: { left: 14, right: 14 },
     });
     y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
 
@@ -777,7 +777,7 @@ async function handleGenerate(
           2: { cellWidth: 30, halign: "center" },
           3: { cellWidth: 32, halign: "right", fontStyle: "bold" },
         },
-        styles: { fontSize: 9, cellPadding: 2.5 }, margin: { left: 14, right: 14 }, tableWidth: "auto",
+        styles: { fontSize: 9, cellPadding: 2.5 }, margin: { left: 14, right: 14 },
       });
       y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
     }
@@ -805,7 +805,7 @@ async function handleGenerate(
           2: { cellWidth: 30, halign: "center" },
           3: { cellWidth: 32, halign: "right", fontStyle: "bold" },
         },
-        styles: { fontSize: 9, cellPadding: 2.5 }, margin: { left: 14, right: 14 }, tableWidth: "auto",
+        styles: { fontSize: 9, cellPadding: 2.5 }, margin: { left: 14, right: 14 },
       });
       y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
     }
@@ -831,7 +831,7 @@ async function handleGenerate(
         0: { cellWidth: "auto", halign: "left" },
         1: { cellWidth: 50, halign: "right", fontStyle: "bold" },
       },
-      styles: { fontSize: 10, cellPadding: 3.5 }, margin: { left: 14, right: 14 }, tableWidth: "auto",
+      styles: { fontSize: 10, cellPadding: 3.5 }, margin: { left: 14, right: 14 },
     });
 
     addFooter(1, doc.getNumberOfPages());
@@ -866,11 +866,18 @@ async function handleGenerate(
       footStyles: { fillColor: AMBER, textColor: [255, 255, 255], fontStyle: "bold" },
       alternateRowStyles: { fillColor: [246, 248, 250] },
       columnStyles: {
-        7: { halign: "right" },
-        8: { halign: "right" },
-        9: { halign: "right", fontStyle: "bold" },
+        0: { cellWidth: 10, halign: "center" },
+        1: { cellWidth: 18, halign: "left" },
+        2: { cellWidth: "auto", halign: "left" },
+        3: { cellWidth: 26, halign: "left" },
+        4: { cellWidth: 22, halign: "left" },
+        5: { cellWidth: 22, halign: "center" },
+        6: { cellWidth: 12, halign: "center" },
+        7: { cellWidth: 22, halign: "right" },
+        8: { cellWidth: 20, halign: "right" },
+        9: { cellWidth: 24, halign: "right", fontStyle: "bold" },
       },
-      styles: { fontSize: 8, cellPadding: 2 },
+      styles: { fontSize: 7.5, cellPadding: 2 },
       margin: { left: 14, right: 14 },
       didDrawPage: (data) => {
         addFooter(data.pageNumber, doc.getNumberOfPages());
@@ -904,7 +911,12 @@ async function handleGenerate(
         headStyles: { fillColor: DARK, textColor: [255, 255, 255], fontStyle: "bold" },
         footStyles: { fillColor: AMBER, textColor: [255, 255, 255], fontStyle: "bold" },
         alternateRowStyles: { fillColor: [246, 248, 250] },
-        columnStyles: { 1: { halign: "center" }, 2: { halign: "right" }, 3: { halign: "right", fontStyle: "bold" } },
+        columnStyles: {
+          0: { cellWidth: "auto", halign: "left" },
+          1: { cellWidth: 20, halign: "center" },
+          2: { cellWidth: 28, halign: "right" },
+          3: { cellWidth: 34, halign: "right", fontStyle: "bold" },
+        },
         styles: { fontSize: 9, cellPadding: 2.5 },
         margin: { left: 14, right: 14 },
       });
@@ -957,7 +969,13 @@ async function handleGenerate(
       headStyles: { fillColor: DARK, textColor: [255, 255, 255], fontStyle: "bold" },
       footStyles: { fillColor: AMBER, textColor: [255, 255, 255], fontStyle: "bold" },
       alternateRowStyles: { fillColor: [246, 248, 250] },
-      columnStyles: { 3: { halign: "right" }, 4: { halign: "right", fontStyle: "bold" } },
+      columnStyles: {
+        0: { cellWidth: 20, halign: "left" },
+        1: { cellWidth: "auto", halign: "left" },
+        2: { cellWidth: 30, halign: "center" },
+        3: { cellWidth: 32, halign: "right" },
+        4: { cellWidth: 32, halign: "right", fontStyle: "bold" },
+      },
       styles: { fontSize: 9, cellPadding: 2.5 },
       margin: { left: 14, right: 14 },
     });

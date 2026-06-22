@@ -146,9 +146,11 @@ export async function generateDevisPDF(devis: Devis) {
   doc.setTextColor(...DARK);
   doc.text("Détail des prestations", L, tableY - 4);
 
-  // Largeurs fixes pour les 3 colonnes (total = W - L - 14)
-  const colW = { qty: 28, sub: 38 };
-  const colPrestaW = W - L - 14 - colW.qty - colW.sub;
+  // Largeurs colonnes — L=14, R=196, total table = 182mm
+  const TW = R - L; // 182mm
+  const QTY_W = 22;
+  const SUB_W = 40;
+  const PRE_W = TW - QTY_W - SUB_W; // 120mm
 
   autoTable(doc, {
     startY: tableY,
@@ -160,28 +162,17 @@ export async function generateDevisPDF(devis: Devis) {
     ]),
     alternateRowStyles: { fillColor: LIGHT_BG },
     columnStyles: {
-      0: { halign: "left",  cellWidth: colPrestaW },
-      1: { halign: "center", cellWidth: colW.qty },
-      2: { halign: "right",  cellWidth: colW.sub, fontStyle: "bold" },
+      0: { halign: "left",   cellWidth: PRE_W },
+      1: { halign: "center", cellWidth: QTY_W },
+      2: { halign: "right",  cellWidth: SUB_W, fontStyle: "bold" },
     },
+    headStyles: { fillColor: DARK, textColor: [255,255,255], fontStyle: "bold", fontSize: 10 },
     styles: { fontSize: 10, cellPadding: { top: 3.5, bottom: 3.5, left: 4, right: 4 } },
-    margin: { left: L, right: 14 },
-    tableWidth: W - L - 14,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    didParseCell: (data: any) => {
-      if (data.section === "head") {
-        data.cell.styles.fillColor = [...DARK];
-        data.cell.styles.textColor = [255, 255, 255];
-        data.cell.styles.fontStyle = "bold";
-        data.cell.styles.fontSize = 10;
-        data.cell.styles.halign = data.column.index === 0 ? "left" : data.column.index === 1 ? "center" : "right";
-      }
-    },
+    margin: { left: L, right: L },
   });
 
   const afterTable = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
-  // Totaux alignés sur le bord droit du tableau
-  const totalsLeft = W - 14 - 72; // boîte de 72mm depuis la marge droite
+  const totalsLeft = R - 78; // boîte totaux : 78mm depuis la marge droite
 
   // ── TOTAUX ───────────────────────────────────────────────────────────────
   const tY = afterTable + 4;
