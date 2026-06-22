@@ -746,16 +746,16 @@ async function handleGenerate(
       footStyles: { fillColor: AMBER, textColor: [255, 255, 255], fontStyle: "bold" },
       alternateRowStyles: { fillColor: [246, 248, 250] },
       columnStyles: {
-        0: { cellWidth: 18, halign: "left" },
-        1: { cellWidth: "auto", halign: "left" },
-        2: { cellWidth: 28, halign: "left" },
-        3: { cellWidth: 26, halign: "center" },
-        4: { cellWidth: 26, halign: "right" },
-        5: { cellWidth: 24, halign: "right" },
-        6: { cellWidth: 28, halign: "right", fontStyle: "bold" },
+        0: { cellWidth: 16, halign: "left" },
+        1: { cellWidth: 46, halign: "left" },
+        2: { cellWidth: 26, halign: "left" },
+        3: { cellWidth: 28, halign: "center" },
+        4: { cellWidth: 24, halign: "right" },
+        5: { cellWidth: 22, halign: "right" },
+        6: { cellWidth: 20, halign: "right", fontStyle: "bold" },
       },
       styles: { fontSize: 9, cellPadding: 2.5 }, margin: { left: 14, right: 14 },
-    });
+    }); // total: 16+46+26+28+24+22+20 = 182mm = A4-margins
     y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
 
     // ── Section 2 : Entrées de capital ────────────────────────────────
@@ -772,11 +772,11 @@ async function handleGenerate(
         footStyles: { fillColor: AMBER, textColor: [255, 255, 255], fontStyle: "bold" },
         alternateRowStyles: { fillColor: [246, 248, 250] },
         columnStyles: {
-          0: { cellWidth: "auto", halign: "left" },
+          0: { cellWidth: 84, halign: "left" },
           1: { cellWidth: 36, halign: "left" },
           2: { cellWidth: 30, halign: "center" },
           3: { cellWidth: 32, halign: "right", fontStyle: "bold" },
-        },
+        }, // 84+36+30+32=182mm
         styles: { fontSize: 9, cellPadding: 2.5 }, margin: { left: 14, right: 14 },
       });
       y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
@@ -801,10 +801,10 @@ async function handleGenerate(
         alternateRowStyles: { fillColor: [246, 248, 250] },
         columnStyles: {
           0: { cellWidth: 28, halign: "left" },
-          1: { cellWidth: "auto", halign: "left" },
+          1: { cellWidth: 92, halign: "left" },
           2: { cellWidth: 30, halign: "center" },
           3: { cellWidth: 32, halign: "right", fontStyle: "bold" },
-        },
+        }, // 28+92+30+32=182mm
         styles: { fontSize: 9, cellPadding: 2.5 }, margin: { left: 14, right: 14 },
       });
       y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
@@ -818,19 +818,19 @@ async function handleGenerate(
       startY: y + 4,
       head: [["Rubrique", "Montant"]],
       body: [
-        ["Encaissements devis TTC", `${metrics.totalTTC.toFixed(2)} EUR`],
-        ["Entrees de capital", `${(metrics.totalCapital ?? 0).toFixed(2)} EUR`],
-        ["Total encaisse", `${(metrics.totalEntrees ?? metrics.totalTTC).toFixed(2)} EUR`],
-        ["Sorties confirmees", `-${(metrics.totalSorties ?? 0).toFixed(2)} EUR`],
-        ["SOLDE NET", `${(metrics.solde ?? metrics.totalTTC).toFixed(2)} EUR`],
-        ["TVA collectee (20%)", `${metrics.totalTVA.toFixed(2)} EUR`],
+        ["Encaissements devis TTC", `${metrics.totalTTC.toFixed(2)} €`],
+        ["Entrées de capital", `${(metrics.totalCapital ?? 0).toFixed(2)} €`],
+        ["Total encaissé", `${(metrics.totalEntrees ?? metrics.totalTTC).toFixed(2)} €`],
+        ["Sorties confirmées", `-${(metrics.totalSorties ?? 0).toFixed(2)} €`],
+        ["SOLDE NET", `${(metrics.solde ?? metrics.totalTTC).toFixed(2)} €`],
+        ["TVA collectée (20%)", `${metrics.totalTVA.toFixed(2)} €`],
       ],
       headStyles: { fillColor: AMBER, textColor: [255, 255, 255], fontStyle: "bold" },
       alternateRowStyles: { fillColor: [246, 248, 250] },
       columnStyles: {
-        0: { cellWidth: "auto", halign: "left" },
+        0: { cellWidth: 132, halign: "left" },
         1: { cellWidth: 50, halign: "right", fontStyle: "bold" },
-      },
+      }, // 132+50=182mm
       styles: { fontSize: 10, cellPadding: 3.5 }, margin: { left: 14, right: 14 },
     });
 
