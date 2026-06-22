@@ -321,16 +321,13 @@ export default function KpiClient() {
     }
 
     // Graphique dynamique selon période
+    const startOffset = -(nMonths - 1); // toujours nMonths mois en arrière depuis aujourd'hui
+
     const allYears = Array.from(new Set(
       Array.from({ length: nMonths }, (_, i) => new Date(curY, curM + startOffset + i, 1).getFullYear())
     )).sort();
     const yearColorMap: Record<number, string> = {};
     allYears.forEach((y, idx) => { yearColorMap[y] = YEAR_COLORS[idx % YEAR_COLORS.length]; });
-
-    // Calcul du mois de départ : pour 1y/2y/3y, on commence en janvier
-    const startOffset = ["1y","2y","3y"].includes(period)
-      ? -(nMonths - 1)   // = -curM pour "1y" → commence en jan curY
-      : -(nMonths - 1);
 
     const slots = Array.from({ length: nMonths }, (_, i) => {
       const d = new Date(curY, curM + startOffset + i, 1);
