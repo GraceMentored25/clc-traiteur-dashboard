@@ -131,7 +131,8 @@ export const useStore = create<AppState>()(
             demandesLogistique: s.demandesLogistique.filter((d) => proDevisIds.has(d.devisId)),
           });
         } else {
-          const labDevis = s.devisListLab.length ? s.devisListLab : MOCK_DEVIS;
+          // Mode Lab : toujours utiliser MOCK_DEVIS frais (dates dynamiques) — jamais le cache
+          const labDevis = MOCK_DEVIS;
           const labDevisIds = new Set(labDevis.map((d) => d.id));
           set({
             appMode: "lab",
@@ -389,7 +390,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: "clc-traiteur-storage",
-      version: 5,
+      version: 6,
       // Chiffrement AES-GCM des données sensibles en localStorage (CWE-311/312)
       storage: createJSONStorage(() => ({
         getItem: async (key: string) => {
@@ -419,20 +420,23 @@ export const useStore = create<AppState>()(
           return { ...state, materiel: mat };
         }
         if (version < 5) {
-          // Migrer l'ancienne devisList vers les deux nouvelles listes
           const oldList: Devis[] = state.devisList ?? [];
           const mode = state.appMode ?? "pro";
           const proList = mode === "pro" ? oldList : [];
-          const labList = mode === "lab" ? oldList : MOCK_DEVIS;
-          return { ...state, devisListPro: proList, devisListLab: labList, devisList: mode === "pro" ? proList : labList };
+          return { ...state, devisListPro: proList, devisListLab: MOCK_DEVIS, devisList: mode === "pro" ? proList : MOCK_DEVIS };
+        }
+        if (version < 6) {
+          // v6 : devisListLab n'est plus persisté, toujours MOCK_DEVIS frais
+          const mode = state.appMode ?? "pro";
+          return { ...state, devisListLab: MOCK_DEVIS, devisList: mode === "lab" ? MOCK_DEVIS : (state.devisListPro ?? []) };
         }
         return state as AppState;
       },
       partialize: (state) => ({
         // user intentionnellement absent — la session vit dans un cookie HttpOnly serveur
+        // devisListLab intentionnellement absent — toujours MOCK_DEVIS frais au chargement
         devisListPro: state.devisListPro,
-        devisListLab: state.devisListLab,
-        devisList: state.devisList,
+        devisList: state.appMode === "pro" ? state.devisList : [],
         theme: state.theme,
         themeId: state.themeId,
         accentColor: state.accentColor,
