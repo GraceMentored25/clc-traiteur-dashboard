@@ -39,6 +39,7 @@ export default function ComptabiliteClientFinal() {
           demandesCourses, demandesLogistique } = useStore();
   const [period, setPeriod] = useState<Period>("all");
   const [docModal, setDocModal] = useState<"summary" | "invoices" | "tva" | null>(null);
+  const [docModalPreview, setDocModalPreview] = useState(false);
   const [capitalModal, setCapitalModal] = useState(false);
   const [editingCapitalId, setEditingCapitalId] = useState<string | null>(null);
   const [capitalForm, setCapitalForm] = useState({ libelle: "", montant: "", date: new Date().toISOString().split("T")[0], source: "vente" as EntreeCapital["source"] });
@@ -148,7 +149,7 @@ export default function ComptabiliteClientFinal() {
           </m.button>
           <m.button
             whileTap={{ scale: 0.97 }}
-            onClick={() => handleGenerate("summary", confirmed, metrics, confirmedCapital, sortiesRepas, sortiesLogistique, true)}
+            onClick={() => { setDocModalPreview(true); setDocModal("summary"); }}
             className="flex items-center gap-2 h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--amber)] hover:border-[var(--amber)]/40 text-xs font-semibold transition-colors"
           >
             <Eye size={14} weight="fill" />
@@ -556,7 +557,7 @@ export default function ComptabiliteClientFinal() {
           <>
             <m.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => setDocModal(null)}
+              onClick={() => { setDocModal(null); setDocModalPreview(false); }}
               className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
             />
             <m.div
@@ -570,17 +571,17 @@ export default function ComptabiliteClientFinal() {
               <div className="w-full max-w-md bg-[var(--surface-1)] rounded-2xl border border-[var(--border)] shadow-2xl overflow-hidden">
                 <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--border)]">
                   <div className="flex items-center gap-2.5">
-                    <FilePdf size={18} weight="fill" className="text-[var(--amber)]" />
-                    <h2 className="font-bold text-[var(--text-primary)]">Documentation légale</h2>
+                    {docModalPreview ? <Eye size={18} weight="fill" className="text-[var(--amber)]" /> : <FilePdf size={18} weight="fill" className="text-[var(--amber)]" />}
+                    <h2 className="font-bold text-[var(--text-primary)]">{docModalPreview ? "Visualiser un document" : "Documentation légale"}</h2>
                   </div>
-                  <button onClick={() => setDocModal(null)} className="w-8 h-8 rounded-xl bg-[var(--surface-2)] hover:bg-[var(--surface-3)] flex items-center justify-center text-[var(--text-secondary)] transition-colors">
+                  <button onClick={() => { setDocModal(null); setDocModalPreview(false); }} className="w-8 h-8 rounded-xl bg-[var(--surface-2)] hover:bg-[var(--surface-3)] flex items-center justify-center text-[var(--text-secondary)] transition-colors">
                     <X size={16} />
                   </button>
                 </div>
 
                 <div className="px-6 py-6 space-y-3">
                   <p className="text-xs text-[var(--text-muted)] mb-4">
-                    Sélectionnez le document à générer pour la période : <span className="text-[var(--amber)] font-semibold">{PERIOD_OPTIONS.find(p => p.value === period)?.label}</span>
+                    {docModalPreview ? "Sélectionnez le document à visualiser" : "Sélectionnez le document à générer"} pour la période : <span className="text-[var(--amber)] font-semibold">{PERIOD_OPTIONS.find(p => p.value === period)?.label}</span>
                   </p>
 
                   {[
@@ -608,7 +609,8 @@ export default function ComptabiliteClientFinal() {
                       icon={doc.icon}
                       title={doc.title}
                       desc={doc.desc}
-                      onGenerate={() => handleGenerate(doc.id, confirmed, metrics, confirmedCapital, sortiesRepas, sortiesLogistique)}
+                      preview={docModalPreview}
+                      onGenerate={() => handleGenerate(doc.id, confirmed, metrics, confirmedCapital, sortiesRepas, sortiesLogistique, docModalPreview)}
                     />
                   ))}
                 </div>
@@ -627,10 +629,11 @@ export default function ComptabiliteClientFinal() {
   );
 }
 
-function DocButton({ icon, title, desc, onGenerate }: {
+function DocButton({ icon, title, desc, preview, onGenerate }: {
   icon: React.ReactNode;
   title: string;
   desc: string;
+  preview?: boolean;
   onGenerate: () => void;
 }) {
   const [loading, setLoading] = useState(false);
@@ -667,7 +670,9 @@ function DocButton({ icon, title, desc, onGenerate }: {
         {loading ? (
           <span className="w-3 h-3 rounded-full border-2 border-current/30 border-t-current animate-spin" />
         ) : done ? (
-          "Généré"
+          preview ? "Ouvert" : "Généré"
+        ) : preview ? (
+          <><Eye size={12} weight="fill" /> Visualiser</>
         ) : (
           <><Download size={12} weight="bold" /> Générer</>
         )}
