@@ -741,12 +741,20 @@ async function handleGenerate(
       head: [["Réf.", "Client", "Type", "Date", "HT", "TVA", "TTC"]],
       body: confirmed.map(d => [d.id, d.clientName, d.eventType, formatDate(d.eventDate),
         `${d.totalHT.toFixed(2)} €`, `${(d.totalTTC - d.totalHT).toFixed(2)} €`, `${d.totalTTC.toFixed(2)} €`]),
-      foot: [["", "", "", "Total devis", `${metrics.totalHT.toFixed(2)} €`, `${metrics.totalTVA.toFixed(2)} €`, `${metrics.totalTTC.toFixed(2)} €`]],
+      foot: [["", "", "", "Total", `${metrics.totalHT.toFixed(2)} €`, `${metrics.totalTVA.toFixed(2)} €`, `${metrics.totalTTC.toFixed(2)} €`]],
       headStyles: { fillColor: DARK, textColor: [255, 255, 255], fontStyle: "bold", fontSize: 9 },
       footStyles: { fillColor: AMBER, textColor: [255, 255, 255], fontStyle: "bold" },
       alternateRowStyles: { fillColor: [246, 248, 250] },
-      columnStyles: { 4: { halign: "right" }, 5: { halign: "right" }, 6: { halign: "right", fontStyle: "bold" } },
-      styles: { fontSize: 9, cellPadding: 2.5 }, margin: { left: 14, right: 14 },
+      columnStyles: {
+        0: { cellWidth: 18, halign: "left" },
+        1: { cellWidth: "auto", halign: "left" },
+        2: { cellWidth: 28, halign: "left" },
+        3: { cellWidth: 26, halign: "center" },
+        4: { cellWidth: 26, halign: "right" },
+        5: { cellWidth: 24, halign: "right" },
+        6: { cellWidth: 28, halign: "right", fontStyle: "bold" },
+      },
+      styles: { fontSize: 9, cellPadding: 2.5 }, margin: { left: 14, right: 14 }, tableWidth: "auto",
     });
     y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
 
@@ -763,8 +771,13 @@ async function handleGenerate(
         headStyles: { fillColor: DARK, textColor: [255, 255, 255], fontStyle: "bold", fontSize: 9 },
         footStyles: { fillColor: AMBER, textColor: [255, 255, 255], fontStyle: "bold" },
         alternateRowStyles: { fillColor: [246, 248, 250] },
-        columnStyles: { 3: { halign: "right", fontStyle: "bold" } },
-        styles: { fontSize: 9, cellPadding: 2.5 }, margin: { left: 14, right: 14 },
+        columnStyles: {
+          0: { cellWidth: "auto", halign: "left" },
+          1: { cellWidth: 36, halign: "left" },
+          2: { cellWidth: 30, halign: "center" },
+          3: { cellWidth: 32, halign: "right", fontStyle: "bold" },
+        },
+        styles: { fontSize: 9, cellPadding: 2.5 }, margin: { left: 14, right: 14 }, tableWidth: "auto",
       });
       y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
     }
@@ -786,8 +799,13 @@ async function handleGenerate(
         headStyles: { fillColor: DARK, textColor: [255, 255, 255], fontStyle: "bold", fontSize: 9 },
         footStyles: { fillColor: AMBER, textColor: [255, 255, 255], fontStyle: "bold" },
         alternateRowStyles: { fillColor: [246, 248, 250] },
-        columnStyles: { 3: { halign: "right", fontStyle: "bold" } },
-        styles: { fontSize: 9, cellPadding: 2.5 }, margin: { left: 14, right: 14 },
+        columnStyles: {
+          0: { cellWidth: 28, halign: "left" },
+          1: { cellWidth: "auto", halign: "left" },
+          2: { cellWidth: 30, halign: "center" },
+          3: { cellWidth: 32, halign: "right", fontStyle: "bold" },
+        },
+        styles: { fontSize: 9, cellPadding: 2.5 }, margin: { left: 14, right: 14 }, tableWidth: "auto",
       });
       y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
     }
@@ -809,8 +827,11 @@ async function handleGenerate(
       ],
       headStyles: { fillColor: AMBER, textColor: [255, 255, 255], fontStyle: "bold" },
       alternateRowStyles: { fillColor: [246, 248, 250] },
-      columnStyles: { 1: { halign: "right", fontStyle: "bold" } },
-      styles: { fontSize: 10, cellPadding: 3.5 }, margin: { left: 14, right: 14 },
+      columnStyles: {
+        0: { cellWidth: "auto", halign: "left" },
+        1: { cellWidth: 50, halign: "right", fontStyle: "bold" },
+      },
+      styles: { fontSize: 10, cellPadding: 3.5 }, margin: { left: 14, right: 14 }, tableWidth: "auto",
     });
 
     addFooter(1, doc.getNumberOfPages());

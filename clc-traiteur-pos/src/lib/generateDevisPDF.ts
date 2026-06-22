@@ -146,9 +146,13 @@ export async function generateDevisPDF(devis: Devis) {
   doc.setTextColor(...DARK);
   doc.text("Détail des prestations", L, tableY - 4);
 
+  // Largeurs fixes pour les 3 colonnes (total = W - L - 14)
+  const colW = { qty: 28, sub: 38 };
+  const colPrestaW = W - L - 14 - colW.qty - colW.sub;
+
   autoTable(doc, {
     startY: tableY,
-    head: [["Prestation", "Quantité", "Sous-total"]],
+    head: [["Prestation", "Qté", "Sous-total HT"]],
     body: devis.items.map(item => [
       item.dishName,
       String(item.quantity),
@@ -156,12 +160,13 @@ export async function generateDevisPDF(devis: Devis) {
     ]),
     alternateRowStyles: { fillColor: LIGHT_BG },
     columnStyles: {
-      0: { halign: "left", cellWidth: "auto" },
-      1: { halign: "right", cellWidth: 26 },
-      2: { halign: "right", cellWidth: 34, fontStyle: "bold" },
+      0: { halign: "left",  cellWidth: colPrestaW },
+      1: { halign: "center", cellWidth: colW.qty },
+      2: { halign: "right",  cellWidth: colW.sub, fontStyle: "bold" },
     },
     styles: { fontSize: 10, cellPadding: { top: 3.5, bottom: 3.5, left: 4, right: 4 } },
     margin: { left: L, right: 14 },
+    tableWidth: W - L - 14,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     didParseCell: (data: any) => {
       if (data.section === "head") {
@@ -169,45 +174,51 @@ export async function generateDevisPDF(devis: Devis) {
         data.cell.styles.textColor = [255, 255, 255];
         data.cell.styles.fontStyle = "bold";
         data.cell.styles.fontSize = 10;
-        data.cell.styles.halign = data.column.index === 0 ? "left" : "right"; // 3 colonnes
+        data.cell.styles.halign = data.column.index === 0 ? "left" : data.column.index === 1 ? "center" : "right";
       }
     },
   });
 
   const afterTable = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
-  const lastTable = (doc as unknown as { lastAutoTable: { columns: Array<{ x: number; width: number }> } }).lastAutoTable;
-  const colSousTotal = lastTable.columns[3];
-  const totalsLeft = colSousTotal?.x ?? (W - 80);
+  // Totaux alignés sur le bord droit du tableau
+  const totalsLeft = W - 14 - 72; // boîte de 72mm depuis la marge droite
 
   // ── TOTAUX ───────────────────────────────────────────────────────────────
   const tY = afterTable + 4;
   const rowH = 8;
 
+  const totalsW = R - totalsLeft;
   doc.setFillColor(...LIGHT_BG);
-  doc.roundedRect(totalsLeft, tY, R - totalsLeft, rowH * 3 + 5, 2, 2, "F");
+  doc.roundedRect(totalsLeft, tY, totalsW, rowH * 3 + 6, 2, 2, "F");
+
+  const tLabelX = totalsLeft + 5;
+  const tValueX = R - 5;
 
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...GRAY);
-  doc.text("Sous-total HT :", totalsLeft + 4, tY + rowH - 1);
+  doc.text("Sous-total HT :", tLabelX, tY + rowH - 1);
+  doc.setFont("helvetica", "bold");
   doc.setTextColor(...DARK);
-  doc.text(`${devis.totalHT.toFixed(2)} €`, R - 4, tY + rowH - 1, { align: "right" });
+  doc.text(`${devis.totalHT.toFixed(2)} €`, tValueX, tY + rowH - 1, { align: "right" });
 
+  doc.setFont("helvetica", "normal");
   doc.setTextColor(...GRAY);
-  doc.text("TVA (20%) :", totalsLeft + 4, tY + rowH * 2 - 1);
+  doc.text("TVA (20%) :", tLabelX, tY + rowH * 2 - 1);
+  doc.setFont("helvetica", "bold");
   doc.setTextColor(...DARK);
-  doc.text(`${(devis.totalTTC - devis.totalHT).toFixed(2)} €`, R - 4, tY + rowH * 2 - 1, { align: "right" });
+  doc.text(`${(devis.totalTTC - devis.totalHT).toFixed(2)} €`, tValueX, tY + rowH * 2 - 1, { align: "right" });
 
   doc.setDrawColor(...AMBER);
-  doc.setLineWidth(0.4);
-  doc.line(totalsLeft + 4, tY + rowH * 2 + 2, R - 4, tY + rowH * 2 + 2);
+  doc.setLineWidth(0.5);
+  doc.line(tLabelX, tY + rowH * 2 + 2, tValueX, tY + rowH * 2 + 2);
 
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...DARK);
-  doc.text("TOTAL TTC :", totalsLeft + 4, tY + rowH * 3 + 2);
+  doc.text("TOTAL TTC :", tLabelX, tY + rowH * 3 + 2);
   doc.setTextColor(AMBER[0], AMBER[1], AMBER[2]);
-  doc.text(`${devis.totalTTC.toFixed(2)} €`, R - 4, tY + rowH * 3 + 2, { align: "right" });
+  doc.text(`${devis.totalTTC.toFixed(2)} €`, tValueX, tY + rowH * 3 + 2, { align: "right" });
 
   // Notes
   let currentY = tY + rowH * 3 + 13;
