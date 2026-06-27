@@ -8,7 +8,6 @@ import type { ThemeId } from "@/lib/themes";
 import { CartItem, Devis, Dish, EntreeCapital, Ingredient, Materiel, DemandeCoursesRepas, DemandeLogistique, User } from "@/lib/types";
 import { MOCK_DEVIS } from "@/lib/data/mock-events";
 import { DEFAULT_INGREDIENTS, DEFAULT_MATERIEL } from "@/lib/data/stocks";
-import { generateId } from "@/lib/utils";
 
 export interface AppState {
   user: User | null;
@@ -347,9 +346,15 @@ export const useStore = create<AppState>()(
       devisListLab: MOCK_DEVIS,
       devisList: [],
       addDevis: (devisData) => {
-        const newDevis: Devis = { ...devisData, id: generateId(), createdAt: new Date().toISOString() };
-        logAudit("DEVIS_CREATED", { id: newDevis.id, client: newDevis.clientName, total: newDevis.totalTTC });
         const mode = get().appMode;
+        const list = mode === "pro" ? get().devisListPro : get().devisListLab;
+        const maxNum = list.reduce((max, d) => {
+          const m = d.id.match(/^DV-(\d+)$/);
+          return m ? Math.max(max, parseInt(m[1], 10)) : max;
+        }, 0);
+        const id = `DV-${String(maxNum + 1).padStart(3, "0")}`;
+        const newDevis: Devis = { ...devisData, id, createdAt: new Date().toISOString() };
+        logAudit("DEVIS_CREATED", { id: newDevis.id, client: newDevis.clientName, total: newDevis.totalTTC });
         set((s) => ({
           devisList: [newDevis, ...s.devisList],
           ...(mode === "pro" ? { devisListPro: [newDevis, ...s.devisListPro] } : { devisListLab: [newDevis, ...s.devisListLab] }),
@@ -390,7 +395,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: "clc-traiteur-storage",
-      version: 6,
+      version: 8,
       // Chiffrement AES-GCM des données sensibles en localStorage (CWE-311/312)
       storage: createJSONStorage(() => ({
         getItem: async (key: string) => {
@@ -429,6 +434,14 @@ export const useStore = create<AppState>()(
           // v6 : devisListLab n'est plus persisté, toujours MOCK_DEVIS frais
           const mode = state.appMode ?? "pro";
           return { ...state, devisListLab: MOCK_DEVIS, devisList: mode === "lab" ? MOCK_DEVIS : (state.devisListPro ?? []) };
+        }
+        if (version < 8) {
+          const proList: Devis[] = state.devisListPro ?? [];
+          const renumbered = proList.map((d, i) => ({
+            ...d,
+            id: `DV-${String(i + 1).padStart(3, "0")}`,
+          }));
+          return { ...state, devisListPro: renumbered, devisList: renumbered };
         }
         return state as AppState;
       },

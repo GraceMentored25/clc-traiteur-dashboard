@@ -100,6 +100,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     loadFromSupabase().then((data) => {
       if (data) {
         const mapped = mapSupabaseToStore(data as Record<string, unknown>);
+        // Renuméroter les IDs hex legacy → DV-001, DV-002…
+        // devisListPro est la source de vérité ; devisList (mode pro) en est une copie
         // Ne jamais écraser user
         const { user: _u, ...rest } = mapped;
         void _u;
