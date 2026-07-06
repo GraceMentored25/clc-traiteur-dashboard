@@ -145,7 +145,8 @@ function TabChecklists() {
               )}
               {renamingId !== l.id && (
                 <button onClick={(e) => { e.stopPropagation(); startRename(l.id, l.title); }}
-                  className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all shrink-0 hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 ${activeId === l.id ? "text-[var(--amber)] opacity-80" : "opacity-0 group-hover:opacity-100 text-[var(--text-muted)]"}`}>
+                  title="Renommer"
+                  className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all shrink-0 hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 ${activeId === l.id ? "text-[var(--amber)] opacity-100" : "opacity-0 group-hover:opacity-100 text-[var(--text-muted)]"}`}>
                   <PencilSimple size={12} />
                 </button>
               )}
@@ -707,7 +708,7 @@ function TabTableaux() {
             {renamingId !== t.id && (
               <button onClick={(e) => { e.stopPropagation(); startRename(t.id, t.title); }}
                 title="Renommer"
-                className="w-7 h-7 rounded-lg flex items-center justify-center transition-all shrink-0 hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 text-[var(--text-muted)] opacity-0 group-hover:opacity-100">
+                className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all shrink-0 hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 ${activeId === t.id ? "text-[var(--amber)] opacity-100" : "text-[var(--text-muted)] opacity-0 group-hover:opacity-100"}`}>
                 <PencilSimple size={12} />
               </button>
             )}
