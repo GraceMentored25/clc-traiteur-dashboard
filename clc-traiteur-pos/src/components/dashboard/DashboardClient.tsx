@@ -678,15 +678,17 @@ function EventTypeSelector({
 
   const readTheme = () => {
     const s = getComputedStyle(document.documentElement);
+    // Classe "light" ajoutée sur <html> par ThemeApplier quand thème clair
+    const isLight = document.documentElement.classList.contains("light");
     setThemeColors({
-      bg:        s.getPropertyValue("--surface-2").trim()  || "#1C2128",
-      bgHover:   s.getPropertyValue("--surface-3").trim()  || "#252B34",
-      border:    s.getPropertyValue("--border").trim()     || "rgba(255,255,255,0.06)",
-      text:      s.getPropertyValue("--text-primary").trim() || "#F0F6FC",
-      textMuted: s.getPropertyValue("--text-secondary").trim() || "#8B949E",
-      amber:     s.getPropertyValue("--amber").trim()      || "#E8960C",
-      success:   s.getPropertyValue("--success").trim()    || "#3FB950",
-      danger:    s.getPropertyValue("--danger").trim()     || "#F85149",
+      bg:        isLight ? "#ffffff" : "#0D1117",
+      bgHover:   isLight ? "#f0f2f5" : "#161B22",
+      border:    isLight ? "#d0d7de" : "#30363d",
+      text:      isLight ? "#111111" : "#F0F6FC",
+      textMuted: isLight ? "#57606a" : "#8B949E",
+      amber:     s.getPropertyValue("--amber").trim()   || "#E8960C",
+      success:   s.getPropertyValue("--success").trim() || "#3FB950",
+      danger:    s.getPropertyValue("--danger").trim()  || "#F85149",
     });
   };
 
