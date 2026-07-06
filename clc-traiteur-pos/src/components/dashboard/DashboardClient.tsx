@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, memo, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import { m, AnimatePresence } from "framer-motion";
 import {
@@ -654,7 +655,7 @@ export default function DashboardClient() {
   );
 }
 
-// ── EventTypeSelector — 2 dropdowns en cascade ──────────────────────────────
+// ── EventTypeSelector — 2 dropdowns en cascade (portals = hors header backdrop) ──
 function EventTypeSelector({
   activeEventType, activeSubMoment, sectionCarts, onSelectEventType, onSelectSubMoment,
 }: {
@@ -666,167 +667,177 @@ function EventTypeSelector({
 }) {
   const [open1, setOpen1] = useState(false);
   const [open2, setOpen2] = useState(false);
-  const ref1 = useRef<HTMLDivElement>(null);
-  const ref2 = useRef<HTMLDivElement>(null);
+  const btn1Ref = useRef<HTMLButtonElement>(null);
+  const btn2Ref = useRef<HTMLButtonElement>(null);
+  const [rect1, setRect1] = useState<DOMRect | null>(null);
+  const [rect2, setRect2] = useState<DOMRect | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  const openDropdown1 = () => {
+    if (btn1Ref.current) setRect1(btn1Ref.current.getBoundingClientRect());
+    setOpen1((v) => !v);
+    setOpen2(false);
+  };
+  const openDropdown2 = () => {
+    if (btn2Ref.current) setRect2(btn2Ref.current.getBoundingClientRect());
+    setOpen2((v) => !v);
+    setOpen1(false);
+  };
 
   useEffect(() => {
+    if (!open1 && !open2) return;
     const handler = (e: MouseEvent) => {
-      if (ref1.current && !ref1.current.contains(e.target as Node)) setOpen1(false);
-      if (ref2.current && !ref2.current.contains(e.target as Node)) setOpen2(false);
+      const t = e.target as Node;
+      if (btn1Ref.current?.contains(t) || btn2Ref.current?.contains(t)) return;
+      setOpen1(false);
+      setOpen2(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, []);
+  }, [open1, open2]);
 
   const currentEvent = EVENT_TYPES.find((e) => e.id === activeEventType);
   const currentSub = currentEvent?.subMoments.find((s) => s.id === activeSubMoment);
 
+  // Style commun pour les panels portals — couleurs résolues depuis globals.css
+  const panelStyle = (rect: DOMRect | null): React.CSSProperties => ({
+    position: "fixed",
+    top: rect ? rect.bottom + 6 : 0,
+    left: rect ? rect.left : 0,
+    minWidth: 200,
+    borderRadius: 12,
+    overflow: "hidden",
+    zIndex: 9999,
+    background: "#1C2128",
+    border: "1px solid rgba(255,255,255,0.06)",
+    boxShadow: "0 12px 40px rgba(0,0,0,0.6)",
+  });
+
   return (
     <div className="flex items-center gap-2">
-      {/* Dropdown 1 — Type d'événement */}
-      <div className="relative" ref={ref1}>
+      {/* Bouton 1 — Type d'événement */}
+      <button
+        ref={btn1Ref}
+        onClick={openDropdown1}
+        className={cn(
+          "flex items-center gap-1.5 h-9 px-3 rounded-xl text-sm transition-colors border whitespace-nowrap",
+          activeEventType
+            ? "bg-[var(--surface-1)] border-[var(--amber)] text-[var(--amber)] font-semibold"
+            : "bg-[var(--surface-1)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+        )}
+      >
+        <CalendarBlank size={14} />
+        <span>{currentEvent?.label ?? "Type d'événement"}</span>
+      </button>
+
+      {/* Panel 1 — rendu dans body via portal */}
+      {mounted && open1 && rect1 && createPortal(
+        <div style={panelStyle(rect1)} onMouseDown={(e) => e.stopPropagation()}>
+          {EVENT_TYPES.map((ev) => (
+            <button
+              key={ev.id}
+              onClick={() => { onSelectEventType(ev.id); setOpen1(false); }}
+              style={{
+                width: "100%", textAlign: "left", padding: "10px 16px",
+                fontSize: 14, display: "flex", alignItems: "center", justifyContent: "space-between",
+                background: activeEventType === ev.id ? "#252B34" : "transparent",
+                color: activeEventType === ev.id ? "#E8960C" : "#8B949E",
+                border: "none", cursor: "pointer",
+              }}
+              onMouseEnter={(e) => { if (activeEventType !== ev.id) (e.currentTarget as HTMLButtonElement).style.background = "#252B34"; (e.currentTarget as HTMLButtonElement).style.color = "#F0F6FC"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = activeEventType === ev.id ? "#252B34" : "transparent"; (e.currentTarget as HTMLButtonElement).style.color = activeEventType === ev.id ? "#E8960C" : "#8B949E"; }}
+            >
+              <span>{ev.label}</span>
+              {activeEventType === ev.id && <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#E8960C" }} />}
+            </button>
+          ))}
+          {activeEventType && (
+            <button
+              onClick={() => { onSelectEventType(""); setOpen1(false); }}
+              style={{
+                width: "100%", textAlign: "left", padding: "10px 16px",
+                fontSize: 12, color: "#F85149", background: "transparent",
+                border: "none", borderTop: "1px solid rgba(255,255,255,0.06)", cursor: "pointer",
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#252B34"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+            >
+              Réinitialiser
+            </button>
+          )}
+        </div>,
+        document.body
+      )}
+
+      {/* Bouton 2 — Sous-moment */}
+      {activeEventType && currentEvent && (
         <button
-          onClick={() => { setOpen1((v) => !v); setOpen2(false); }}
+          ref={btn2Ref}
+          onClick={openDropdown2}
           className={cn(
             "flex items-center gap-1.5 h-9 px-3 rounded-xl text-sm transition-colors border whitespace-nowrap",
-            activeEventType
+            activeSubMoment
               ? "bg-[var(--surface-1)] border-[var(--amber)] text-[var(--amber)] font-semibold"
               : "bg-[var(--surface-1)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           )}
         >
-          <CalendarBlank size={14} />
-          <span>{currentEvent?.label ?? "Type d'événement"}</span>
-        </button>
-        <AnimatePresence>
-          {open1 && (
-            <m.div
-              initial={{ opacity: 0, y: -6, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -4, scale: 0.97 }}
-              transition={{ duration: 0.12 }}
-              className="absolute left-0 top-11 min-w-[180px] rounded-xl z-[200] overflow-hidden"
-              style={{
-                backgroundColor: "var(--surface-2)",
-                border: "1px solid var(--border)",
-                boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-                backdropFilter: "none",
-                WebkitBackdropFilter: "none",
-              }}
-            >
-              {EVENT_TYPES.map((ev) => (
-                <button
-                  key={ev.id}
-                  onClick={() => { onSelectEventType(ev.id); setOpen1(false); }}
+          <span>{currentSub?.label ?? "Choisir le moment"}</span>
+          <div className="flex items-center gap-0.5 ml-1">
+            {currentEvent.subMoments.map((sub) => {
+              const count = (sectionCarts[sub.id] ?? []).length;
+              return (
+                <div
+                  key={sub.id}
                   className={cn(
-                    "w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between",
-                    activeEventType === ev.id
-                      ? "text-[var(--amber)] bg-[var(--surface-3)]"
-                      : "text-[var(--text-secondary)] hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)]"
+                    "w-1.5 h-1.5 rounded-full",
+                    sub.id === activeSubMoment ? "bg-[var(--amber)]" :
+                    count > 0 ? "bg-[var(--success)]" : "bg-[var(--surface-3)]"
                   )}
-                >
-                  {ev.label}
-                  {activeEventType === ev.id && <div className="w-1.5 h-1.5 rounded-full bg-[var(--amber)]" />}
-                </button>
-              ))}
-              {activeEventType && (
-                <button
-                  onClick={() => { onSelectEventType(""); setOpen1(false); }}
-                  className="w-full text-left px-4 py-2.5 text-xs text-[var(--danger)] hover:bg-[var(--surface-3)] transition-colors border-t border-[var(--border)]"
-                >
-                  Réinitialiser
-                </button>
-              )}
-            </m.div>
-          )}
-        </AnimatePresence>
-      </div>
+                  title={`${sub.label} — ${count} plat${count > 1 ? "s" : ""}`}
+                />
+              );
+            })}
+          </div>
+        </button>
+      )}
 
-      {/* Dropdown 2 — Sous-moment (visible uniquement si un type est sélectionné) */}
-      <AnimatePresence>
-        {activeEventType && currentEvent && (
-          <m.div
-            initial={{ opacity: 0, x: -8 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -8 }}
-            transition={{ duration: 0.15 }}
-            className="relative"
-            ref={ref2}
-          >
-            <button
-              onClick={() => { setOpen2((v) => !v); setOpen1(false); }}
-              className={cn(
-                "flex items-center gap-1.5 h-9 px-3 rounded-xl text-sm transition-colors border whitespace-nowrap",
-                activeSubMoment
-                  ? "bg-[var(--surface-1)] border-[var(--amber)] text-[var(--amber)] font-semibold"
-                  : "bg-[var(--surface-1)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              )}
-            >
-              <span>{currentSub?.label ?? "Choisir le moment"}</span>
-              {/* Indicateurs de sections remplies */}
-              <div className="flex items-center gap-0.5 ml-1">
-                {currentEvent.subMoments.map((sub) => {
-                  const count = (sectionCarts[sub.id] ?? []).length;
-                  return (
-                    <div
-                      key={sub.id}
-                      className={cn(
-                        "w-1.5 h-1.5 rounded-full",
-                        sub.id === activeSubMoment ? "bg-[var(--amber)]" :
-                        count > 0 ? "bg-[var(--success)]" : "bg-[var(--surface-3)]"
-                      )}
-                      title={`${sub.label} — ${count} plat${count > 1 ? "s" : ""}`}
-                    />
-                  );
-                })}
-              </div>
-            </button>
-            <AnimatePresence>
-              {open2 && (
-                <m.div
-                  initial={{ opacity: 0, y: -6, scale: 0.96 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -4, scale: 0.97 }}
-                  transition={{ duration: 0.12 }}
-                  className="absolute left-0 top-11 min-w-[220px] rounded-xl z-[200] overflow-hidden"
-                  style={{
-                    backgroundColor: "var(--surface-2)",
-                    border: "1px solid var(--border)",
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-                    backdropFilter: "none",
-                    WebkitBackdropFilter: "none",
-                  }}
-                >
-                  {currentEvent.subMoments.map((sub) => {
-                    const count = (sectionCarts[sub.id] ?? []).reduce((n, c) => n + c.quantity, 0);
-                    return (
-                      <button
-                        key={sub.id}
-                        onClick={() => { onSelectSubMoment(sub.id); setOpen2(false); }}
-                        className={cn(
-                          "w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between gap-3",
-                          activeSubMoment === sub.id
-                            ? "text-[var(--amber)] bg-[var(--surface-3)]"
-                            : "text-[var(--text-secondary)] hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)]"
-                        )}
-                      >
-                        <span>{sub.label}</span>
-                        {count > 0 && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[var(--surface-3)] text-[var(--success)] shrink-0">
-                            {count} plat{count > 1 ? "s" : ""}
-                          </span>
-                        )}
-                        {activeSubMoment === sub.id && count === 0 && (
-                          <div className="w-1.5 h-1.5 rounded-full bg-[var(--amber)] shrink-0" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </m.div>
-              )}
-            </AnimatePresence>
-          </m.div>
-        )}
-      </AnimatePresence>
+      {/* Panel 2 — rendu dans body via portal */}
+      {mounted && open2 && rect2 && currentEvent && createPortal(
+        <div style={{ ...panelStyle(rect2), minWidth: 240 }} onMouseDown={(e) => e.stopPropagation()}>
+          {currentEvent.subMoments.map((sub) => {
+            const count = (sectionCarts[sub.id] ?? []).reduce((n, c) => n + c.quantity, 0);
+            return (
+              <button
+                key={sub.id}
+                onClick={() => { onSelectSubMoment(sub.id); setOpen2(false); }}
+                style={{
+                  width: "100%", textAlign: "left", padding: "10px 16px",
+                  fontSize: 14, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+                  background: activeSubMoment === sub.id ? "#252B34" : "transparent",
+                  color: activeSubMoment === sub.id ? "#E8960C" : "#8B949E",
+                  border: "none", cursor: "pointer",
+                }}
+                onMouseEnter={(e) => { if (activeSubMoment !== sub.id) { (e.currentTarget as HTMLButtonElement).style.background = "#252B34"; (e.currentTarget as HTMLButtonElement).style.color = "#F0F6FC"; } }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = activeSubMoment === sub.id ? "#252B34" : "transparent"; (e.currentTarget as HTMLButtonElement).style.color = activeSubMoment === sub.id ? "#E8960C" : "#8B949E"; }}
+              >
+                <span>{sub.label}</span>
+                {count > 0 && (
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 6, background: "#3FB95020", color: "#3FB950", flexShrink: 0 }}>
+                    {count} plat{count > 1 ? "s" : ""}
+                  </span>
+                )}
+                {activeSubMoment === sub.id && count === 0 && (
+                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#E8960C", flexShrink: 0 }} />
+                )}
+              </button>
+            );
+          })}
+        </div>,
+        document.body
+      )}
+
     </div>
   );
 }
