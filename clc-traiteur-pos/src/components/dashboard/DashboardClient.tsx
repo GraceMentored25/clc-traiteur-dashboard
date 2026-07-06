@@ -672,15 +672,32 @@ function EventTypeSelector({
   const [rect1, setRect1] = useState<DOMRect | null>(null);
   const [rect2, setRect2] = useState<DOMRect | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [themeColors, setThemeColors] = useState({ bg: "", bgHover: "", border: "", text: "", textMuted: "", amber: "", success: "", danger: "" });
 
   useEffect(() => { setMounted(true); }, []);
 
+  const readTheme = () => {
+    const s = getComputedStyle(document.documentElement);
+    setThemeColors({
+      bg:        s.getPropertyValue("--surface-2").trim()  || "#1C2128",
+      bgHover:   s.getPropertyValue("--surface-3").trim()  || "#252B34",
+      border:    s.getPropertyValue("--border").trim()     || "rgba(255,255,255,0.06)",
+      text:      s.getPropertyValue("--text-primary").trim() || "#F0F6FC",
+      textMuted: s.getPropertyValue("--text-secondary").trim() || "#8B949E",
+      amber:     s.getPropertyValue("--amber").trim()      || "#E8960C",
+      success:   s.getPropertyValue("--success").trim()    || "#3FB950",
+      danger:    s.getPropertyValue("--danger").trim()     || "#F85149",
+    });
+  };
+
   const openDropdown1 = () => {
+    readTheme();
     if (btn1Ref.current) setRect1(btn1Ref.current.getBoundingClientRect());
     setOpen1((v) => !v);
     setOpen2(false);
   };
   const openDropdown2 = () => {
+    readTheme();
     if (btn2Ref.current) setRect2(btn2Ref.current.getBoundingClientRect());
     setOpen2((v) => !v);
     setOpen1(false);
@@ -701,7 +718,7 @@ function EventTypeSelector({
   const currentEvent = EVENT_TYPES.find((e) => e.id === activeEventType);
   const currentSub = currentEvent?.subMoments.find((s) => s.id === activeSubMoment);
 
-  // Style commun pour les panels portals — couleurs résolues depuis globals.css
+  // Style commun pour les panels portals — couleurs lues depuis le thème actif
   const panelStyle = (rect: DOMRect | null): React.CSSProperties => ({
     position: "fixed",
     top: rect ? rect.bottom + 6 : 0,
@@ -710,9 +727,9 @@ function EventTypeSelector({
     borderRadius: 12,
     overflow: "hidden",
     zIndex: 9999,
-    background: "#1C2128",
-    border: "1px solid rgba(255,255,255,0.06)",
-    boxShadow: "0 12px 40px rgba(0,0,0,0.6)",
+    background: themeColors.bg || "var(--surface-2)",
+    border: `1px solid ${themeColors.border || "var(--border)"}`,
+    boxShadow: "0 12px 40px rgba(0,0,0,0.3)",
   });
 
   return (
@@ -742,15 +759,15 @@ function EventTypeSelector({
               style={{
                 width: "100%", textAlign: "left", padding: "10px 16px",
                 fontSize: 14, display: "flex", alignItems: "center", justifyContent: "space-between",
-                background: activeEventType === ev.id ? "#252B34" : "transparent",
-                color: activeEventType === ev.id ? "#E8960C" : "#8B949E",
+                background: activeEventType === ev.id ? themeColors.bgHover : "transparent",
+                color: activeEventType === ev.id ? themeColors.amber : themeColors.textMuted,
                 border: "none", cursor: "pointer",
               }}
-              onMouseEnter={(e) => { if (activeEventType !== ev.id) (e.currentTarget as HTMLButtonElement).style.background = "#252B34"; (e.currentTarget as HTMLButtonElement).style.color = "#F0F6FC"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = activeEventType === ev.id ? "#252B34" : "transparent"; (e.currentTarget as HTMLButtonElement).style.color = activeEventType === ev.id ? "#E8960C" : "#8B949E"; }}
+              onMouseEnter={(e) => { if (activeEventType !== ev.id) { (e.currentTarget as HTMLButtonElement).style.background = themeColors.bgHover; (e.currentTarget as HTMLButtonElement).style.color = themeColors.text; } }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = activeEventType === ev.id ? themeColors.bgHover : "transparent"; (e.currentTarget as HTMLButtonElement).style.color = activeEventType === ev.id ? themeColors.amber : themeColors.textMuted; }}
             >
               <span>{ev.label}</span>
-              {activeEventType === ev.id && <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#E8960C" }} />}
+              {activeEventType === ev.id && <div style={{ width: 6, height: 6, borderRadius: "50%", background: themeColors.amber }} />}
             </button>
           ))}
           {activeEventType && (
@@ -758,10 +775,10 @@ function EventTypeSelector({
               onClick={() => { onSelectEventType(""); setOpen1(false); }}
               style={{
                 width: "100%", textAlign: "left", padding: "10px 16px",
-                fontSize: 12, color: "#F85149", background: "transparent",
-                border: "none", borderTop: "1px solid rgba(255,255,255,0.06)", cursor: "pointer",
+                fontSize: 12, color: themeColors.danger, background: "transparent",
+                border: "none", borderTop: `1px solid ${themeColors.border}`, cursor: "pointer",
               }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#252B34"; }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = themeColors.bgHover; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
             >
               Réinitialiser
@@ -815,21 +832,21 @@ function EventTypeSelector({
                 style={{
                   width: "100%", textAlign: "left", padding: "10px 16px",
                   fontSize: 14, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
-                  background: activeSubMoment === sub.id ? "#252B34" : "transparent",
-                  color: activeSubMoment === sub.id ? "#E8960C" : "#8B949E",
+                  background: activeSubMoment === sub.id ? themeColors.bgHover : "transparent",
+                  color: activeSubMoment === sub.id ? themeColors.amber : themeColors.textMuted,
                   border: "none", cursor: "pointer",
                 }}
-                onMouseEnter={(e) => { if (activeSubMoment !== sub.id) { (e.currentTarget as HTMLButtonElement).style.background = "#252B34"; (e.currentTarget as HTMLButtonElement).style.color = "#F0F6FC"; } }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = activeSubMoment === sub.id ? "#252B34" : "transparent"; (e.currentTarget as HTMLButtonElement).style.color = activeSubMoment === sub.id ? "#E8960C" : "#8B949E"; }}
+                onMouseEnter={(e) => { if (activeSubMoment !== sub.id) { (e.currentTarget as HTMLButtonElement).style.background = themeColors.bgHover; (e.currentTarget as HTMLButtonElement).style.color = themeColors.text; } }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = activeSubMoment === sub.id ? themeColors.bgHover : "transparent"; (e.currentTarget as HTMLButtonElement).style.color = activeSubMoment === sub.id ? themeColors.amber : themeColors.textMuted; }}
               >
                 <span>{sub.label}</span>
                 {count > 0 && (
-                  <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 6, background: "#3FB95020", color: "#3FB950", flexShrink: 0 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 6, background: themeColors.bgHover, color: themeColors.success, flexShrink: 0 }}>
                     {count} plat{count > 1 ? "s" : ""}
                   </span>
                 )}
                 {activeSubMoment === sub.id && count === 0 && (
-                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#E8960C", flexShrink: 0 }} />
+                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: themeColors.amber, flexShrink: 0 }} />
                 )}
               </button>
             );
