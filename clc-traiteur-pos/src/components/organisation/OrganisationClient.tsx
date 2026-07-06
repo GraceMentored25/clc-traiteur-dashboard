@@ -53,10 +53,20 @@ function TabChecklists() {
   const [newItemText, setNewItemText] = useState("");
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameVal, setRenameVal] = useState("");
+  const renamingRef = useRef<{ id: string; val: string } | null>(null);
+
+  const startRename = (id: string, title: string) => {
+    renamingRef.current = { id, val: title };
+    setRenamingId(id);
+    setRenameVal(title);
+  };
 
   const commitRename = () => {
-    if (renamingId && renameVal.trim())
-      setLists((ls) => ls.map((l) => l.id === renamingId ? { ...l, title: renameVal.trim() } : l));
+    const ref = renamingRef.current;
+    if (ref && ref.val.trim()) {
+      setLists((ls) => ls.map((l) => l.id === ref.id ? { ...l, title: ref.val.trim() } : l));
+    }
+    renamingRef.current = null;
     setRenamingId(null);
   };
 
@@ -122,19 +132,19 @@ function TabChecklists() {
             <div key={l.id} className="flex items-center gap-1 group">
               {renamingId === l.id ? (
                 <input autoFocus value={renameVal}
-                  onChange={(e) => setRenameVal(e.target.value)}
+                  onChange={(e) => { setRenameVal(e.target.value); if (renamingRef.current) renamingRef.current.val = e.target.value; }}
                   onBlur={commitRename}
-                  onKeyDown={(e) => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") setRenamingId(null); }}
-                  className="flex-1 h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--amber)]/60 text-sm text-[var(--text-primary)] outline-none" />
+                  onKeyDown={(e) => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") { renamingRef.current = null; setRenamingId(null); } }}
+                  className="flex-1 h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--amber)] text-sm text-[var(--text-primary)] outline-none font-semibold" />
               ) : (
-                <button onClick={() => setActiveId(l.id)} onDoubleClick={() => { setRenamingId(l.id); setRenameVal(l.title); }}
+                <button onClick={() => setActiveId(l.id)} onDoubleClick={() => startRename(l.id, l.title)}
                   className={`flex-1 text-left px-3 py-2.5 rounded-xl border transition-colors ${activeId === l.id ? "bg-[var(--amber)]/10 border-[var(--amber)]/30 text-[var(--amber)]" : "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-primary)] hover:border-[var(--border-accent)]"}`}>
                   <p className="text-sm font-semibold truncate">{l.title}</p>
                   <p className="text-[11px] text-[var(--text-muted)] mt-0.5">{done}/{l.items.length} tâches</p>
                 </button>
               )}
               {renamingId !== l.id && (
-                <button onClick={(e) => { e.stopPropagation(); setRenamingId(l.id); setRenameVal(l.title); }}
+                <button onClick={(e) => { e.stopPropagation(); startRename(l.id, l.title); }}
                   className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all shrink-0 hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 ${activeId === l.id ? "text-[var(--amber)] opacity-80" : "opacity-0 group-hover:opacity-100 text-[var(--text-muted)]"}`}>
                   <PencilSimple size={12} />
                 </button>
@@ -157,12 +167,12 @@ function TabChecklists() {
               <div className="flex-1 min-w-0 mr-2">
                 {renamingId === active.id ? (
                   <input autoFocus value={renameVal}
-                    onChange={(e) => setRenameVal(e.target.value)}
+                    onChange={(e) => { setRenameVal(e.target.value); if (renamingRef.current) renamingRef.current.val = e.target.value; }}
                     onBlur={commitRename}
-                    onKeyDown={(e) => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") setRenamingId(null); }}
-                    className="w-full h-8 px-2 rounded-lg bg-[var(--surface-2)] border border-[var(--amber)]/60 text-sm font-bold text-[var(--text-primary)] outline-none" />
+                    onKeyDown={(e) => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") { renamingRef.current = null; setRenamingId(null); } }}
+                    className="w-full h-8 px-2 rounded-lg bg-[var(--surface-2)] border border-[var(--amber)] text-sm font-bold text-[var(--text-primary)] outline-none" />
                 ) : (
-                  <h3 onDoubleClick={() => { setRenamingId(active.id); setRenameVal(active.title); }}
+                  <h3 onDoubleClick={() => startRename(active.id, active.title)}
                     className="font-bold text-[var(--text-primary)] cursor-pointer hover:text-[var(--amber)] transition-colors" title="Double-clic pour renommer">
                     {active.title}
                   </h3>
@@ -551,10 +561,20 @@ function TabTableaux() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameVal, setRenameVal] = useState("");
+  const renamingRef = useRef<{ id: string; val: string } | null>(null);
+
+  const startRename = (id: string, title: string) => {
+    renamingRef.current = { id, val: title };
+    setRenamingId(id);
+    setRenameVal(title);
+  };
 
   const commitRename = () => {
-    if (renamingId && renameVal.trim())
-      setTables((ts) => ts.map((t) => t.id === renamingId ? { ...t, title: renameVal.trim() } : t));
+    const ref = renamingRef.current;
+    if (ref && ref.val.trim()) {
+      setTables((ts) => ts.map((t) => t.id === ref.id ? { ...t, title: ref.val.trim() } : t));
+    }
+    renamingRef.current = null;
     setRenamingId(null);
   };
 
@@ -672,18 +692,18 @@ function TabTableaux() {
           <div key={t.id} className="flex items-center gap-1 group">
             {renamingId === t.id ? (
               <input autoFocus value={renameVal}
-                onChange={(e) => setRenameVal(e.target.value)}
+                onChange={(e) => { setRenameVal(e.target.value); if (renamingRef.current) renamingRef.current.val = e.target.value; }}
                 onBlur={commitRename}
-                onKeyDown={(e) => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") setRenamingId(null); }}
-                className="flex-1 h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--amber)]/60 text-sm text-[var(--text-primary)] outline-none" />
+                onKeyDown={(e) => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") { renamingRef.current = null; setRenamingId(null); } }}
+                className="flex-1 h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--amber)] text-sm text-[var(--text-primary)] outline-none font-semibold" />
             ) : (
-              <button onClick={() => setActiveId(t.id)} onDoubleClick={() => { setRenamingId(t.id); setRenameVal(t.title); }}
+              <button onClick={() => setActiveId(t.id)} onDoubleClick={() => startRename(t.id, t.title)}
                 className={`flex-1 text-left px-3 py-2 rounded-xl text-sm transition-colors ${activeId === t.id ? "bg-[var(--amber)]/10 text-[var(--amber)] font-semibold" : "bg-[var(--surface-2)] text-[var(--text-primary)] hover:border-[var(--border-accent)]"}`}>
                 {t.title}
               </button>
             )}
             {renamingId !== t.id && (
-              <button onClick={(e) => { e.stopPropagation(); setRenamingId(t.id); setRenameVal(t.title); }}
+              <button onClick={(e) => { e.stopPropagation(); startRename(t.id, t.title); }}
                 className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all shrink-0 hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 ${activeId === t.id ? "text-[var(--amber)] opacity-80" : "opacity-0 group-hover:opacity-100 text-[var(--text-muted)]"}`}>
                 <PencilSimple size={12} />
               </button>
@@ -712,12 +732,12 @@ function TabTableaux() {
               <div className="flex items-center gap-3">
                 {renamingId === active.id ? (
                   <input autoFocus value={renameVal}
-                    onChange={(e) => setRenameVal(e.target.value)}
+                    onChange={(e) => { setRenameVal(e.target.value); if (renamingRef.current) renamingRef.current.val = e.target.value; }}
                     onBlur={commitRename}
-                    onKeyDown={(e) => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") setRenamingId(null); }}
-                    className="h-7 px-2 rounded-lg bg-[var(--surface-1)] border border-[var(--amber)]/60 text-sm font-bold text-[var(--text-primary)] outline-none" />
+                    onKeyDown={(e) => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") { renamingRef.current = null; setRenamingId(null); } }}
+                    className="h-7 px-2 rounded-lg bg-[var(--surface-1)] border border-[var(--amber)] text-sm font-bold text-[var(--text-primary)] outline-none" />
                 ) : (
-                  <h3 onDoubleClick={() => { setRenamingId(active.id); setRenameVal(active.title); }}
+                  <h3 onDoubleClick={() => startRename(active.id, active.title)}
                     className="font-bold text-[var(--text-primary)] text-sm cursor-pointer hover:text-[var(--amber)] transition-colors" title="Double-clic pour renommer">
                     {active.title}
                   </h3>
