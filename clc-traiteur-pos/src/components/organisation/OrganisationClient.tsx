@@ -383,6 +383,120 @@ function TabRappels() {
   );
 }
 
+// ── Moteur de formules ───────────────────────────────────────────────────────
+// Convertit "A1" → { row: 0, col: 0 }, "B3" → { row: 2, col: 1 }
+function parseCellRef(ref: string): { row: number; col: number } | null {
+  const m = ref.trim().toUpperCase().match(/^([A-Z]+)(\d+)$/);
+  if (!m) return null;
+  const col = m[1].split("").reduce((acc, c) => acc * 26 + c.charCodeAt(0) - 64, 0) - 1;
+  const row = parseInt(m[2], 10) - 1;
+  return { row, col };
+}
+
+// Résout une plage "A1:B3" en liste de références
+function parseRange(range: string): string[] {
+  const parts = range.trim().toUpperCase().split(":");
+  if (parts.length !== 2) return [range];
+  const from = parseCellRef(parts[0]);
+  const to = parseCellRef(parts[1]);
+  if (!from || !to) return [];
+  const refs: string[] = [];
+  for (let r = from.row; r <= to.row; r++) {
+    for (let c = from.col; c <= to.col; c++) {
+      const colLetter = String.fromCharCode(65 + c);
+      refs.push(`${colLetter}${r + 1}`);
+    }
+  }
+  return refs;
+}
+
+function evaluateFormula(formula: string, rows: string[][]): string {
+  try {
+    const expr = formula.slice(1).trim(); // enlever le "="
+
+    // Résoudre les références de cellules avant les fonctions
+    const resolveRef = (ref: string): number => {
+      const pos = parseCellRef(ref);
+      if (!pos) return 0;
+      const val = rows[pos.row]?.[pos.col] ?? "";
+      if (val.startsWith("=")) return parseFloat(evaluateFormula(val, rows)) || 0;
+      return parseFloat(val) || 0;
+    };
+
+    const resolveRange = (range: string): number[] =>
+      parseRange(range).map(resolveRef);
+
+    // Fonctions supportées (insensible à la casse)
+    const upper = expr.toUpperCase();
+
+    // SOMME / SUM
+    const sumMatch = upper.match(/^(?:SOMME|SUM)\((.+)\)$/);
+    if (sumMatch) {
+      const args = sumMatch[1].split(";").flatMap((a) =>
+        a.includes(":") ? resolveRange(a) : [resolveRef(a.trim())]
+      );
+      return String(args.reduce((s, v) => s + v, 0));
+    }
+
+    // MOYENNE / AVERAGE
+    const avgMatch = upper.match(/^(?:MOYENNE|AVERAGE)\((.+)\)$/);
+    if (avgMatch) {
+      const args = avgMatch[1].split(";").flatMap((a) =>
+        a.includes(":") ? resolveRange(a) : [resolveRef(a.trim())]
+      );
+      if (args.length === 0) return "0";
+      return String(Math.round((args.reduce((s, v) => s + v, 0) / args.length) * 100) / 100);
+    }
+
+    // MIN
+    const minMatch = upper.match(/^MIN\((.+)\)$/);
+    if (minMatch) {
+      const args = minMatch[1].split(";").flatMap((a) =>
+        a.includes(":") ? resolveRange(a) : [resolveRef(a.trim())]
+      );
+      return String(Math.min(...args));
+    }
+
+    // MAX
+    const maxMatch = upper.match(/^MAX\((.+)\)$/);
+    if (maxMatch) {
+      const args = maxMatch[1].split(";").flatMap((a) =>
+        a.includes(":") ? resolveRange(a) : [resolveRef(a.trim())]
+      );
+      return String(Math.max(...args));
+    }
+
+    // NB / COUNT
+    const countMatch = upper.match(/^(?:NB|COUNT)\((.+)\)$/);
+    if (countMatch) {
+      const args = countMatch[1].split(";").flatMap((a) =>
+        a.includes(":") ? resolveRange(a) : [resolveRef(a.trim())]
+      );
+      return String(args.filter((v) => !isNaN(v) && v !== 0).length);
+    }
+
+    // Expression arithmétique avec références cellules (A1*B1, A1+B2, etc.)
+    const withValues = expr.replace(/[A-Z]+\d+/gi, (ref) => String(resolveRef(ref)));
+    // Évaluation sécurisée — uniquement chiffres et opérateurs
+    if (/^[\d\s+\-*/().%^,]+$/.test(withValues)) {
+      // eslint-disable-next-line no-new-func
+      const result = new Function(`"use strict"; return (${withValues})`)();
+      const num = parseFloat(result);
+      return isNaN(num) ? "#ERREUR" : String(Math.round(num * 10000) / 10000);
+    }
+
+    return "#ERREUR";
+  } catch {
+    return "#ERREUR";
+  }
+}
+
+// Affichage d'une cellule : évalue si formule, sinon valeur brute
+function displayCell(val: string, rows: string[][]): string {
+  if (val.startsWith("=")) return evaluateFormula(val, rows);
+  return val;
+}
+
 // ── Tableaux Tab ─────────────────────────────────────────────────────────────
 interface CustomTable {
   id: string;
@@ -399,6 +513,7 @@ function TabTableaux() {
   const [editingCell, setEditingCell] = useState<{ row: number; col: number } | null>(null);
   const [editingHeader, setEditingHeader] = useState<number | null>(null);
   const [editVal, setEditVal] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const active = tables.find((t) => t.id === activeId);
 
@@ -407,8 +522,8 @@ function TabTableaux() {
     const t: CustomTable = {
       id: crypto.randomUUID(),
       title: newTitle.trim(),
-      columns: ["Colonne 1", "Colonne 2"],
-      rows: [["", ""]],
+      columns: ["A", "B", "C", "D"],
+      rows: Array.from({ length: 8 }, () => ["", "", "", ""]),
     };
     setTables((ts) => [...ts, t]);
     setActiveId(t.id);
@@ -421,8 +536,9 @@ function TabTableaux() {
 
   const addColumn = () => {
     if (!active) return;
+    const letter = String.fromCharCode(65 + active.columns.length);
     update({
-      columns: [...active.columns, `Colonne ${active.columns.length + 1}`],
+      columns: [...active.columns, letter],
       rows: active.rows.map((r) => [...r, ""]),
     });
   };
@@ -460,6 +576,31 @@ function TabTableaux() {
     if (editingCell) { setCell(editingCell.row, editingCell.col, editVal); setEditingCell(null); }
     if (editingHeader !== null) { setHeader(editingHeader, editVal); setEditingHeader(null); }
   };
+
+  const startEdit = (ri: number, ci: number, val: string) => {
+    commitCell();
+    setEditingCell({ row: ri, col: ci });
+    setEditingHeader(null);
+    setEditVal(val);
+    setTimeout(() => inputRef.current?.select(), 10);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent, ri: number, ci: number) => {
+    if (e.key === "Enter") {
+      commitCell();
+      // Descendre d'une ligne
+      if (active && ri < active.rows.length - 1) startEdit(ri + 1, ci, active.rows[ri + 1][ci]);
+    } else if (e.key === "Tab") {
+      e.preventDefault();
+      commitCell();
+      if (active && ci < active.columns.length - 1) startEdit(ri, ci + 1, active.rows[ri][ci + 1]);
+    } else if (e.key === "Escape") {
+      setEditingCell(null);
+    }
+  };
+
+  // Colonne lettre pour affichage (A, B, C…)
+  const colLetter = (ci: number) => String.fromCharCode(65 + ci);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-4">
@@ -499,7 +640,7 @@ function TabTableaux() {
       </div>
 
       {/* Éditeur de tableau */}
-      <div className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] overflow-hidden min-h-[300px]">
+      <div className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] overflow-hidden min-h-[300px] flex flex-col">
         {!active ? (
           <div className="flex flex-col items-center justify-center h-full py-16">
             <Table size={36} className="text-[var(--text-muted)] mb-3 opacity-40" />
@@ -507,46 +648,59 @@ function TabTableaux() {
           </div>
         ) : (
           <>
-            {/* Header du tableau */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
-              <h3 className="font-bold text-[var(--text-primary)] text-sm">{active.title}</h3>
-              <div className="flex gap-2">
+            {/* Toolbar */}
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--border)] bg-[var(--surface-2)]">
+              <div className="flex items-center gap-3">
+                <h3 className="font-bold text-[var(--text-primary)] text-sm">{active.title}</h3>
+                {/* Barre de formule */}
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--surface-1)] border border-[var(--border)] text-xs font-mono text-[var(--text-muted)] min-w-[180px]">
+                  <span className="text-[var(--amber)] font-semibold shrink-0">
+                    {editingCell ? `${colLetter(editingCell.col)}${editingCell.row + 1}` : "—"}
+                  </span>
+                  <span className="text-[var(--text-secondary)] truncate">{editingCell ? editVal : ""}</span>
+                </div>
+              </div>
+              <div className="flex gap-2 items-center">
+                <span className="text-[10px] text-[var(--text-muted)] hidden sm:block">
+                  Formules : =SOMME(A1:A5) · =MOYENNE · =MIN · =MAX · =A1*B1
+                </span>
                 <button onClick={addColumn}
-                  className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-xs bg-[var(--surface-2)] text-[var(--text-secondary)] hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 transition-colors">
-                  <Plus size={10} weight="bold" /> Colonne
+                  className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-xs bg-[var(--surface-1)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--amber)] transition-colors">
+                  <Plus size={10} weight="bold" /> Col.
                 </button>
                 <button onClick={addRow}
-                  className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-xs bg-[var(--surface-2)] text-[var(--text-secondary)] hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 transition-colors">
+                  className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-xs bg-[var(--surface-1)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--amber)] transition-colors">
                   <Plus size={10} weight="bold" /> Ligne
                 </button>
               </div>
             </div>
 
             {/* Tableau scrollable */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse">
+            <div className="overflow-auto flex-1">
+              <table className="text-sm border-collapse" style={{ minWidth: "100%" }}>
                 <thead>
                   <tr>
+                    {/* Coin vide numéro de ligne */}
+                    <th className="border-b border-r border-[var(--border)] bg-[var(--surface-2)] w-8 text-center text-[10px] text-[var(--text-muted)] sticky left-0 z-10" />
                     {active.columns.map((col, ci) => (
-                      <th key={ci} className="border-b border-r border-[var(--border)] bg-[var(--surface-2)] px-2 py-2 text-left font-semibold text-[var(--text-muted)] text-[11px] uppercase tracking-wide min-w-[120px] group relative">
+                      <th key={ci} className="border-b border-r border-[var(--border)] bg-[var(--surface-2)] px-2 py-1.5 text-center font-semibold text-[var(--text-muted)] text-[11px] min-w-[110px] group relative select-none">
                         {editingHeader === ci ? (
                           <input autoFocus value={editVal}
                             onChange={(e) => setEditVal(e.target.value)}
                             onBlur={commitCell}
                             onKeyDown={(e) => { if (e.key === "Enter" || e.key === "Escape") commitCell(); }}
-                            className="w-full bg-transparent outline-none text-[var(--text-primary)] text-xs font-bold" />
+                            className="w-full bg-transparent outline-none text-[var(--text-primary)] text-xs font-bold text-center" />
                         ) : (
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="truncate">{col}</span>
+                          <div className="flex items-center justify-between gap-0.5">
+                            <button onDoubleClick={() => { setEditingHeader(ci); setEditingCell(null); setEditVal(col); }}
+                              className="flex-1 text-center font-bold text-[var(--text-secondary)] text-xs uppercase tracking-wide">
+                              {col}
+                            </button>
                             <div className="opacity-0 group-hover:opacity-100 flex gap-0.5 shrink-0">
-                              <button onClick={() => { setEditingHeader(ci); setEditingCell(null); setEditVal(col); }}
-                                className="w-5 h-5 rounded flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--amber)]">
-                                <PencilSimple size={9} />
-                              </button>
                               {active.columns.length > 1 && (
                                 <button onClick={() => deleteCol(ci)}
-                                  className="w-5 h-5 rounded flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--danger)]">
-                                  <X size={9} />
+                                  className="w-4 h-4 rounded flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--danger)]">
+                                  <X size={8} />
                                 </button>
                               )}
                             </div>
@@ -554,36 +708,64 @@ function TabTableaux() {
                         )}
                       </th>
                     ))}
-                    <th className="border-b border-[var(--border)] bg-[var(--surface-2)] w-8" />
+                    <th className="border-b border-[var(--border)] bg-[var(--surface-2)] w-6" />
                   </tr>
                 </thead>
                 <tbody>
                   {active.rows.map((row, ri) => (
-                    <tr key={ri} className="group hover:bg-[var(--surface-2)]/50 transition-colors">
-                      {row.map((cell, ci) => (
-                        <td key={ci} className="border-b border-r border-[var(--border)] px-2 py-1.5 text-[var(--text-primary)] min-w-[120px]"
-                          onClick={() => { setEditingCell({ row: ri, col: ci }); setEditingHeader(null); setEditVal(cell); }}>
-                          {editingCell?.row === ri && editingCell?.col === ci ? (
-                            <input autoFocus value={editVal}
-                              onChange={(e) => setEditVal(e.target.value)}
-                              onBlur={commitCell}
-                              onKeyDown={(e) => { if (e.key === "Enter") commitCell(); if (e.key === "Tab") { commitCell(); } }}
-                              className="w-full bg-transparent outline-none text-[var(--text-primary)] text-sm" />
-                          ) : (
-                            <span className="block truncate min-h-[1.25rem]">{cell || <span className="text-[var(--text-muted)] opacity-40">—</span>}</span>
-                          )}
-                        </td>
-                      ))}
-                      <td className="border-b border-[var(--border)] px-1">
+                    <tr key={ri} className="group">
+                      {/* Numéro de ligne */}
+                      <td className="border-b border-r border-[var(--border)] bg-[var(--surface-2)] text-center text-[10px] text-[var(--text-muted)] font-mono w-8 sticky left-0 select-none">
+                        {ri + 1}
+                      </td>
+                      {row.map((cell, ci) => {
+                        const isEditing = editingCell?.row === ri && editingCell?.col === ci;
+                        const displayed = displayCell(cell, active.rows);
+                        const isFormula = cell.startsWith("=");
+                        const isError = displayed === "#ERREUR";
+                        return (
+                          <td key={ci}
+                            className={`border-b border-r border-[var(--border)] px-0 py-0 min-w-[110px] relative ${isEditing ? "bg-[var(--amber)]/8 outline outline-2 outline-[var(--amber)] z-10" : "hover:bg-[var(--surface-2)] cursor-cell"}`}
+                            onClick={() => !isEditing && startEdit(ri, ci, cell)}>
+                            {isEditing ? (
+                              <input
+                                ref={inputRef}
+                                value={editVal}
+                                onChange={(e) => setEditVal(e.target.value)}
+                                onBlur={commitCell}
+                                onKeyDown={(e) => handleKeyDown(e, ri, ci)}
+                                className="w-full h-full px-2 py-1.5 bg-transparent outline-none text-[var(--text-primary)] text-sm font-mono"
+                              />
+                            ) : (
+                              <span className={`block px-2 py-1.5 truncate min-h-[2rem] text-sm ${
+                                isError ? "text-[var(--danger)] font-mono text-xs" :
+                                isFormula ? "text-[var(--success)] font-mono" :
+                                !isNaN(parseFloat(displayed)) && displayed !== "" ? "text-right font-mono text-[var(--text-primary)]" :
+                                "text-[var(--text-primary)]"
+                              }`}>
+                                {displayed || ""}
+                              </span>
+                            )}
+                          </td>
+                        );
+                      })}
+                      <td className="border-b border-[var(--border)] w-6 px-1">
                         <button onClick={() => deleteRow(ri)}
-                          className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--danger)] transition-all">
-                          <Trash size={11} />
+                          className="opacity-0 group-hover:opacity-100 w-5 h-5 rounded flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--danger)] transition-all">
+                          <Trash size={10} />
                         </button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Aide formules */}
+            <div className="px-4 py-2 border-t border-[var(--border)] bg-[var(--surface-2)] text-[10px] text-[var(--text-muted)] flex flex-wrap gap-3">
+              {["=SOMME(A1:A5)", "=MOYENNE(A1:B5)", "=MIN(A1:C1)", "=MAX(A:B)", "=NB(A1:A5)", "=A1*B1", "=A1+B1-C1"].map((f) => (
+                <code key={f} className="text-[var(--amber)] font-mono">{f}</code>
+              ))}
             </div>
           </>
         )}
