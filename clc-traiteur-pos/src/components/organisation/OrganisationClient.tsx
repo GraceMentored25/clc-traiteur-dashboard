@@ -137,7 +137,7 @@ function TabChecklists() {
                   onKeyDown={(e) => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") { renamingRef.current = null; setRenamingId(null); } }}
                   className="flex-1 h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--amber)] text-sm text-[var(--text-primary)] outline-none font-semibold" />
               ) : (
-                <button onClick={() => setActiveId(l.id)} onDoubleClick={() => startRename(l.id, l.title)}
+                <button onClick={() => { if (activeId === l.id) return; setActiveId(l.id); }} onDoubleClick={() => startRename(l.id, l.title)}
                   className={`flex-1 text-left px-3 py-2.5 rounded-xl border transition-colors ${activeId === l.id ? "bg-[var(--amber)]/10 border-[var(--amber)]/30 text-[var(--amber)]" : "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-primary)] hover:border-[var(--border-accent)]"}`}>
                   <p className="text-sm font-semibold truncate">{l.title}</p>
                   <p className="text-[11px] text-[var(--text-muted)] mt-0.5">{done}/{l.items.length} tâches</p>
@@ -697,14 +697,17 @@ function TabTableaux() {
                 onKeyDown={(e) => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") { renamingRef.current = null; setRenamingId(null); } }}
                 className="flex-1 h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--amber)] text-sm text-[var(--text-primary)] outline-none font-semibold" />
             ) : (
-              <button onClick={() => setActiveId(t.id)} onDoubleClick={() => startRename(t.id, t.title)}
+              <button
+                onClick={() => { if (activeId === t.id) return; setActiveId(t.id); }}
+                onDoubleClick={() => startRename(t.id, t.title)}
                 className={`flex-1 text-left px-3 py-2 rounded-xl text-sm transition-colors ${activeId === t.id ? "bg-[var(--amber)]/10 text-[var(--amber)] font-semibold" : "bg-[var(--surface-2)] text-[var(--text-primary)] hover:border-[var(--border-accent)]"}`}>
                 {t.title}
               </button>
             )}
             {renamingId !== t.id && (
               <button onClick={(e) => { e.stopPropagation(); startRename(t.id, t.title); }}
-                className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all shrink-0 hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 ${activeId === t.id ? "text-[var(--amber)] opacity-80" : "opacity-0 group-hover:opacity-100 text-[var(--text-muted)]"}`}>
+                title="Renommer"
+                className="w-7 h-7 rounded-lg flex items-center justify-center transition-all shrink-0 hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 text-[var(--text-muted)] opacity-0 group-hover:opacity-100">
                 <PencilSimple size={12} />
               </button>
             )}
