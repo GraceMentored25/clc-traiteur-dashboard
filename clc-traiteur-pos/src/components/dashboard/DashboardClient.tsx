@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useMemo, memo, useEffect, useRef } from "react";
+import { useState, useMemo, memo, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import { m, AnimatePresence } from "framer-motion";
 import {
   MagnifyingGlass, ShoppingCart, SquaresFour, Rows,
-  SortAscending, Plus, X, Camera, Trash,
+  SortAscending, Plus, X, Camera, Trash, CalendarBlank,
 } from "@phosphor-icons/react";
 import type { RecipeIngredient } from "@/lib/types";
 import { CATEGORIES, DISHES } from "@/lib/data/dishes";
+import { EVENT_TYPES } from "@/lib/data/event-types";
 import { useStore } from "@/lib/store";
 import { cn, formatCurrency } from "@/lib/utils";
 import DishCard from "./DishCard";
@@ -62,6 +63,29 @@ export default function DashboardClient() {
   const addCustomDish = useStore((s) => s.addCustomDish);
   const setRecipeIngredients = useStore((s) => s.setRecipeIngredients);
   const addCustomCategory = useStore((s) => s.addCustomCategory);
+
+  // ── Événement / sous-moment ──────────────────────────────────
+  const activeEventType = useStore((s) => s.activeEventType);
+  const activeSubMoment = useStore((s) => s.activeSubMoment);
+  const sectionCarts = useStore((s) => s.sectionCarts);
+  const setActiveEventType = useStore((s) => s.setActiveEventType);
+  const setActiveSubMoment = useStore((s) => s.setActiveSubMoment);
+
+  const currentEventType = EVENT_TYPES.find((e) => e.id === activeEventType);
+  const currentSubMoment = currentEventType?.subMoments.find((s) => s.id === activeSubMoment);
+
+  // Nombre total de sections avec des plats sélectionnés
+  const filledSections = useMemo(() =>
+    Object.values(sectionCarts).filter((c) => c.length > 0).length,
+    [sectionCarts]
+  );
+
+  // Total de tous les sous-moments combinés
+  const totalAllSections = useMemo(() => {
+    return Object.values(sectionCarts).reduce((total, cart) => {
+      return total + cart.reduce((s, item) => s + item.dish.price * item.quantity, 0);
+    }, 0);
+  }, [sectionCarts]);
 
   const allCategories = useMemo(() => [...CATEGORIES, ...customCategories], [customCategories]);
   const allDishes = useMemo(() => [...DISHES, ...customDishes], [customDishes]);
@@ -139,10 +163,26 @@ export default function DashboardClient() {
 
       {/* ── DESKTOP header ─────────────────────────────────────── */}
       <header className="hidden lg:flex sticky top-0 z-30 items-center gap-3 px-8 py-4 bg-[var(--surface-1)]/80 backdrop-blur-md border-b border-[var(--border)]">
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <h1 className="text-lg font-bold text-[var(--text-primary)] tracking-tight">Création de devis</h1>
-          <p className="text-xs text-[var(--text-muted)]">Sélectionnez les plats et définissez les quantités</p>
+          {activeSubMoment ? (
+            <p className="text-xs text-[var(--amber)] font-medium truncate">
+              {currentEventType?.label} — {currentSubMoment?.label}
+              {filledSections > 0 && <span className="text-[var(--text-muted)] ml-1.5">· {filledSections} section{filledSections > 1 ? "s" : ""} remplie{filledSections > 1 ? "s" : ""}</span>}
+            </p>
+          ) : (
+            <p className="text-xs text-[var(--text-muted)]">Sélectionnez les plats et définissez les quantités</p>
+          )}
         </div>
+
+        {/* Dropdown 1 — Type d'événement */}
+        <EventTypeSelector
+          activeEventType={activeEventType}
+          activeSubMoment={activeSubMoment}
+          sectionCarts={sectionCarts}
+          onSelectEventType={setActiveEventType}
+          onSelectSubMoment={setActiveSubMoment}
+        />
 
         {/* Search */}
         <div className="relative w-56">
@@ -230,7 +270,7 @@ export default function DashboardClient() {
           )}
         </m.button>
 
-        {cartCount > 0 && (
+        {(cartCount > 0 || filledSections > 0) && (
           <m.button
             initial={{ opacity: 0, x: 10 }}
             animate={{ opacity: 1, x: 0 }}
@@ -238,7 +278,10 @@ export default function DashboardClient() {
             onClick={() => setDevisModalOpen(true)}
             className="h-9 px-5 rounded-xl bg-[var(--amber)] hover:bg-[var(--amber-light)] text-[var(--surface)] font-semibold text-sm transition-colors whitespace-nowrap"
           >
-            Générer — {formatCurrency(cartTotal())}
+            {filledSections > 0
+              ? `Générer — ${formatCurrency(totalAllSections)}`
+              : `Générer — ${formatCurrency(cartTotal())}`
+            }
           </m.button>
         )}
       </header>
@@ -605,6 +648,170 @@ export default function DashboardClient() {
               </div>
             </m.div>
           </>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ── EventTypeSelector — 2 dropdowns en cascade ──────────────────────────────
+function EventTypeSelector({
+  activeEventType, activeSubMoment, sectionCarts, onSelectEventType, onSelectSubMoment,
+}: {
+  activeEventType: string;
+  activeSubMoment: string;
+  sectionCarts: Record<string, import("@/lib/types").CartItem[]>;
+  onSelectEventType: (id: string) => void;
+  onSelectSubMoment: (id: string) => void;
+}) {
+  const [open1, setOpen1] = useState(false);
+  const [open2, setOpen2] = useState(false);
+  const ref1 = useRef<HTMLDivElement>(null);
+  const ref2 = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref1.current && !ref1.current.contains(e.target as Node)) setOpen1(false);
+      if (ref2.current && !ref2.current.contains(e.target as Node)) setOpen2(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const currentEvent = EVENT_TYPES.find((e) => e.id === activeEventType);
+  const currentSub = currentEvent?.subMoments.find((s) => s.id === activeSubMoment);
+
+  return (
+    <div className="flex items-center gap-2">
+      {/* Dropdown 1 — Type d'événement */}
+      <div className="relative" ref={ref1}>
+        <button
+          onClick={() => { setOpen1((v) => !v); setOpen2(false); }}
+          className={cn(
+            "flex items-center gap-1.5 h-9 px-3 rounded-xl text-sm transition-colors border whitespace-nowrap",
+            activeEventType
+              ? "bg-[var(--amber)]/10 border-[var(--amber)]/30 text-[var(--amber)]"
+              : "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+          )}
+        >
+          <CalendarBlank size={14} />
+          <span>{currentEvent?.label ?? "Type d'événement"}</span>
+        </button>
+        <AnimatePresence>
+          {open1 && (
+            <m.div
+              initial={{ opacity: 0, y: -6, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -4, scale: 0.97 }}
+              transition={{ duration: 0.12 }}
+              className="absolute left-0 top-11 min-w-[180px] bg-[var(--surface-2)] border border-[var(--border)] rounded-xl shadow-xl z-[100] overflow-hidden"
+            >
+              {EVENT_TYPES.map((ev) => (
+                <button
+                  key={ev.id}
+                  onClick={() => { onSelectEventType(ev.id); setOpen1(false); }}
+                  className={cn(
+                    "w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between",
+                    activeEventType === ev.id
+                      ? "text-[var(--amber)] bg-[var(--amber)]/8"
+                      : "text-[var(--text-secondary)] hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)]"
+                  )}
+                >
+                  {ev.label}
+                  {activeEventType === ev.id && <div className="w-1.5 h-1.5 rounded-full bg-[var(--amber)]" />}
+                </button>
+              ))}
+              {/* Réinitialiser */}
+              {activeEventType && (
+                <button
+                  onClick={() => { onSelectEventType(""); setOpen1(false); }}
+                  className="w-full text-left px-4 py-2.5 text-xs text-[var(--danger)] hover:bg-red-500/8 transition-colors border-t border-[var(--border)]"
+                >
+                  Réinitialiser
+                </button>
+              )}
+            </m.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Dropdown 2 — Sous-moment (visible uniquement si un type est sélectionné) */}
+      <AnimatePresence>
+        {activeEventType && currentEvent && (
+          <m.div
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -8 }}
+            transition={{ duration: 0.15 }}
+            className="relative"
+            ref={ref2}
+          >
+            <button
+              onClick={() => { setOpen2((v) => !v); setOpen1(false); }}
+              className={cn(
+                "flex items-center gap-1.5 h-9 px-3 rounded-xl text-sm transition-colors border whitespace-nowrap",
+                activeSubMoment
+                  ? "bg-[var(--amber)]/10 border-[var(--amber)]/30 text-[var(--amber)]"
+                  : "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              )}
+            >
+              <span>{currentSub?.label ?? "Choisir le moment"}</span>
+              {/* Indicateurs de sections remplies */}
+              <div className="flex items-center gap-0.5 ml-1">
+                {currentEvent.subMoments.map((sub) => {
+                  const count = (sectionCarts[sub.id] ?? []).length;
+                  return (
+                    <div
+                      key={sub.id}
+                      className={cn(
+                        "w-1.5 h-1.5 rounded-full",
+                        sub.id === activeSubMoment ? "bg-[var(--amber)]" :
+                        count > 0 ? "bg-[var(--success)]" : "bg-[var(--surface-3)]"
+                      )}
+                      title={`${sub.label} — ${count} plat${count > 1 ? "s" : ""}`}
+                    />
+                  );
+                })}
+              </div>
+            </button>
+            <AnimatePresence>
+              {open2 && (
+                <m.div
+                  initial={{ opacity: 0, y: -6, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -4, scale: 0.97 }}
+                  transition={{ duration: 0.12 }}
+                  className="absolute left-0 top-11 min-w-[220px] bg-[var(--surface-2)] border border-[var(--border)] rounded-xl shadow-xl z-[100] overflow-hidden"
+                >
+                  {currentEvent.subMoments.map((sub) => {
+                    const count = (sectionCarts[sub.id] ?? []).reduce((n, c) => n + c.quantity, 0);
+                    return (
+                      <button
+                        key={sub.id}
+                        onClick={() => { onSelectSubMoment(sub.id); setOpen2(false); }}
+                        className={cn(
+                          "w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between gap-3",
+                          activeSubMoment === sub.id
+                            ? "text-[var(--amber)] bg-[var(--amber)]/8"
+                            : "text-[var(--text-secondary)] hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)]"
+                        )}
+                      >
+                        <span>{sub.label}</span>
+                        {count > 0 && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[var(--success)]/15 text-[var(--success)] shrink-0">
+                            {count} plat{count > 1 ? "s" : ""}
+                          </span>
+                        )}
+                        {activeSubMoment === sub.id && count === 0 && (
+                          <div className="w-1.5 h-1.5 rounded-full bg-[var(--amber)] shrink-0" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </m.div>
+              )}
+            </AnimatePresence>
+          </m.div>
         )}
       </AnimatePresence>
     </div>

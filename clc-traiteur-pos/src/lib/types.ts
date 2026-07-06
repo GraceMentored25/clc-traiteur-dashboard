@@ -19,6 +19,13 @@ export interface DevisItem {
   quantity: number;
   unitPrice: number;
   subtotal: number;
+  section?: string; // moment de l'événement (ex: "Vin d'honneur")
+}
+
+export interface DevisSection {
+  label: string;
+  items: DevisItem[];
+  subtotal: number;
 }
 
 export type DevisStatus = "Brouillon" | "Envoyé" | "Confirmé" | "Annulé";

@@ -6,6 +6,7 @@ import { encryptStore, decryptStore } from "@/lib/crypto";
 import { logAudit } from "@/lib/auditLog";
 import type { ThemeId } from "@/lib/themes";
 import { CartItem, Devis, Dish, EntreeCapital, Ingredient, Materiel, DemandeCoursesRepas, DemandeLogistique, User } from "@/lib/types";
+import { EVENT_TYPES } from "@/lib/data/event-types";
 import { MOCK_DEVIS } from "@/lib/data/mock-events";
 import { DEFAULT_INGREDIENTS, DEFAULT_MATERIEL } from "@/lib/data/stocks";
 
@@ -73,6 +74,17 @@ export interface AppState {
   updateLogistiqueItem: (demandeId: string, index: number, qty: number) => void;
   setLogistiqueItemStock: (demandeId: string, index: number, stockUtilise: number) => void;
   setLogistiqueStatut: (id: string, statut: import("@/lib/types").CoursesStatut) => void;
+
+  // ── Sélection événement / sous-moment ──────────────────────
+  activeEventType: string;   // id du type d'événement (ex: "mariage")
+  activeSubMoment: string;   // id du sous-moment actif (ex: "vin-honneur")
+  setActiveEventType: (id: string) => void;
+  setActiveSubMoment: (id: string) => void;
+
+  // ── Paniers par section (sectionId → CartItem[]) ────────────
+  sectionCarts: Record<string, CartItem[]>;
+  setSectionCart: (sectionId: string, cart: CartItem[]) => void;
+  clearAllSectionCarts: () => void;
 
   cart: CartItem[];
   addToCart: (item: CartItem) => void;
@@ -313,33 +325,70 @@ export const useStore = create<AppState>()(
           return { demandesLogistique: updated };
         }),
 
+      activeEventType: "",
+      activeSubMoment: "",
+      setActiveEventType: (id) => {
+        const evType = EVENT_TYPES.find((e) => e.id === id);
+        const firstSub = evType?.subMoments[0]?.id ?? "";
+        set({ activeEventType: id, activeSubMoment: firstSub });
+        // Charger le panier de la première section de ce type
+        const existing = get().sectionCarts[firstSub] ?? [];
+        set({ cart: existing });
+      },
+      setActiveSubMoment: (id) => {
+        // Sauvegarder le panier courant dans la section active avant de switcher
+        const current = get();
+        if (current.activeSubMoment) {
+          set((s) => ({
+            sectionCarts: { ...s.sectionCarts, [current.activeSubMoment]: s.cart },
+          }));
+        }
+        // Charger le panier de la nouvelle section
+        const newCart = current.sectionCarts[id] ?? [];
+        set({ activeSubMoment: id, cart: newCart });
+      },
+
+      sectionCarts: {},
+      setSectionCart: (sectionId, cart) =>
+        set((s) => ({ sectionCarts: { ...s.sectionCarts, [sectionId]: cart } })),
+      clearAllSectionCarts: () => set({ sectionCarts: {}, cart: [], activeEventType: "", activeSubMoment: "" }),
+
       cart: [],
       addToCart: (item) => {
-        const current = get().cart;
-        const existing = current.find((c) => c.dish.id === item.dish.id);
-        if (existing) {
-          set({
-            cart: current.map((c) =>
-              c.dish.id === item.dish.id
-                ? { ...c, quantity: c.quantity + item.quantity }
-                : c
-            ),
-          });
-        } else {
-          set({ cart: [...current, item] });
-        }
+        const { cart, activeSubMoment, sectionCarts } = get();
+        const existing = cart.find((c) => c.dish.id === item.dish.id);
+        const newCart = existing
+          ? cart.map((c) => c.dish.id === item.dish.id ? { ...c, quantity: c.quantity + item.quantity } : c)
+          : [...cart, item];
+        set({
+          cart: newCart,
+          sectionCarts: activeSubMoment ? { ...sectionCarts, [activeSubMoment]: newCart } : sectionCarts,
+        });
       },
       updateQuantity: (dishId, quantity) => {
-        if (quantity <= 0) {
-          get().removeFromCart(dishId);
-          return;
-        }
-        set({ cart: get().cart.map((c) => c.dish.id === dishId ? { ...c, quantity } : c) });
+        if (quantity <= 0) { get().removeFromCart(dishId); return; }
+        const { cart, activeSubMoment, sectionCarts } = get();
+        const newCart = cart.map((c) => c.dish.id === dishId ? { ...c, quantity } : c);
+        set({
+          cart: newCart,
+          sectionCarts: activeSubMoment ? { ...sectionCarts, [activeSubMoment]: newCart } : sectionCarts,
+        });
       },
       removeFromCart: (dishId) => {
-        set({ cart: get().cart.filter((c) => c.dish.id !== dishId) });
+        const { cart, activeSubMoment, sectionCarts } = get();
+        const newCart = cart.filter((c) => c.dish.id !== dishId);
+        set({
+          cart: newCart,
+          sectionCarts: activeSubMoment ? { ...sectionCarts, [activeSubMoment]: newCart } : sectionCarts,
+        });
       },
-      clearCart: () => set({ cart: [] }),
+      clearCart: () => {
+        const sub = get().activeSubMoment;
+        set((s) => ({
+          cart: [],
+          sectionCarts: sub ? { ...s.sectionCarts, [sub]: [] } : s.sectionCarts,
+        }));
+      },
       cartTotal: () => get().cart.reduce((sum, c) => sum + c.dish.price * c.quantity, 0),
 
       devisListPro: [],
@@ -448,6 +497,9 @@ export const useStore = create<AppState>()(
       partialize: (state) => ({
         // user intentionnellement absent — la session vit dans un cookie HttpOnly serveur
         // devisListLab intentionnellement absent — toujours MOCK_DEVIS frais au chargement
+        activeEventType: state.activeEventType,
+        activeSubMoment: state.activeSubMoment,
+        sectionCarts: state.sectionCarts,
         devisListPro: state.devisListPro,
         devisList: state.appMode === "pro" ? state.devisList : [],
         theme: state.theme,
