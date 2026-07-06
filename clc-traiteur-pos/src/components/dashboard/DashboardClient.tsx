@@ -690,8 +690,8 @@ function EventTypeSelector({
           className={cn(
             "flex items-center gap-1.5 h-9 px-3 rounded-xl text-sm transition-colors border whitespace-nowrap",
             activeEventType
-              ? "bg-[var(--amber)]/10 border-[var(--amber)]/30 text-[var(--amber)]"
-              : "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              ? "bg-[var(--surface-1)] border-[var(--amber)] text-[var(--amber)] font-semibold"
+              : "bg-[var(--surface-1)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           )}
         >
           <CalendarBlank size={14} />
@@ -751,8 +751,8 @@ function EventTypeSelector({
               className={cn(
                 "flex items-center gap-1.5 h-9 px-3 rounded-xl text-sm transition-colors border whitespace-nowrap",
                 activeSubMoment
-                  ? "bg-[var(--amber)]/10 border-[var(--amber)]/30 text-[var(--amber)]"
-                  : "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  ? "bg-[var(--surface-1)] border-[var(--amber)] text-[var(--amber)] font-semibold"
+                  : "bg-[var(--surface-1)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
               )}
             >
               <span>{currentSub?.label ?? "Choisir le moment"}</span>
