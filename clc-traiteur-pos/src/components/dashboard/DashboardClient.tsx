@@ -704,8 +704,14 @@ function EventTypeSelector({
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -4, scale: 0.97 }}
               transition={{ duration: 0.12 }}
-              className="absolute left-0 top-11 min-w-[180px] border border-[var(--border)] rounded-xl shadow-2xl z-[100] overflow-hidden"
-              style={{ background: "var(--surface-2)", isolation: "isolate" }}
+              className="absolute left-0 top-11 min-w-[180px] rounded-xl z-[200] overflow-hidden"
+              style={{
+                backgroundColor: "var(--surface-2)",
+                border: "1px solid var(--border)",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+                backdropFilter: "none",
+                WebkitBackdropFilter: "none",
+              }}
             >
               {EVENT_TYPES.map((ev) => (
                 <button
@@ -714,7 +720,7 @@ function EventTypeSelector({
                   className={cn(
                     "w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between",
                     activeEventType === ev.id
-                      ? "text-[var(--amber)] bg-[var(--amber)]/8"
+                      ? "text-[var(--amber)] bg-[var(--surface-3)]"
                       : "text-[var(--text-secondary)] hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)]"
                   )}
                 >
@@ -722,11 +728,10 @@ function EventTypeSelector({
                   {activeEventType === ev.id && <div className="w-1.5 h-1.5 rounded-full bg-[var(--amber)]" />}
                 </button>
               ))}
-              {/* Réinitialiser */}
               {activeEventType && (
                 <button
                   onClick={() => { onSelectEventType(""); setOpen1(false); }}
-                  className="w-full text-left px-4 py-2.5 text-xs text-[var(--danger)] hover:bg-red-500/8 transition-colors border-t border-[var(--border)]"
+                  className="w-full text-left px-4 py-2.5 text-xs text-[var(--danger)] hover:bg-[var(--surface-3)] transition-colors border-t border-[var(--border)]"
                 >
                   Réinitialiser
                 </button>
@@ -782,8 +787,14 @@ function EventTypeSelector({
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -4, scale: 0.97 }}
                   transition={{ duration: 0.12 }}
-                  className="absolute left-0 top-11 min-w-[220px] border border-[var(--border)] rounded-xl shadow-2xl z-[100] overflow-hidden"
-                  style={{ background: "var(--surface-2)", isolation: "isolate" }}
+                  className="absolute left-0 top-11 min-w-[220px] rounded-xl z-[200] overflow-hidden"
+                  style={{
+                    backgroundColor: "var(--surface-2)",
+                    border: "1px solid var(--border)",
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+                    backdropFilter: "none",
+                    WebkitBackdropFilter: "none",
+                  }}
                 >
                   {currentEvent.subMoments.map((sub) => {
                     const count = (sectionCarts[sub.id] ?? []).reduce((n, c) => n + c.quantity, 0);
@@ -794,13 +805,13 @@ function EventTypeSelector({
                         className={cn(
                           "w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between gap-3",
                           activeSubMoment === sub.id
-                            ? "text-[var(--amber)] bg-[var(--amber)]/8"
+                            ? "text-[var(--amber)] bg-[var(--surface-3)]"
                             : "text-[var(--text-secondary)] hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)]"
                         )}
                       >
                         <span>{sub.label}</span>
                         {count > 0 && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[var(--success)]/15 text-[var(--success)] shrink-0">
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[var(--surface-3)] text-[var(--success)] shrink-0">
                             {count} plat{count > 1 ? "s" : ""}
                           </span>
                         )}
