@@ -704,7 +704,8 @@ function EventTypeSelector({
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -4, scale: 0.97 }}
               transition={{ duration: 0.12 }}
-              className="absolute left-0 top-11 min-w-[180px] bg-[var(--surface-2)] border border-[var(--border)] rounded-xl shadow-xl z-[100] overflow-hidden"
+              className="absolute left-0 top-11 min-w-[180px] border border-[var(--border)] rounded-xl shadow-2xl z-[100] overflow-hidden"
+              style={{ background: "var(--surface-2)", isolation: "isolate" }}
             >
               {EVENT_TYPES.map((ev) => (
                 <button
@@ -781,7 +782,8 @@ function EventTypeSelector({
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -4, scale: 0.97 }}
                   transition={{ duration: 0.12 }}
-                  className="absolute left-0 top-11 min-w-[220px] bg-[var(--surface-2)] border border-[var(--border)] rounded-xl shadow-xl z-[100] overflow-hidden"
+                  className="absolute left-0 top-11 min-w-[220px] border border-[var(--border)] rounded-xl shadow-2xl z-[100] overflow-hidden"
+                  style={{ background: "var(--surface-2)", isolation: "isolate" }}
                 >
                   {currentEvent.subMoments.map((sub) => {
                     const count = (sectionCarts[sub.id] ?? []).reduce((n, c) => n + c.quantity, 0);
