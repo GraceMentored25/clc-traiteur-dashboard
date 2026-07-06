@@ -152,67 +152,180 @@ export async function generateDevisPDF(devis: Devis) {
   const SUB_W = 40;
   const PRE_W = TW - QTY_W - SUB_W; // 120mm
 
-  autoTable(doc, {
-    startY: tableY,
-    head: [["Prestation", "Qté", "Sous-total HT"]],
-    body: devis.items.map(item => [
-      item.dishName,
-      String(item.quantity),
-      `${item.subtotal.toFixed(2)} €`,
-    ]),
-    alternateRowStyles: { fillColor: LIGHT_BG },
-    columnStyles: {
-      0: { halign: "left",   cellWidth: PRE_W },
-      1: { halign: "center", cellWidth: QTY_W },
-      2: { halign: "right",  cellWidth: SUB_W, fontStyle: "bold" },
-    },
-    headStyles: { fillColor: DARK, textColor: [255,255,255], fontStyle: "bold", fontSize: 10 },
-    styles: { fontSize: 10, cellPadding: { top: 3.5, bottom: 3.5, left: 4, right: 4 } },
-    margin: { left: L, right: L },
-  });
+  const colStyles = {
+    0: { halign: "left"   as const, cellWidth: PRE_W },
+    1: { halign: "center" as const, cellWidth: QTY_W },
+    2: { halign: "right"  as const, cellWidth: SUB_W, fontStyle: "bold" as const },
+  };
+
+  // Détecter si le devis a des sections
+  const hasSections = devis.items.some(i => i.section);
+
+  if (hasSections) {
+    // Grouper les items par section dans l'ordre d'apparition
+    const sectionMap = new Map<string, typeof devis.items>();
+    for (const item of devis.items) {
+      const key = item.section ?? "Autres";
+      if (!sectionMap.has(key)) sectionMap.set(key, []);
+      sectionMap.get(key)!.push(item);
+    }
+    const sectionList = Array.from(sectionMap.entries()).map(([label, items]) => ({
+      label,
+      items,
+      subtotal: items.reduce((s, i) => s + i.subtotal, 0),
+    }));
+
+    let currentY = tableY;
+
+    for (const sec of sectionList) {
+      // En-tête de section coloré
+      doc.setFillColor(AMBER[0], AMBER[1], AMBER[2]);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      const secHeaderH = 7;
+      doc.roundedRect(L, currentY, TW, secHeaderH, 1, 1, "F");
+      doc.text(sec.label.toUpperCase(), L + 4, currentY + 5);
+      doc.text(`Sous-total HT : ${sec.subtotal.toFixed(2)} €`, R - 4, currentY + 5, { align: "right" });
+      currentY += secHeaderH + 1;
+
+      autoTable(doc, {
+        startY: currentY,
+        head: [["Prestation", "Qté", "Sous-total HT"]],
+        body: sec.items.map(item => [
+          item.dishName,
+          String(item.quantity),
+          `${item.subtotal.toFixed(2)} €`,
+        ]),
+        alternateRowStyles: { fillColor: LIGHT_BG },
+        columnStyles: colStyles,
+        headStyles: { fillColor: [45, 52, 60] as [number,number,number], textColor: [255,255,255] as [number,number,number], fontStyle: "bold", fontSize: 9 },
+        styles: { fontSize: 10, cellPadding: { top: 3, bottom: 3, left: 4, right: 4 } },
+        margin: { left: L, right: L },
+      });
+
+      currentY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4;
+    }
+
+    // Récap sections
+    const recapY = currentY;
+    const recapBoxH = sectionList.length * 6 + 4;
+    doc.setFillColor(255, 248, 230);
+    doc.roundedRect(R - 90, recapY, 90 - (W - R), recapBoxH, 2, 2, "F");
+    sectionList.forEach((sec, i) => {
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...GRAY);
+      doc.text(sec.label, R - 86, recapY + 5 + i * 6);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...DARK);
+      doc.text(`${sec.subtotal.toFixed(2)} €`, R - 4, recapY + 5 + i * 6, { align: "right" });
+    });
+    currentY = recapY + recapBoxH + 2;
+
+    // ── TOTAUX avec sections ────────────────────────────────────────────────
+    const tY = currentY;
+    const rowH = 8;
+    const totalsLeft = R - 78;
+    const totalsW = R - totalsLeft;
+    doc.setFillColor(...LIGHT_BG);
+    doc.roundedRect(totalsLeft, tY, totalsW, rowH * 3 + 6, 2, 2, "F");
+
+    const tLabelX = totalsLeft + 5;
+    const tValueX = R - 5;
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...GRAY);
+    doc.text("Sous-total HT :", tLabelX, tY + rowH - 1);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...DARK);
+    doc.text(`${devis.totalHT.toFixed(2)} €`, tValueX, tY + rowH - 1, { align: "right" });
+
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...GRAY);
+    doc.text("TVA (20%) :", tLabelX, tY + rowH * 2 - 1);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...DARK);
+    doc.text(`${(devis.totalTTC - devis.totalHT).toFixed(2)} €`, tValueX, tY + rowH * 2 - 1, { align: "right" });
+
+    doc.setDrawColor(...AMBER);
+    doc.setLineWidth(0.5);
+    doc.line(tLabelX, tY + rowH * 2 + 2, tValueX, tY + rowH * 2 + 2);
+
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...DARK);
+    doc.text("TOTAL TTC :", tLabelX, tY + rowH * 3 + 2);
+    doc.setTextColor(AMBER[0], AMBER[1], AMBER[2]);
+    doc.text(`${devis.totalTTC.toFixed(2)} €`, tValueX, tY + rowH * 3 + 2, { align: "right" });
+
+    // Réaffecter afterTable pour la suite (notes, acompte…)
+    (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY = tY + rowH * 3 + 8;
+
+  } else {
+    // ── Mode classique sans sections ──────────────────────────────────────
+    autoTable(doc, {
+      startY: tableY,
+      head: [["Prestation", "Qté", "Sous-total HT"]],
+      body: devis.items.map(item => [
+        item.dishName,
+        String(item.quantity),
+        `${item.subtotal.toFixed(2)} €`,
+      ]),
+      alternateRowStyles: { fillColor: LIGHT_BG },
+      columnStyles: colStyles,
+      headStyles: { fillColor: DARK, textColor: [255,255,255] as [number,number,number], fontStyle: "bold", fontSize: 10 },
+      styles: { fontSize: 10, cellPadding: { top: 3.5, bottom: 3.5, left: 4, right: 4 } },
+      margin: { left: L, right: L },
+    });
+  }
 
   const afterTable = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
   const totalsLeft = R - 78; // boîte totaux : 78mm depuis la marge droite
 
-  // ── TOTAUX ───────────────────────────────────────────────────────────────
-  const tY = afterTable + 4;
-  const rowH = 8;
+  // ── TOTAUX (mode sans sections seulement) ────────────────────────────────
+  if (!hasSections) {
+    const tY = afterTable + 4;
+    const rowH = 8;
+    const totalsW = R - totalsLeft;
+    doc.setFillColor(...LIGHT_BG);
+    doc.roundedRect(totalsLeft, tY, totalsW, rowH * 3 + 6, 2, 2, "F");
 
-  const totalsW = R - totalsLeft;
-  doc.setFillColor(...LIGHT_BG);
-  doc.roundedRect(totalsLeft, tY, totalsW, rowH * 3 + 6, 2, 2, "F");
+    const tLabelX = totalsLeft + 5;
+    const tValueX = R - 5;
 
-  const tLabelX = totalsLeft + 5;
-  const tValueX = R - 5;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...GRAY);
+    doc.text("Sous-total HT :", tLabelX, tY + rowH - 1);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...DARK);
+    doc.text(`${devis.totalHT.toFixed(2)} €`, tValueX, tY + rowH - 1, { align: "right" });
 
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(...GRAY);
-  doc.text("Sous-total HT :", tLabelX, tY + rowH - 1);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...DARK);
-  doc.text(`${devis.totalHT.toFixed(2)} €`, tValueX, tY + rowH - 1, { align: "right" });
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...GRAY);
+    doc.text("TVA (20%) :", tLabelX, tY + rowH * 2 - 1);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...DARK);
+    doc.text(`${(devis.totalTTC - devis.totalHT).toFixed(2)} €`, tValueX, tY + rowH * 2 - 1, { align: "right" });
 
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(...GRAY);
-  doc.text("TVA (20%) :", tLabelX, tY + rowH * 2 - 1);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...DARK);
-  doc.text(`${(devis.totalTTC - devis.totalHT).toFixed(2)} €`, tValueX, tY + rowH * 2 - 1, { align: "right" });
+    doc.setDrawColor(...AMBER);
+    doc.setLineWidth(0.5);
+    doc.line(tLabelX, tY + rowH * 2 + 2, tValueX, tY + rowH * 2 + 2);
 
-  doc.setDrawColor(...AMBER);
-  doc.setLineWidth(0.5);
-  doc.line(tLabelX, tY + rowH * 2 + 2, tValueX, tY + rowH * 2 + 2);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...DARK);
+    doc.text("TOTAL TTC :", tLabelX, tY + rowH * 3 + 2);
+    doc.setTextColor(AMBER[0], AMBER[1], AMBER[2]);
+    doc.text(`${devis.totalTTC.toFixed(2)} €`, tValueX, tY + rowH * 3 + 2, { align: "right" });
 
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...DARK);
-  doc.text("TOTAL TTC :", tLabelX, tY + rowH * 3 + 2);
-  doc.setTextColor(AMBER[0], AMBER[1], AMBER[2]);
-  doc.text(`${devis.totalTTC.toFixed(2)} €`, tValueX, tY + rowH * 3 + 2, { align: "right" });
+    (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY = tY + rowH * 3 + 8;
+  }
 
-  // Notes
-  let currentY = tY + rowH * 3 + 13;
+  // ── NOTES + ACOMPTE (commun aux deux modes) ───────────────────────────────
+  let currentY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 5;
   if (devis.notes) {
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
@@ -225,8 +338,8 @@ export async function generateDevisPDF(devis: Devis) {
     currentY += 6 + noteLines.length * 6 + 4;
   }
 
-  // Acompte reste page 1
-  const aY = currentY + 5;
+  // Acompte
+  const aY = currentY + 3;
   doc.setFillColor(255, 248, 230);
   doc.roundedRect(L, aY, R - L, 28, 2, 2, "F");
   doc.setDrawColor(...AMBER);

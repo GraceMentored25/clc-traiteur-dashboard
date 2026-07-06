@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { m } from "framer-motion";
 import { X, Phone, Calendar, Users, FileText, Check, FilePdf } from "@phosphor-icons/react";
 import { generateDevisPDF } from "@/lib/generateDevisPDF";
@@ -25,6 +25,25 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
   const totalHT = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
   const totalTTC = totalHT * 1.2;
 
+  // Déterminer si le devis a des sections
+  const hasSections = useMemo(() => items.some(i => i.section), [items]);
+
+  // Grouper les items par section
+  const sections = useMemo(() => {
+    if (!hasSections) return null;
+    const map = new Map<string, DevisItem[]>();
+    for (const item of items) {
+      const key = item.section ?? "Autres";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(item);
+    }
+    return Array.from(map.entries()).map(([label, sectionItems]) => ({
+      label,
+      items: sectionItems,
+      subtotal: sectionItems.reduce((s, i) => s + i.quantity * i.unitPrice, 0),
+    }));
+  }, [items, hasSections]);
+
   const updateItem = useCallback((dishId: number, field: "quantity" | "unitPrice", raw: string) => {
     const val = parseFloat(raw);
     if (isNaN(val) || val < 0) return;
@@ -38,28 +57,56 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
 
   const handleSave = () => {
     const newHT = items.reduce((s, i) => s + i.subtotal, 0);
-    updateDevis(devis.id, {
-      items,
-      totalHT: newHT,
-      totalTTC: newHT * 1.2,
-    });
+    updateDevis(devis.id, { items, totalHT: newHT, totalTTC: newHT * 1.2 });
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
   };
 
   const isDirty = JSON.stringify(items) !== JSON.stringify(devis.items);
 
+  // Rendu d'une ligne item (partagé sections/flat)
+  const renderItem = (item: DevisItem) => (
+    <div key={item.dishId} className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-[var(--surface-2)]">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-[var(--text-primary)] truncate">{item.dishName}</p>
+        <p className="text-[10px] text-[var(--text-muted)] font-mono mt-0.5">
+          {item.quantity} × {formatCurrency(item.unitPrice)} = <span className="text-[var(--amber)]">{formatCurrency(item.subtotal)}</span>
+        </p>
+      </div>
+      <div className="flex flex-col items-center gap-0.5">
+        <label className="text-[9px] text-[var(--text-muted)] uppercase tracking-wide">Qté</label>
+        <input
+          type="number" min="0"
+          value={item.quantity}
+          onChange={(e) => updateItem(item.dishId, "quantity", e.target.value)}
+          onFocus={(e) => e.target.select()}
+          className="w-14 h-7 text-center font-mono font-bold text-sm bg-[var(--surface-3)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 focus:ring-1 focus:ring-[var(--amber)]/15 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        />
+      </div>
+      <div className="flex flex-col items-center gap-0.5">
+        <label className="text-[9px] text-[var(--text-muted)] uppercase tracking-wide">Prix €</label>
+        <input
+          type="number" min="0" step="0.5"
+          value={item.unitPrice}
+          onChange={(e) => updateItem(item.dishId, "unitPrice", e.target.value)}
+          onFocus={(e) => e.target.select()}
+          className="w-16 h-7 text-center font-mono font-bold text-sm bg-[var(--surface-3)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 focus:ring-1 focus:ring-[var(--amber)]/15 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        />
+      </div>
+    </div>
+  );
+
   return (
     <>
       <m.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+        className="fixed inset-0 bg-black/50 z-40"
       />
       <m.aside
         initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="fixed right-0 top-0 h-full w-full sm:w-[460px] bg-[var(--surface-1)] border-l border-[var(--border)] z-50 flex flex-col overflow-y-auto"
+        className="fixed right-0 top-0 h-full w-full sm:w-[480px] bg-[var(--surface-1)] border-l border-[var(--border)] z-50 flex flex-col overflow-y-auto"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--border)] sticky top-0 bg-[var(--surface-1)] z-10">
@@ -74,7 +121,7 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
             <button
               onClick={() => generateDevisPDF(devis)}
               title="Générer PDF"
-              className="flex items-center gap-1.5 h-8 px-3 rounded-xl bg-[var(--amber)]/10 text-[var(--amber)] text-xs font-semibold hover:bg-[var(--amber)]/20 transition-all"
+              className="flex items-center gap-1.5 h-8 px-3 rounded-xl bg-[var(--amber)]/10 text-[var(--amber)] text-xs font-semibold hover:bg-[var(--amber)]/20 transition-colors"
             >
               <FilePdf size={14} weight="fill" />
               PDF
@@ -133,70 +180,50 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
             <Select
               value={devis.status}
               onChange={(v) => onStatusChange(v as DevisStatus)}
-              options={STATUS_OPTIONS.map((s) => ({
-                value: s,
-                label: s,
-                labelClassName: STATUS_COLORS[s]?.split(" ")[0],
-              }))}
+              options={STATUS_OPTIONS.map((s) => ({ value: s, label: s, labelClassName: STATUS_COLORS[s]?.split(" ")[0] }))}
               className="w-full"
             />
           </div>
 
-          {/* Items — editable */}
+          {/* Plats — par section ou flat */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-widest">Plats commandés</p>
+              <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-widest">
+                {hasSections ? `Prestations · ${sections!.length} section${sections!.length > 1 ? "s" : ""}` : "Plats commandés"}
+              </p>
               <p className="text-[10px] text-[var(--text-muted)]">Qté · Prix unit.</p>
             </div>
-            <div className="space-y-1.5">
-              {items.map((item) => (
-                <div key={item.dishId} className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-[var(--surface-2)]">
-                  {/* Name */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-[var(--text-primary)] truncate">{item.dishName}</p>
-                    <p className="text-[10px] text-[var(--text-muted)] font-mono mt-0.5">
-                      {item.quantity} × {formatCurrency(item.unitPrice)} = <span className="text-[var(--amber)]">{formatCurrency(item.subtotal)}</span>
-                    </p>
-                  </div>
 
-                  {/* Qty input */}
-                  <div className="flex flex-col items-center gap-0.5">
-                    <label className="text-[9px] text-[var(--text-muted)] uppercase tracking-wide">Qté</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={item.quantity}
-                      onChange={(e) => updateItem(item.dishId, "quantity", e.target.value)}
-                      onFocus={(e) => e.target.select()}
-                      className="w-14 h-7 text-center font-mono font-bold text-sm bg-[var(--surface-3)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 focus:ring-1 focus:ring-[var(--amber)]/15 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
+            {hasSections ? (
+              <div className="space-y-4">
+                {sections!.map((sec) => (
+                  <div key={sec.label}>
+                    {/* Header section */}
+                    <div className="flex items-center justify-between px-3 py-1.5 rounded-t-xl bg-[var(--amber)]/10 border border-[var(--amber)]/20">
+                      <span className="text-[10px] font-bold text-[var(--amber)] uppercase tracking-wider">{sec.label}</span>
+                      <span className="text-[10px] font-mono font-semibold text-[var(--amber)]">{formatCurrency(sec.subtotal * 1.2)} TTC</span>
+                    </div>
+                    {/* Items de la section */}
+                    <div className="space-y-1.5 border border-t-0 border-[var(--amber)]/20 rounded-b-xl p-2">
+                      {sec.items.map(renderItem)}
+                    </div>
                   </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {items.map(renderItem)}
+              </div>
+            )}
 
-                  {/* Price input */}
-                  <div className="flex flex-col items-center gap-0.5">
-                    <label className="text-[9px] text-[var(--text-muted)] uppercase tracking-wide">Prix €</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.5"
-                      value={item.unitPrice}
-                      onChange={(e) => updateItem(item.dishId, "unitPrice", e.target.value)}
-                      onFocus={(e) => e.target.select()}
-                      className="w-16 h-7 text-center font-mono font-bold text-sm bg-[var(--surface-3)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 focus:ring-1 focus:ring-[var(--amber)]/15 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Save button — shown only if changed */}
+            {/* Save button */}
             {(isDirty || saved) && (
               <m.button
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={handleSave}
-                className={`mt-3 w-full h-9 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all ${
+                className={`mt-3 w-full h-9 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${
                   saved
                     ? "bg-green-500/15 text-[var(--success)] border border-green-500/30"
                     : "bg-[var(--amber)] hover:bg-[var(--amber-light)] text-[var(--surface)]"
@@ -207,8 +234,15 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
             )}
           </div>
 
-          {/* Total — recalculé dynamiquement */}
+          {/* Totaux */}
           <div className="rounded-xl bg-[var(--amber)]/8 border border-[var(--amber)]/20 p-4 space-y-2">
+            {hasSections && sections!.map((sec) => (
+              <div key={sec.label} className="flex justify-between text-xs text-[var(--text-muted)]">
+                <span className="truncate mr-2">{sec.label}</span>
+                <span className="font-mono shrink-0">{formatCurrency(sec.subtotal)}</span>
+              </div>
+            ))}
+            {hasSections && <div className="border-t border-[var(--amber)]/20 pt-2" />}
             <div className="flex justify-between text-sm text-[var(--text-secondary)]">
               <span>Sous-total HT</span>
               <span className="font-mono">{formatCurrency(totalHT)}</span>
