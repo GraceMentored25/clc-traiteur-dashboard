@@ -672,7 +672,7 @@ function EventTypeSelector({
   const [rect1, setRect1] = useState<DOMRect | null>(null);
   const [rect2, setRect2] = useState<DOMRect | null>(null);
   const [mounted, setMounted] = useState(false);
-  const [themeColors, setThemeColors] = useState({ bg: "", bgHover: "", border: "", text: "", textMuted: "", amber: "", success: "", danger: "" });
+  const [themeColors, setThemeColors] = useState({ bg: "", bgHover: "", bgSelected: "", border: "", text: "", textMuted: "", amber: "", success: "", danger: "" });
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -682,7 +682,8 @@ function EventTypeSelector({
     const isLight = document.documentElement.classList.contains("light");
     setThemeColors({
       bg:        isLight ? "#ffffff" : "#0D1117",
-      bgHover:   isLight ? "#f0f2f5" : "#161B22",
+      bgHover:    isLight ? "#f0f2f5" : "#161B22",
+      bgSelected: isLight ? "#fff3e0" : "#2a1f08",
       border:    isLight ? "#d0d7de" : "#30363d",
       text:      isLight ? "#111111" : "#F0F6FC",
       textMuted: isLight ? "#57606a" : "#8B949E",
@@ -761,12 +762,12 @@ function EventTypeSelector({
               style={{
                 width: "100%", textAlign: "left", padding: "10px 16px",
                 fontSize: 14, display: "flex", alignItems: "center", justifyContent: "space-between",
-                background: activeEventType === ev.id ? themeColors.bgHover : "transparent",
+                background: activeEventType === ev.id ? themeColors.bgSelected : "transparent",
                 color: activeEventType === ev.id ? themeColors.amber : themeColors.textMuted,
                 border: "none", cursor: "pointer",
               }}
               onMouseEnter={(e) => { if (activeEventType !== ev.id) { (e.currentTarget as HTMLButtonElement).style.background = themeColors.bgHover; (e.currentTarget as HTMLButtonElement).style.color = themeColors.text; } }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = activeEventType === ev.id ? themeColors.bgHover : "transparent"; (e.currentTarget as HTMLButtonElement).style.color = activeEventType === ev.id ? themeColors.amber : themeColors.textMuted; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = activeEventType === ev.id ? themeColors.bgSelected : "transparent"; (e.currentTarget as HTMLButtonElement).style.color = activeEventType === ev.id ? themeColors.amber : themeColors.textMuted; }}
             >
               <span>{ev.label}</span>
               {activeEventType === ev.id && <div style={{ width: 6, height: 6, borderRadius: "50%", background: themeColors.amber }} />}
@@ -834,12 +835,12 @@ function EventTypeSelector({
                 style={{
                   width: "100%", textAlign: "left", padding: "10px 16px",
                   fontSize: 14, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
-                  background: activeSubMoment === sub.id ? themeColors.bgHover : "transparent",
+                  background: activeSubMoment === sub.id ? themeColors.bgSelected : "transparent",
                   color: activeSubMoment === sub.id ? themeColors.amber : themeColors.textMuted,
                   border: "none", cursor: "pointer",
                 }}
                 onMouseEnter={(e) => { if (activeSubMoment !== sub.id) { (e.currentTarget as HTMLButtonElement).style.background = themeColors.bgHover; (e.currentTarget as HTMLButtonElement).style.color = themeColors.text; } }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = activeSubMoment === sub.id ? themeColors.bgHover : "transparent"; (e.currentTarget as HTMLButtonElement).style.color = activeSubMoment === sub.id ? themeColors.amber : themeColors.textMuted; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = activeSubMoment === sub.id ? themeColors.bgSelected : "transparent"; (e.currentTarget as HTMLButtonElement).style.color = activeSubMoment === sub.id ? themeColors.amber : themeColors.textMuted; }}
               >
                 <span>{sub.label}</span>
                 {count > 0 && (
