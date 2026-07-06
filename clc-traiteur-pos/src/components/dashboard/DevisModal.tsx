@@ -38,6 +38,12 @@ export default function DevisModal({ onClose }: Props) {
   const sectionCarts = useStore((s) => s.sectionCarts);
   const activeEventType = useStore((s) => s.activeEventType);
 
+  // Label du type d'événement sélectionné (ex: "mariage" → "Mariage")
+  const prefilledEventType = useMemo(() => {
+    const ev = EVENT_TYPES.find((e) => e.id === activeEventType);
+    return ev?.label ?? "";
+  }, [activeEventType]);
+
   const [success, setSuccess] = useState(false);
 
   // ── Construire les sections depuis sectionCarts ────────────────────────────
@@ -72,6 +78,7 @@ export default function DevisModal({ onClose }: Props) {
 
   const { register, control, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
+    defaultValues: { eventType: prefilledEventType },
   });
 
   const onSubmit = async (data: FormData) => {
@@ -273,10 +280,19 @@ export default function DevisModal({ onClose }: Props) {
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-[var(--text-secondary)]">Type d&apos;événement</label>
-                  <Controller name="eventType" control={control} render={({ field }) => (
-                    <Select value={field.value} onChange={field.onChange} options={EVENT_TYPE_OPTS} placeholder="Sélectionner..." className="w-full" />
-                  )} />
-                  {errors.eventType && <p className="text-[11px] text-[var(--danger)] flex items-center gap-1"><WarningCircle size={11} /> {errors.eventType.message}</p>}
+                  {prefilledEventType ? (
+                    <div className="w-full h-10 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--amber)]/30 text-sm text-[var(--text-primary)] flex items-center justify-between">
+                      <span>{prefilledEventType}</span>
+                      <span className="text-[10px] text-[var(--amber)] font-semibold px-1.5 py-0.5 rounded-md bg-[var(--amber)]/10">Auto</span>
+                    </div>
+                  ) : (
+                    <>
+                      <Controller name="eventType" control={control} render={({ field }) => (
+                        <Select value={field.value} onChange={field.onChange} options={EVENT_TYPE_OPTS} placeholder="Sélectionner..." className="w-full" />
+                      )} />
+                      {errors.eventType && <p className="text-[11px] text-[var(--danger)] flex items-center gap-1"><WarningCircle size={11} /> {errors.eventType.message}</p>}
+                    </>
+                  )}
                 </div>
 
                 <div className="space-y-1.5">
