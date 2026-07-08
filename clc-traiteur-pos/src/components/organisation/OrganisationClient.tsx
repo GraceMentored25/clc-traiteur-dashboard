@@ -4,8 +4,9 @@ import { useState, useRef } from "react";
 import { m, AnimatePresence } from "framer-motion";
 import {
   Plus, Trash, Check, X, CheckSquare, Note, CalendarBlank,
-  TextAlignLeft, Table, PencilSimple,
+  TextAlignLeft, Table, PencilSimple, UploadSimple,
 } from "@phosphor-icons/react";
+import * as XLSX from "xlsx";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface ChecklistItem { id: string; text: string; done: boolean; }
@@ -560,9 +561,63 @@ function TabTableaux() {
   const [editingHeader, setEditingHeader] = useState<number | null>(null);
   const [editVal, setEditVal] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const importRef = useRef<HTMLInputElement>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameVal, setRenameVal] = useState("");
   const renamingRef = useRef<{ id: string; val: string } | null>(null);
+
+  const importFromExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!importRef.current) return;
+    importRef.current.value = "";
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: "array" });
+
+        const newTables: CustomTable[] = workbook.SheetNames.map((name) => {
+          const sheet = workbook.Sheets[name];
+          const raw: (string | number | boolean | null | undefined)[][] =
+            XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+
+          if (raw.length === 0) {
+            return {
+              id: crypto.randomUUID(),
+              title: name,
+              columns: ["A"],
+              rows: [[""]],
+            };
+          }
+
+          const headerRow = raw[0].map((h) => (h !== null && h !== undefined && h !== "" ? String(h) : ""));
+          const columns = headerRow.length > 0 ? headerRow : ["A"];
+
+          const rows = raw.slice(1).map((r) => {
+            const row = columns.map((_, ci) =>
+              r[ci] !== null && r[ci] !== undefined ? String(r[ci]) : ""
+            );
+            return row;
+          });
+
+          return {
+            id: crypto.randomUUID(),
+            title: name,
+            columns,
+            rows: rows.length > 0 ? rows : [columns.map(() => "")],
+          };
+        });
+
+        setTables((ts) => [...ts, ...newTables]);
+        if (newTables.length > 0) setActiveId(newTables[0].id);
+      } catch {
+        alert("Impossible de lire ce fichier Excel. Vérifiez le format (.xls / .xlsx / .csv).");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
 
   const startRename = (id: string, title: string) => {
     renamingRef.current = { id, val: title };
@@ -673,6 +728,18 @@ function TabTableaux() {
         <button onClick={() => setCreating(true)}
           className="w-full flex items-center gap-2 h-9 px-3 rounded-xl bg-[var(--amber)] hover:bg-[var(--amber-light)] text-[var(--surface)] text-sm font-semibold transition-colors">
           <Plus size={14} weight="bold" /> Nouveau tableau
+        </button>
+        <input
+          ref={importRef}
+          type="file"
+          accept=".xls,.xlsx,.xlsm,.xlsb,.ods,.csv"
+          className="hidden"
+          onChange={importFromExcel}
+        />
+        <button
+          onClick={() => importRef.current?.click()}
+          className="w-full flex items-center gap-2 h-9 px-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] hover:border-[var(--amber)]/50 hover:text-[var(--amber)] text-[var(--text-secondary)] text-sm font-semibold transition-colors">
+          <UploadSimple size={14} weight="bold" /> Importer Excel
         </button>
         <AnimatePresence>
           {creating && (
