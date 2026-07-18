@@ -2,12 +2,13 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { m } from "framer-motion";
-import { X, Phone, Calendar, Users, FileText, Check, FilePdf } from "@phosphor-icons/react";
+import { X, Phone, Calendar, Users, FileText, Check, FilePdf, Trash, Plus } from "@phosphor-icons/react";
 import { generateDevisPDF } from "@/lib/generateDevisPDF";
 import { Devis, DevisItem, DevisStatus } from "@/lib/types";
 import { formatCurrency, formatDate, STATUS_COLORS } from "@/lib/utils";
 import { useStore } from "@/lib/store";
 import { Select } from "@/components/ui/SelectV2";
+import { DISHES } from "@/lib/data/dishes";
 
 interface Props {
   devis: Devis;
@@ -17,18 +18,40 @@ interface Props {
 
 const STATUS_OPTIONS: DevisStatus[] = ["Brouillon", "Envoyé", "Confirmé", "Annulé"];
 
+// Hiérarchie des sous-sections
+const SUBSECTION_MAP = [
+  { label: "Entrées", categories: ["Entrées"] },
+  {
+    label: "Plats",
+    categories: ["Plats principaux", "Grillades", "Poissons", "Accompagnements"],
+    subGroups: [
+      { label: "Viandes", categories: ["Plats principaux"] },
+      { label: "Grillades", categories: ["Grillades"] },
+      { label: "Poissons", categories: ["Poissons"] },
+      { label: "Accompagnements", categories: ["Accompagnements"] },
+    ],
+  },
+  { label: "Desserts", categories: ["Desserts"] },
+  { label: "Boissons", categories: ["Cocktails & Boissons"] },
+] as const;
+
+const ALL_KNOWN_CATEGORIES = SUBSECTION_MAP.flatMap(s => s.categories);
+
+function getDishCategory(dishId: number): string {
+  return DISHES.find(d => d.id === dishId)?.category ?? "";
+}
+
 export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
   const { updateDevis } = useStore();
   const [items, setItems] = useState<DevisItem[]>(devis.items.map(i => ({ ...i })));
   const [saved, setSaved] = useState(false);
+  const [addSelections, setAddSelections] = useState<Record<string, number>>({});
 
   const totalHT = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
   const totalTTC = totalHT * 1.2;
 
-  // Déterminer si le devis a des sections
   const hasSections = useMemo(() => items.some(i => i.section), [items]);
 
-  // Grouper les items par section
   const sections = useMemo(() => {
     if (!hasSections) return null;
     const map = new Map<string, DevisItem[]>();
@@ -44,16 +67,45 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
     }));
   }, [items, hasSections]);
 
-  const updateItem = useCallback((dishId: number, field: "quantity" | "unitPrice", raw: string) => {
+  // Clé composite (dishId + section) pour isoler chaque occurrence d'un plat
+  const updateItem = useCallback((dishId: number, section: string | undefined, field: "quantity" | "unitPrice", raw: string) => {
     const val = parseFloat(raw);
     if (isNaN(val) || val < 0) return;
     setItems(prev => prev.map(i => {
-      if (i.dishId !== dishId) return i;
+      if (i.dishId !== dishId || i.section !== section) return i;
       const updated = { ...i, [field]: field === "quantity" ? Math.round(val) : val };
       updated.subtotal = updated.quantity * updated.unitPrice;
       return updated;
     }));
   }, []);
+
+  const removeItem = useCallback((dishId: number, section: string | undefined) => {
+    setItems(prev => prev.filter(i => !(i.dishId === dishId && i.section === section)));
+  }, []);
+
+  const addDishToSection = useCallback((sectionLabel: string, dishId: number) => {
+    const dish = DISHES.find(d => d.id === dishId);
+    if (!dish) return;
+    const exists = items.find(i => i.dishId === dishId && i.section === sectionLabel);
+    if (exists) {
+      setItems(prev => prev.map(i => {
+        if (i.dishId !== dishId || i.section !== sectionLabel) return i;
+        const updated = { ...i, quantity: i.quantity + 1 };
+        updated.subtotal = updated.quantity * updated.unitPrice;
+        return updated;
+      }));
+    } else {
+      setItems(prev => [...prev, {
+        dishId: dish.id,
+        dishName: dish.name,
+        quantity: 1,
+        unitPrice: dish.price,
+        subtotal: dish.price,
+        section: sectionLabel,
+      }]);
+    }
+    setAddSelections(prev => ({ ...prev, [sectionLabel]: 0 }));
+  }, [items]);
 
   const handleSave = () => {
     const newHT = items.reduce((s, i) => s + i.subtotal, 0);
@@ -64,9 +116,15 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
 
   const isDirty = JSON.stringify(items) !== JSON.stringify(devis.items);
 
-  // Rendu d'une ligne item (partagé sections/flat)
   const renderItem = (item: DevisItem) => (
-    <div key={item.dishId} className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-[var(--surface-2)]">
+    <div key={`${item.dishId}-${item.section ?? ""}`} className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-[var(--surface-2)]">
+      <button
+        onClick={() => removeItem(item.dishId, item.section)}
+        className="w-6 h-6 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 flex items-center justify-center shrink-0 transition-colors"
+        title="Supprimer ce plat"
+      >
+        <Trash size={11} weight="bold" />
+      </button>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-[var(--text-primary)] truncate">{item.dishName}</p>
         <p className="text-[10px] text-[var(--text-muted)] font-mono mt-0.5">
@@ -78,7 +136,7 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
         <input
           type="number" min="0"
           value={item.quantity}
-          onChange={(e) => updateItem(item.dishId, "quantity", e.target.value)}
+          onChange={(e) => updateItem(item.dishId, item.section, "quantity", e.target.value)}
           onFocus={(e) => e.target.select()}
           className="w-14 h-7 text-center font-mono font-bold text-sm bg-[var(--surface-3)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 focus:ring-1 focus:ring-[var(--amber)]/15 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         />
@@ -88,10 +146,105 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
         <input
           type="number" min="0" step="0.5"
           value={item.unitPrice}
-          onChange={(e) => updateItem(item.dishId, "unitPrice", e.target.value)}
+          onChange={(e) => updateItem(item.dishId, item.section, "unitPrice", e.target.value)}
           onFocus={(e) => e.target.select()}
           className="w-16 h-7 text-center font-mono font-bold text-sm bg-[var(--surface-3)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 focus:ring-1 focus:ring-[var(--amber)]/15 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         />
+      </div>
+    </div>
+  );
+
+  // Séparateur de sous-section
+  const SubsectionDivider = ({ label }: { label: string }) => (
+    <div className="flex items-center gap-2 px-1 py-1">
+      <span className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider whitespace-nowrap">{label}</span>
+      <div className="flex-1 h-px bg-[var(--border)]" />
+    </div>
+  );
+
+  // Rendu des items d'une section avec sous-sections et sous-groupes
+  const renderSectionBody = (sectionItems: DevisItem[], sectionLabel: string) => (
+    <div className="space-y-2">
+      {SUBSECTION_MAP.map(subsec => {
+        const subsecItems = sectionItems.filter(i =>
+          (subsec.categories as readonly string[]).includes(getDishCategory(i.dishId))
+        );
+        if (subsecItems.length === 0) return null;
+
+        if ("subGroups" in subsec && subsec.subGroups) {
+          return (
+            <div key={subsec.label}>
+              <SubsectionDivider label={subsec.label} />
+              <div className="space-y-2 pl-1">
+                {subsec.subGroups.map(sg => {
+                  const sgItems = subsecItems.filter(i => (sg.categories as readonly string[]).includes(getDishCategory(i.dishId)));
+                  if (sgItems.length === 0) return null;
+                  return (
+                    <div key={sg.label}>
+                      <p className="text-[9px] font-semibold text-[var(--text-muted)] uppercase tracking-wider px-2 mb-1">{sg.label}</p>
+                      <div className="space-y-1.5">{sgItems.map(renderItem)}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <div key={subsec.label}>
+            <SubsectionDivider label={subsec.label} />
+            <div className="space-y-1.5">{subsecItems.map(renderItem)}</div>
+          </div>
+        );
+      })}
+
+      {/* Items hors catalogue connu */}
+      {(() => {
+        const others = sectionItems.filter(i => !ALL_KNOWN_CATEGORIES.includes(getDishCategory(i.dishId)));
+        if (others.length === 0) return null;
+        return (
+          <div>
+            <SubsectionDivider label="Autres" />
+            <div className="space-y-1.5">{others.map(renderItem)}</div>
+          </div>
+        );
+      })()}
+
+      {/* Ligne ajout plat dans la section */}
+      <div className="flex items-center gap-2 pt-2">
+        <select
+          value={addSelections[sectionLabel] ?? 0}
+          onChange={e => setAddSelections(prev => ({ ...prev, [sectionLabel]: parseInt(e.target.value) }))}
+          className="flex-1 h-8 text-xs bg-[var(--surface-3)] border border-dashed border-[var(--amber)]/40 rounded-lg text-[var(--text-secondary)] px-2 outline-none focus:border-[var(--amber)]/60 transition-colors"
+        >
+          <option value={0} disabled>Ajouter un plat…</option>
+          {SUBSECTION_MAP.map(subsec =>
+            "subGroups" in subsec && subsec.subGroups
+              ? subsec.subGroups.map(sg => (
+                  <optgroup key={`${subsec.label}-${sg.label}`} label={`${subsec.label} — ${sg.label}`}>
+                    {DISHES.filter(d => (sg.categories as readonly string[]).includes(d.category)).map(d => (
+                      <option key={d.id} value={d.id}>{d.name} — {formatCurrency(d.price)}</option>
+                    ))}
+                  </optgroup>
+                ))
+              : (
+                  <optgroup key={subsec.label} label={subsec.label}>
+                    {DISHES.filter(d => (subsec.categories as readonly string[]).includes(d.category)).map(d => (
+                      <option key={d.id} value={d.id}>{d.name} — {formatCurrency(d.price)}</option>
+                    ))}
+                  </optgroup>
+                )
+          )}
+        </select>
+        <button
+          onClick={() => { const id = addSelections[sectionLabel]; if (id) addDishToSection(sectionLabel, id); }}
+          disabled={!addSelections[sectionLabel]}
+          className="h-8 w-8 rounded-lg bg-[var(--amber)] text-[var(--surface)] flex items-center justify-center hover:bg-[var(--amber-light)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors shrink-0"
+          title="Ajouter ce plat à la section"
+        >
+          <Plus size={14} weight="bold" />
+        </button>
       </div>
     </div>
   );
@@ -185,7 +338,7 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
             />
           </div>
 
-          {/* Plats — par section ou flat */}
+          {/* Plats — par section avec sous-sections ou flat */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-widest">
@@ -203,9 +356,9 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
                       <span className="text-[10px] font-bold text-[var(--amber)] uppercase tracking-wider">{sec.label}</span>
                       <span className="text-[10px] font-mono font-semibold text-[var(--amber)]">{formatCurrency(sec.subtotal * 1.2)} TTC</span>
                     </div>
-                    {/* Items de la section */}
-                    <div className="space-y-1.5 border border-t-0 border-[var(--amber)]/20 rounded-b-xl p-2">
-                      {sec.items.map(renderItem)}
+                    {/* Corps section avec sous-sections */}
+                    <div className="border border-t-0 border-[var(--amber)]/20 rounded-b-xl p-2">
+                      {renderSectionBody(sec.items, sec.label)}
                     </div>
                   </div>
                 ))}
