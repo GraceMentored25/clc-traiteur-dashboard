@@ -189,6 +189,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
         {children}
       </main>
+      <span className="fixed bottom-2 right-3 text-[10px] font-mono text-[var(--text-muted)]/50 select-none pointer-events-none z-50">
+        {process.env.NEXT_PUBLIC_COMMIT_HASH}
+      </span>
     </div>
   );
 }
