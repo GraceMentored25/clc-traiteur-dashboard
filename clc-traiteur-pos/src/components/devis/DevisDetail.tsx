@@ -219,7 +219,7 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
           onChange={e => setAddSelections(prev => ({ ...prev, [sectionLabel]: parseInt(e.target.value) }))}
           className="flex-1 h-8 text-xs bg-[var(--surface-3)] border border-dashed border-[var(--amber)]/40 rounded-lg text-[var(--text-secondary)] px-2 outline-none focus:border-[var(--amber)]/60 transition-colors"
         >
-          <option value={0} disabled>Ajouter un plat…</option>
+          <option value={0} disabled>Ajouter un plat ou service…</option>
           {SUBSECTION_MAP.map(subsec =>
             "subGroups" in subsec && subsec.subGroups
               ? subsec.subGroups.map(sg => (
