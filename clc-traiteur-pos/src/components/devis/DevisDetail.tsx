@@ -25,7 +25,7 @@ const SUBSECTION_MAP = [
     label: "Plats",
     categories: ["Plats principaux", "Grillades", "Poissons", "Accompagnements"],
     subGroups: [
-      { label: "Viandes", categories: ["Plats principaux"] },
+      { label: "Plats principaux", categories: ["Plats principaux"] },
       { label: "Grillades", categories: ["Grillades"] },
       { label: "Poissons", categories: ["Poissons"] },
       { label: "Accompagnements", categories: ["Accompagnements"] },
