@@ -201,7 +201,7 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
 
       {/* Items hors catalogue connu */}
       {(() => {
-        const others = sectionItems.filter(i => !ALL_KNOWN_CATEGORIES.includes(getDishCategory(i.dishId)));
+        const others = sectionItems.filter(i => !(ALL_KNOWN_CATEGORIES as readonly string[]).includes(getDishCategory(i.dishId)));
         if (others.length === 0) return null;
         return (
           <div>
