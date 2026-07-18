@@ -187,12 +187,7 @@ const DishCard = memo(function DishCard({ dish }: Props) {
                   transition={{ duration: 0.1 }}
                   onClick={handlePriceBadgeClick}
                   title="Cliquer pour modifier le prix"
-                  className={cn(
-                    "flex items-center gap-1 text-xs font-bold text-white px-2 py-0.5 rounded-lg transition-colors",
-                    isPriceCustom
-                      ? "bg-[var(--amber)]/80 hover:bg-[var(--amber)]"
-                      : "bg-black/50 hover:bg-black/70"
-                  )}
+                  className="flex items-center gap-1 text-xs font-bold text-white px-2 py-0.5 rounded-lg transition-colors bg-black/50 hover:bg-black/70"
                 >
                   {formatCurrency(effectivePrice)}
                   <span className="text-white/60 font-normal text-[10px]"> / {dish.unit}</span>
