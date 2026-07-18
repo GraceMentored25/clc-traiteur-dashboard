@@ -158,7 +158,7 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
   // Séparateur de sous-section
   const SubsectionDivider = ({ label }: { label: string }) => (
     <div className="flex items-center gap-2 px-1 py-1">
-      <span className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider whitespace-nowrap">{label}</span>
+      <span className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">{label}</span>
       <div className="flex-1 h-px bg-[var(--border)]" />
     </div>
   );
