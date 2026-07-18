@@ -9,6 +9,7 @@ export const CATEGORIES = [
   "Accompagnements",
   "Desserts",
   "Cocktails & Boissons",
+  "Services",
 ];
 
 export const DISHES: Dish[] = [
@@ -182,5 +183,32 @@ export const DISHES: Dish[] = [
     image: "/dishes/bissap.png",
     description: "Fleurs d'hibiscus infusées, gingembre et vanille",
     unit: "verre 25cl",
+  },
+  {
+    id: 20,
+    name: "Serveurs",
+    category: "Services",
+    price: 80,
+    image: "/dishes/serveurs.jpg",
+    description: "Service en salle par personne pour la durée de l'événement",
+    unit: "personne",
+  },
+  {
+    id: 21,
+    name: "Marmites chauffantes",
+    category: "Services",
+    price: 25,
+    image: "/dishes/marmites-chauffantes.jpg",
+    description: "Location de marmites chauffantes pour maintenir les plats au chaud",
+    unit: "pièce",
+  },
+  {
+    id: 22,
+    name: "Service de table",
+    category: "Services",
+    price: 15,
+    image: "/dishes/service-table.jpg",
+    description: "Vaisselle, couverts, nappes et tout le matériel de table",
+    unit: "couvert",
   },
 ];

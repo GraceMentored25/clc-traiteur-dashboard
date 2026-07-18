@@ -33,6 +33,7 @@ const SUBSECTION_MAP = [
   },
   { label: "Desserts", categories: ["Desserts"] },
   { label: "Boissons", categories: ["Cocktails & Boissons"] },
+  { label: "Services", categories: ["Services"] },
 ] as const;
 
 const ALL_KNOWN_CATEGORIES = SUBSECTION_MAP.flatMap(s => s.categories);
