@@ -167,7 +167,7 @@ export default function ComptabiliteClientFinal() {
     const totalSalaires = confirmedSalaires.reduce((s, sal) => s + sal.montant, 0);
     const totalSorties = totalSortiesRepas + totalSortiesLog + totalSalaires;
     const solde = totalEntrees - totalSorties;
-    return { totalHT, totalTVA, totalTTC, avgDevis, count: confirmed.length, totalCapital, totalEntrees, totalSorties, totalSalaires, solde };
+    return { totalHT, totalTVA, totalTTC, avgDevis, count: confirmed.length, totalCapital, totalEntrees, totalSorties, totalCourses: totalSortiesRepas, totalLogistique: totalSortiesLog, totalSalaires, solde };
   }, [confirmed, confirmedCapital, sortiesRepas, sortiesLogistique, confirmedSalaires]);
 
   const handleAddCapital = () => {
@@ -880,6 +880,18 @@ export default function ComptabiliteClientFinal() {
                 <span className="text-sm text-[var(--text-secondary)]">Sorties confirmées</span>
                 <span className="text-sm font-mono font-semibold text-[var(--amber)]">− {formatCurrency(metrics.totalSorties)}</span>
               </div>
+              {metrics.totalCourses > 0 && (
+                <div className="flex items-center justify-between px-4 lg:px-6 py-2 pl-6 lg:pl-10">
+                  <span className="text-xs text-[var(--text-muted)]">dont courses</span>
+                  <span className="text-xs font-mono text-[var(--text-muted)]">{formatCurrency(metrics.totalCourses)}</span>
+                </div>
+              )}
+              {metrics.totalLogistique > 0 && (
+                <div className="flex items-center justify-between px-4 lg:px-6 py-2 pl-6 lg:pl-10">
+                  <span className="text-xs text-[var(--text-muted)]">dont logistique</span>
+                  <span className="text-xs font-mono text-[var(--text-muted)]">{formatCurrency(metrics.totalLogistique)}</span>
+                </div>
+              )}
               {metrics.totalSalaires > 0 && (
                 <div className="flex items-center justify-between px-4 lg:px-6 py-2 pl-6 lg:pl-10">
                   <span className="text-xs text-[var(--text-muted)]">dont salaires versés</span>
