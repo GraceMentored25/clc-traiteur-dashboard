@@ -61,7 +61,7 @@ export interface EntreeCapital {
 
 // ── Personnel & Salaires ──────────────────────────────────────────────────
 
-export type PersonnelRole = "associe" | "commis";
+export type PersonnelRole = "associe" | "commis" | "consultant";
 
 export interface Personnel {
   id: string;

@@ -18,7 +18,6 @@ import {
   PencilSimple,
   Users,
   UserPlus,
-  ListBullets,
   Wallet,
 } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
@@ -39,6 +38,7 @@ const SOURCES: { value: EntreeCapital["source"]; label: string }[] = [
 const ROLE_OPTIONS: { value: PersonnelRole; label: string }[] = [
   { value: "associe", label: "Associé" },
   { value: "commis", label: "Commis" },
+  { value: "consultant", label: "Consultant" },
 ];
 const roleLabel = (r?: PersonnelRole) => ROLE_OPTIONS.find((o) => o.value === r)?.label ?? "—";
 
@@ -58,12 +58,14 @@ export default function ComptabiliteClientFinal() {
 
   // ── Salaires & personnel ──────────────────────────────────────
   const [salaireModal, setSalaireModal] = useState(false);
-  const [salaireView, setSalaireView] = useState<"menu" | "list" | "staff" | "add">("menu");
+  const [salaireView, setSalaireView] = useState<"menu" | "salaires" | "staff">("menu");
+  const [showSalaireForm, setShowSalaireForm] = useState(false);
   const [staffForm, setStaffForm] = useState({ name: "", role: "commis" as PersonnelRole });
   const [salaireForm, setSalaireForm] = useState({ personnelId: "", newName: "", montant: "", date: new Date().toISOString().split("T")[0], libelle: "" });
 
-  const openSalaireModal = () => { setSalaireView("menu"); setSalaireModal(true); };
+  const openSalaireModal = () => { setSalaireView("menu"); setShowSalaireForm(false); setSalaireModal(true); };
   const closeSalaireModal = () => { setSalaireModal(false); };
+  const goSalaireMenu = () => { setSalaireView("menu"); setShowSalaireForm(false); };
 
   const handleAddStaff = () => {
     if (!staffForm.name.trim()) return;
@@ -87,7 +89,7 @@ export default function ComptabiliteClientFinal() {
     }
     addSalaire({ personnelId, name, role, montant, date: salaireForm.date, libelle: salaireForm.libelle.trim() || undefined });
     setSalaireForm({ personnelId: "", newName: "", montant: "", date: new Date().toISOString().split("T")[0], libelle: "" });
-    setSalaireView("list");
+    setShowSalaireForm(false);
   };
 
   const confirmed = useMemo(() => {
@@ -663,9 +665,8 @@ export default function ComptabiliteClientFinal() {
                     <Users size={18} weight="fill" className="text-[var(--amber)]" />
                     <h2 className="font-bold text-[var(--text-primary)]">
                       {salaireView === "menu" && "Salaires & personnel"}
-                      {salaireView === "list" && "Salaires versés"}
+                      {salaireView === "salaires" && "Salaires versés"}
                       {salaireView === "staff" && "Ajouter du personnel"}
-                      {salaireView === "add" && "Ajouter un salaire"}
                     </h2>
                   </div>
                   <button onClick={closeSalaireModal} className="w-8 h-8 rounded-xl bg-[var(--surface-2)] hover:bg-[var(--surface-3)] flex items-center justify-center text-[var(--text-secondary)] transition-colors">
@@ -677,11 +678,11 @@ export default function ComptabiliteClientFinal() {
                   {/* Menu */}
                   {salaireView === "menu" && (
                     <div className="space-y-3">
-                      <button onClick={() => setSalaireView("list")} className="w-full flex items-center gap-4 p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--amber)]/30 transition-all text-left">
-                        <div className="w-10 h-10 rounded-xl bg-[var(--amber)]/10 text-[var(--amber)] flex items-center justify-center shrink-0"><ListBullets size={20} weight="fill" /></div>
+                      <button onClick={() => { setShowSalaireForm(false); setSalaireView("salaires"); }} className="w-full flex items-center gap-4 p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--amber)]/30 transition-all text-left">
+                        <div className="w-10 h-10 rounded-xl bg-[var(--amber)]/10 text-[var(--amber)] flex items-center justify-center shrink-0"><Wallet size={20} weight="fill" /></div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-[var(--text-primary)]">Consulter les salaires versés</p>
-                          <p className="text-[11px] text-[var(--text-muted)] mt-0.5">{salaires.length} versement{salaires.length > 1 ? "s" : ""} · {formatCurrency(salaires.reduce((a, s) => a + s.montant, 0))}</p>
+                          <p className="text-sm font-semibold text-[var(--text-primary)]">Salaires versés</p>
+                          <p className="text-[11px] text-[var(--text-muted)] mt-0.5">Consulter et ajouter un salaire · {salaires.length} versement{salaires.length > 1 ? "s" : ""} · {formatCurrency(salaires.reduce((a, s) => a + s.montant, 0))}</p>
                         </div>
                       </button>
                       <button onClick={() => setSalaireView("staff")} className="w-full flex items-center gap-4 p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--amber)]/30 transition-all text-left">
@@ -691,46 +692,113 @@ export default function ComptabiliteClientFinal() {
                           <p className="text-[11px] text-[var(--text-muted)] mt-0.5">{personnel.length} personne{personnel.length > 1 ? "s" : ""} enregistrée{personnel.length > 1 ? "s" : ""}</p>
                         </div>
                       </button>
-                      <button onClick={() => setSalaireView("add")} className="w-full flex items-center gap-4 p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--amber)]/30 transition-all text-left">
-                        <div className="w-10 h-10 rounded-xl bg-[var(--amber)]/10 text-[var(--amber)] flex items-center justify-center shrink-0"><Plus size={20} weight="bold" /></div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-[var(--text-primary)]">Ajouter un salaire</p>
-                          <p className="text-[11px] text-[var(--text-muted)] mt-0.5">Choisir une personne existante ou nouvelle</p>
-                        </div>
-                      </button>
                     </div>
                   )}
 
-                  {/* Liste des salaires */}
-                  {salaireView === "list" && (
-                    <div className="space-y-2">
+                  {/* Salaires versés — liste + ajout inline */}
+                  {salaireView === "salaires" && (
+                    <div className="space-y-3">
                       {salaires.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-10 text-center">
+                        <div className="flex flex-col items-center justify-center py-8 text-center">
                           <Wallet size={32} className="text-[var(--text-muted)] mb-2" />
-                          <p className="text-sm text-[var(--text-secondary)]">Aucun salaire versé</p>
+                          <p className="text-sm text-[var(--text-secondary)]">Aucun salaire versé pour l&apos;instant</p>
                         </div>
                       ) : (
-                        <>
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-3 px-3">
+                            <span className="flex-1 text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">Personne / Rôle</span>
+                            <span className="w-24 text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">Période</span>
+                            <span className="w-16 text-right text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">Montant</span>
+                            <span className="w-7 shrink-0" />
+                          </div>
                           {salaires.map((s) => (
-                            <div key={s.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[var(--surface-2)] group">
+                            <div key={s.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[var(--surface-2)]">
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-[var(--text-primary)] truncate">{s.name} <span className="text-[10px] text-[var(--text-muted)]">· {roleLabel(s.role)}</span></p>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                  {s.libelle && <span className="text-xs text-[var(--text-muted)] truncate">{s.libelle}</span>}
-                                  <span className="text-xs text-[var(--text-muted)] flex items-center gap-1 shrink-0"><Calendar size={10}/>{formatDate(s.date)}</span>
-                                </div>
+                                <p className="text-sm font-medium text-[var(--text-primary)] truncate">{s.name}</p>
+                                <p className="text-[11px] text-[var(--text-muted)]">{roleLabel(s.role)}</p>
                               </div>
-                              <p className="text-sm font-mono font-bold text-[var(--amber)] shrink-0">{formatCurrency(s.montant)}</p>
+                              <div className="w-24 min-w-0">
+                                <p className="text-xs text-[var(--text-secondary)] truncate">{s.libelle || "—"}</p>
+                                <p className="text-[10px] text-[var(--text-muted)] flex items-center gap-1"><Calendar size={9}/>{formatDate(s.date)}</p>
+                              </div>
+                              <p className="w-16 text-right text-sm font-mono font-bold text-[var(--amber)]">{formatCurrency(s.montant)}</p>
                               <button onClick={() => removeSalaire(s.id)} className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition-all shrink-0">
                                 <Trash size={13} />
                               </button>
                             </div>
                           ))}
-                          <div className="flex items-center justify-between px-3 pt-3 border-t border-[var(--border)]">
+                          <div className="flex items-center justify-between px-3 pt-2 border-t border-[var(--border)]">
                             <p className="text-sm font-bold text-[var(--text-primary)]">Total</p>
                             <p className="text-sm font-mono font-bold text-[var(--amber)]">{formatCurrency(salaires.reduce((a, s) => a + s.montant, 0))}</p>
                           </div>
-                        </>
+                        </div>
+                      )}
+
+                      {/* Bouton « nouveau salaire » (ou formulaire inline sur la même vue) */}
+                      {!showSalaireForm ? (
+                        <button onClick={() => setShowSalaireForm(true)}
+                          className="w-full flex items-center justify-center gap-2 h-10 rounded-xl border border-dashed border-[var(--amber)]/40 text-[var(--amber)] text-sm font-semibold hover:bg-[var(--amber)]/5 transition-colors">
+                          <Plus size={16} weight="bold" /> Nouveau salaire
+                        </button>
+                      ) : (
+                        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)]/40 p-3 space-y-3">
+                          <p className="text-xs font-semibold text-[var(--text-primary)]">Nouveau salaire</p>
+                          <div>
+                            <label className="text-xs text-[var(--text-muted)] mb-1 block">Personne *</label>
+                            <Select
+                              value={salaireForm.personnelId}
+                              onChange={(v) => setSalaireForm((f) => ({ ...f, personnelId: v }))}
+                              placeholder="Sélectionner une personne…"
+                              options={[
+                                ...personnel.map((p) => ({ value: p.id, label: `${p.name} — ${roleLabel(p.role)}` })),
+                                { value: "__new__", label: "＋ Nouvelle personne" },
+                              ]}
+                              className="w-full"
+                            />
+                          </div>
+                          {salaireForm.personnelId === "__new__" && (
+                            <div>
+                              <label className="text-xs text-[var(--text-muted)] mb-1 block">Nom de la nouvelle personne *</label>
+                              <input autoFocus value={salaireForm.newName}
+                                onChange={(e) => setSalaireForm((f) => ({ ...f, newName: e.target.value }))}
+                                placeholder="Nom"
+                                className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all" />
+                            </div>
+                          )}
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-xs text-[var(--text-muted)] mb-1 block">Montant (€) *</label>
+                              <input type="number" min="0" step="0.01" value={salaireForm.montant}
+                                onChange={(e) => setSalaireForm((f) => ({ ...f, montant: e.target.value }))}
+                                placeholder="0.00"
+                                className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                            </div>
+                            <div>
+                              <label className="text-xs text-[var(--text-muted)] mb-1 block">Date</label>
+                              <input type="date" value={salaireForm.date}
+                                onChange={(e) => setSalaireForm((f) => ({ ...f, date: e.target.value }))}
+                                className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all" />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="text-xs text-[var(--text-muted)] mb-1 block">Période (optionnel)</label>
+                            <input value={salaireForm.libelle}
+                              onChange={(e) => setSalaireForm((f) => ({ ...f, libelle: e.target.value }))}
+                              placeholder="Ex: juillet 2026, prime événement…"
+                              className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all" />
+                          </div>
+                          <div className="flex gap-2 pt-1">
+                            <button onClick={() => { setShowSalaireForm(false); setSalaireForm({ personnelId: "", newName: "", montant: "", date: new Date().toISOString().split("T")[0], libelle: "" }); }}
+                              className="flex-1 h-9 rounded-xl border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-2)] transition-colors">
+                              Annuler
+                            </button>
+                            <button onClick={handleAddSalaire}
+                              disabled={!salaireForm.montant || (!salaireForm.personnelId) || (salaireForm.personnelId === "__new__" && !salaireForm.newName.trim())}
+                              className="flex-1 h-9 rounded-xl bg-[var(--amber)] hover:bg-[var(--amber-light)] text-[var(--surface)] font-semibold text-sm transition-colors disabled:opacity-40">
+                              Enregistrer
+                            </button>
+                          </div>
+                        </div>
                       )}
                     </div>
                   )}
@@ -779,55 +847,6 @@ export default function ComptabiliteClientFinal() {
                     </div>
                   )}
 
-                  {/* Ajouter un salaire */}
-                  {salaireView === "add" && (
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-xs text-[var(--text-muted)] mb-1 block">Personne *</label>
-                        <Select
-                          value={salaireForm.personnelId}
-                          onChange={(v) => setSalaireForm((f) => ({ ...f, personnelId: v }))}
-                          placeholder="Sélectionner une personne…"
-                          options={[
-                            ...personnel.map((p) => ({ value: p.id, label: `${p.name} — ${roleLabel(p.role)}` })),
-                            { value: "__new__", label: "＋ Nouvelle personne" },
-                          ]}
-                          className="w-full"
-                        />
-                      </div>
-                      {salaireForm.personnelId === "__new__" && (
-                        <div>
-                          <label className="text-xs text-[var(--text-muted)] mb-1 block">Nom de la nouvelle personne *</label>
-                          <input autoFocus value={salaireForm.newName}
-                            onChange={(e) => setSalaireForm((f) => ({ ...f, newName: e.target.value }))}
-                            placeholder="Nom"
-                            className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all" />
-                        </div>
-                      )}
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-xs text-[var(--text-muted)] mb-1 block">Montant (€) *</label>
-                          <input type="number" min="0" step="0.01" value={salaireForm.montant}
-                            onChange={(e) => setSalaireForm((f) => ({ ...f, montant: e.target.value }))}
-                            placeholder="0.00"
-                            className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-                        </div>
-                        <div>
-                          <label className="text-xs text-[var(--text-muted)] mb-1 block">Date</label>
-                          <input type="date" value={salaireForm.date}
-                            onChange={(e) => setSalaireForm((f) => ({ ...f, date: e.target.value }))}
-                            className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all" />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-xs text-[var(--text-muted)] mb-1 block">Libellé (optionnel)</label>
-                        <input value={salaireForm.libelle}
-                          onChange={(e) => setSalaireForm((f) => ({ ...f, libelle: e.target.value }))}
-                          placeholder="Ex: Salaire juillet, prime événement…"
-                          className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all" />
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 {/* Footer modal */}
@@ -835,16 +854,7 @@ export default function ComptabiliteClientFinal() {
                   {salaireView === "menu" ? (
                     <button onClick={closeSalaireModal} className="flex-1 h-10 rounded-xl border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-2)] transition-colors">Fermer</button>
                   ) : (
-                    <>
-                      <button onClick={() => setSalaireView("menu")} className="flex-1 h-10 rounded-xl border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-2)] transition-colors">Retour</button>
-                      {salaireView === "add" && (
-                        <button onClick={handleAddSalaire}
-                          disabled={!salaireForm.montant || (!salaireForm.personnelId) || (salaireForm.personnelId === "__new__" && !salaireForm.newName.trim())}
-                          className="flex-1 h-10 rounded-xl bg-[var(--amber)] hover:bg-[var(--amber-light)] text-[var(--surface)] font-semibold text-sm transition-colors disabled:opacity-40">
-                          Enregistrer le salaire
-                        </button>
-                      )}
-                    </>
+                    <button onClick={goSalaireMenu} className="flex-1 h-10 rounded-xl border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-2)] transition-colors">Retour</button>
                   )}
                 </div>
               </div>
