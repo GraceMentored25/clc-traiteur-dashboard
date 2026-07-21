@@ -35,10 +35,10 @@ const SOURCES: { value: EntreeCapital["source"]; label: string }[] = [
   { value: "autre", label: "Autre" },
 ];
 
-const ROLE_OPTIONS: { value: PersonnelRole; label: string }[] = [
-  { value: "associe", label: "Associé" },
-  { value: "commis", label: "Commis" },
-  { value: "consultant", label: "Consultant" },
+const ROLE_OPTIONS: { value: PersonnelRole; label: string; plural: string }[] = [
+  { value: "associe", label: "Associé", plural: "Associés" },
+  { value: "commis", label: "Commis", plural: "Commis" },
+  { value: "consultant", label: "Consultant", plural: "Consultants" },
 ];
 const roleLabel = (r?: PersonnelRole) => ROLE_OPTIONS.find((o) => o.value === r)?.label ?? "—";
 
@@ -830,7 +830,7 @@ export default function ComptabiliteClientFinal() {
                         if (list.length === 0) return null;
                         return (
                           <div key={ro.value}>
-                            <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">{ro.label}s</p>
+                            <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">{ro.plural}</p>
                             <div className="flex flex-wrap gap-2">
                               {list.map((p) => (
                                 <span key={p.id} className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-xs text-[var(--text-primary)]">
