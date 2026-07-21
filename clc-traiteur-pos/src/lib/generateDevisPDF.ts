@@ -1,50 +1,79 @@
 import { Devis, DevisItem } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import { DISHES } from "@/lib/data/dishes";
+import { ALL_KNOWN_CATEGORIES, SUBSECTION_MAP } from "@/lib/data/subsections";
 
 const AMBER: [number, number, number] = [232, 150, 12];
 const DARK: [number, number, number] = [26, 30, 36];
 const GRAY: [number, number, number] = [87, 96, 106];
 const LIGHT_BG: [number, number, number] = [246, 248, 250];
 const SUBCAT_BG: [number, number, number] = [255, 240, 214];
+const SUBGROUP_BG: [number, number, number] = [250, 246, 240];
 
-// ── Sous-catégories (sous-onglets) : Entrées, Plats, Desserts, Boissons, Services ──
-const SUBCATS: { label: string; cats: string[] }[] = [
-  { label: "Entrées", cats: ["Entrées"] },
-  { label: "Plats", cats: ["Plats principaux", "Grillades", "Poissons", "Accompagnements"] },
-  { label: "Desserts", cats: ["Desserts"] },
-  { label: "Boissons", cats: ["Cocktails & Boissons"] },
-  { label: "Services", cats: ["Services"] },
-];
-const KNOWN_CATS = new Set(SUBCATS.flatMap((s) => s.cats));
+const KNOWN_CATS = new Set(ALL_KNOWN_CATEGORIES);
 const DISH_CATEGORY = new Map<number, string>(DISHES.map((d) => [d.id, d.category]));
 const itemCategory = (item: DevisItem) => DISH_CATEGORY.get(item.dishId) ?? "";
 
-// Regroupe une liste d'items par sous-catégorie (dans l'ordre défini)
-function groupItemsBySubcat(items: DevisItem[]): { label: string; items: DevisItem[] }[] {
-  const groups: { label: string; items: DevisItem[] }[] = [];
-  for (const sc of SUBCATS) {
-    const its = items.filter((i) => sc.cats.includes(itemCategory(i)));
-    if (its.length) groups.push({ label: sc.label, items: its });
+type BodyCell = string | { content: string; colSpan: number; styles: Record<string, unknown> };
+
+function pushItems(body: BodyCell[][], items: DevisItem[]) {
+  for (const it of items) {
+    body.push([it.dishName, String(it.quantity), `${it.subtotal.toFixed(2)} €`]);
   }
-  const autres = items.filter((i) => !KNOWN_CATS.has(itemCategory(i)));
-  if (autres.length) groups.push({ label: "Autres", items: autres });
-  return groups;
 }
 
-// Construit le corps du tableau autoTable avec des lignes-titres de sous-catégorie (colSpan)
-function buildCategorizedBody(items: DevisItem[]): (string | { content: string; colSpan: number; styles: Record<string, unknown> })[][] {
-  const groups = groupItemsBySubcat(items);
-  const showLabels = groups.length > 1 || (groups.length === 1 && groups[0].label !== "Autres");
-  const body: (string | { content: string; colSpan: number; styles: Record<string, unknown> })[][] = [];
-  for (const g of groups) {
-    if (showLabels) {
-      body.push([{ content: g.label, colSpan: 3, styles: { fillColor: SUBCAT_BG, textColor: DARK, fontStyle: "bold", halign: "left", fontSize: 9 } }]);
-    }
-    for (const it of g.items) {
-      body.push([it.dishName, String(it.quantity), `${it.subtotal.toFixed(2)} €`]);
+/** Ligne titre de sous-onglet (Entrées, Plats, …) */
+function pushSubTabTitle(body: BodyCell[][], label: string) {
+  body.push([{
+    content: label.toUpperCase(),
+    colSpan: 3,
+    styles: { fillColor: SUBCAT_BG, textColor: DARK, fontStyle: "bold", halign: "left", fontSize: 9 },
+  }]);
+}
+
+/** Ligne sous-titre (ex: Plats principaux…) sous un sous-onglet */
+function pushSubTitle(body: BodyCell[][], label: string) {
+  body.push([{
+    content: label,
+    colSpan: 3,
+    styles: { fillColor: SUBGROUP_BG, textColor: GRAY, fontStyle: "bold", halign: "left", fontSize: 8 },
+  }]);
+}
+
+/**
+ * Corps du tableau : hiérarchie = sous-onglet → sous-titre (si besoin) → lignes.
+ * Miroir de renderSectionBody dans DevisDetail.
+ */
+function buildCategorizedBody(items: DevisItem[]): BodyCell[][] {
+  const body: BodyCell[][] = [];
+  let anyGroup = false;
+
+  for (const sub of SUBSECTION_MAP) {
+    const subItems = items.filter((i) => sub.categories.includes(itemCategory(i)));
+    if (!subItems.length) continue;
+    anyGroup = true;
+    pushSubTabTitle(body, sub.label);
+
+    if (sub.subGroups) {
+      for (const sg of sub.subGroups) {
+        const sgItems = subItems.filter((i) => sg.categories.includes(itemCategory(i)));
+        if (!sgItems.length) continue;
+        pushSubTitle(body, sg.label);
+        pushItems(body, sgItems);
+      }
+    } else {
+      pushItems(body, subItems);
     }
   }
+
+  const others = items.filter((i) => !KNOWN_CATS.has(itemCategory(i)));
+  if (others.length) {
+    if (anyGroup) pushSubTabTitle(body, "Autres");
+    pushItems(body, others);
+  }
+
+  // Aucune catégorie connue → liste plate
+  if (!body.length) pushItems(body, items);
   return body;
 }
 
@@ -268,6 +297,9 @@ export async function generateDevisPDF(devis: Devis) {
       ensureSpace(bandH + 20);
       const y = currentY;
       const img = imgCache[sectionImageKey(sec.label)];
+      // Fond sombre sous l'image → aucun liseré blanc (arrondi jsPDF / JPEG)
+      doc.setFillColor(16, 18, 22);
+      doc.rect(L, y, TW, bandH, "F");
       if (img) {
         doc.addImage(img, "JPEG", L, y, TW, bandH);
         // voile sombre pour la lisibilité du texte blanc
@@ -276,7 +308,7 @@ export async function generateDevisPDF(devis: Devis) {
         doc.setFillColor(AMBER[0], AMBER[1], AMBER[2]);
         doc.rect(L, y, TW, bandH, "F");
       }
-      // liseré amber à gauche
+      // liseré amber à gauche (après l'image pour rester net sur toute la hauteur)
       doc.setFillColor(AMBER[0], AMBER[1], AMBER[2]);
       doc.rect(L, y, 3, bandH, "F");
       // titre + sous-total
