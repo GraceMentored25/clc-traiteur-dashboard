@@ -5,10 +5,21 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { encryptStore, decryptStore } from "@/lib/crypto";
 import { logAudit } from "@/lib/auditLog";
 import type { ThemeId } from "@/lib/themes";
-import { CartItem, Devis, Dish, EntreeCapital, Ingredient, Materiel, DemandeCoursesRepas, DemandeLogistique, User } from "@/lib/types";
+import { CartItem, Devis, Dish, EntreeCapital, Ingredient, Materiel, DemandeCoursesRepas, DemandeLogistique, User, Personnel, Salaire } from "@/lib/types";
 import { EVENT_TYPES } from "@/lib/data/event-types";
 import { MOCK_DEVIS } from "@/lib/data/mock-events";
 import { DEFAULT_INGREDIENTS, DEFAULT_MATERIEL } from "@/lib/data/stocks";
+
+// Personnel par défaut (associés + commis) — ids stables
+const DEFAULT_PERSONNEL: Personnel[] = [
+  { id: "EMP-fortune", name: "Fortune", role: "associe" },
+  { id: "EMP-mairam", name: "Maïram", role: "associe" },
+  { id: "EMP-maelle", name: "Maëlle", role: "commis" },
+  { id: "EMP-elihu", name: "Elihu", role: "commis" },
+  { id: "EMP-ivanna", name: "Ivanna", role: "commis" },
+  { id: "EMP-kenza", name: "Kenza", role: "commis" },
+  { id: "EMP-monique", name: "Monique", role: "commis" },
+];
 
 export interface AppState {
   user: User | null;
@@ -42,6 +53,15 @@ export interface AppState {
   entreesCapital: EntreeCapital[];
   addEntreeCapital: (e: EntreeCapital) => void;
   removeEntreeCapital: (id: string) => void;
+
+  // ── Personnel & Salaires ────────────────────────────────────
+  personnel: Personnel[];
+  addPersonnel: (p: Omit<Personnel, "id">) => void;
+  removePersonnel: (id: string) => void;
+
+  salaires: Salaire[];
+  addSalaire: (s: Omit<Salaire, "id">) => void;
+  removeSalaire: (id: string) => void;
 
   // ── Stocks ──────────────────────────────────────────────────
   ingredients: Ingredient[];
@@ -193,6 +213,24 @@ export const useStore = create<AppState>()(
       entreesCapital: [],
       addEntreeCapital: (e) => { logAudit("CAPITAL_ADDED", { id: e.id, montant: e.montant, source: e.source }); set((s) => ({ entreesCapital: [e, ...s.entreesCapital] })); },
       removeEntreeCapital: (id) => { logAudit("CAPITAL_DELETED", { id }); set((s) => ({ entreesCapital: s.entreesCapital.filter((e) => e.id !== id) })); },
+
+      personnel: DEFAULT_PERSONNEL,
+      addPersonnel: (p) =>
+        set((s) => {
+          const name = p.name.trim();
+          if (!name) return s;
+          // Évite les doublons (même nom + même rôle)
+          if (s.personnel.some((e) => e.name.toLowerCase() === name.toLowerCase() && e.role === p.role)) return s;
+          return { personnel: [...s.personnel, { id: `EMP-${crypto.randomUUID()}`, name, role: p.role }] };
+        }),
+      removePersonnel: (id) => set((s) => ({ personnel: s.personnel.filter((e) => e.id !== id) })),
+
+      salaires: [],
+      addSalaire: (sal) => {
+        logAudit("SALAIRE_ADDED", { name: sal.name, montant: sal.montant });
+        set((s) => ({ salaires: [{ ...sal, id: `SAL-${crypto.randomUUID()}` }, ...s.salaires] }));
+      },
+      removeSalaire: (id) => { logAudit("SALAIRE_DELETED", { id }); set((s) => ({ salaires: s.salaires.filter((e) => e.id !== id) })); },
 
       ingredients: DEFAULT_INGREDIENTS,
       setIngredientStock: (id, qty) =>
@@ -444,7 +482,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: "clc-traiteur-storage",
-      version: 8,
+      version: 9,
       // Chiffrement AES-GCM des données sensibles en localStorage (CWE-311/312)
       storage: createJSONStorage(() => ({
         getItem: async (key: string) => {
@@ -492,6 +530,9 @@ export const useStore = create<AppState>()(
           }));
           return { ...state, devisListPro: renumbered, devisList: renumbered };
         }
+        if (version < 9) {
+          return { ...state, personnel: state.personnel ?? DEFAULT_PERSONNEL, salaires: state.salaires ?? [] };
+        }
         return state as AppState;
       },
       partialize: (state) => ({
@@ -510,6 +551,8 @@ export const useStore = create<AppState>()(
         customDishes: state.customDishes,
         customCategories: state.customCategories,
         entreesCapital: state.entreesCapital,
+        personnel: state.personnel,
+        salaires: state.salaires,
         ingredients: state.ingredients,
         materiel: state.materiel,
         customRecipes: state.customRecipes,
