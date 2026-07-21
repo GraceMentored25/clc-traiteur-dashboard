@@ -135,9 +135,9 @@ export default function DevisClient() {
         ) : (
           <>
             {/* Desktop header */}
-            <div className="hidden md:grid grid-cols-[80px_1fr_130px_120px_120px_100px_80px] gap-0 px-4 py-3 border-b border-[var(--border)]">
-              {["Réf.", "Client", "Événement", "Date", "Total TTC", "Statut", "Actions"].map((h) => (
-                <p key={h} className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">{h}</p>
+            <div className="hidden md:grid grid-cols-[80px_minmax(0,240px)_130px_120px_1fr_120px_100px_80px] gap-0 px-4 py-3 border-b border-[var(--border)]">
+              {["Réf.", "Client", "Événement", "Date", "", "Total TTC", "Statut", "Actions"].map((h, hi) => (
+                <p key={h || `spacer-${hi}`} className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">{h}</p>
               ))}
             </div>
 
@@ -151,7 +151,7 @@ export default function DevisClient() {
                 >
                   {/* Desktop row */}
                   <div
-                    className="hidden md:grid grid-cols-[80px_1fr_130px_120px_120px_100px_80px] gap-0 px-4 py-3.5 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors group cursor-pointer"
+                    className="hidden md:grid grid-cols-[80px_minmax(0,240px)_130px_120px_1fr_120px_100px_80px] gap-0 px-4 py-3.5 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors group cursor-pointer"
                     onClick={() => setSelected(devis)}
                   >
                     <p className="text-xs font-mono font-medium text-[var(--amber)] self-center">{devis.id}</p>
@@ -164,6 +164,7 @@ export default function DevisClient() {
                       <Calendar size={12} className="shrink-0" />
                       <span className="truncate">{formatDate(devis.eventDate)}</span>
                     </div>
+                    <div aria-hidden />
                     <p className="text-sm font-mono font-bold text-[var(--text-primary)] self-center">{formatCurrency(devis.totalTTC)}</p>
                     <div className="self-center">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold ${STATUS_COLORS[devis.status]}`}>
