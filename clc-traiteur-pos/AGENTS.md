@@ -6,8 +6,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## Autolearning
 
-### Devis PDF — liseré blanc sur bandeau image
-- **Problème** : petit espace blanc en haut du bandeau section (image + liseré orange).
-- **Cause** : JPEG *progressive* mal rendu par jsPDF `addImage` (trou / décalage en haut de la bande).
-- **Fix** : images `public/sections/*.jpg` en JPEG *baseline* + fond sombre sous l’image avant `addImage`.
-- **Règle** : pour toute image embarquée dans un PDF jsPDF, préférer JPEG baseline (pas progressive) et peindre un fond sous l’image.
+### Devis PDF — liseré blanc / rayures sur bandeau image
+- **Problème** : espace blanc / écart avec le bord ; image en rayures verticales.
+- **Cause** : (1) bandeau dessiné avec marge `L=14` → écart blanc ; (2) jsPDF `addImage` **JPEG** corrompt souvent le rendu (rayures).
+- **Fix** : bandeau **full-bleed** (`x=0`, `width=pageWidth`) ; images en **PNG** (`public/sections/*.png`) + chargement canvas→PNG.
+- **Règle** : pour les fonds photo dans jsPDF, utiliser PNG (pas JPEG) et coller le bandeau au bord de page si l’UI le demande.
