@@ -13,6 +13,7 @@ export function middleware(req: NextRequest) {
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/images/") ||
     pathname.startsWith("/dishes/") ||
+    pathname.startsWith("/sections/") ||
     pathname === "/logo.png" ||
     pathname === "/auth.jpeg" ||
     pathname === "/auth4x.png" ||

@@ -89,32 +89,60 @@ function sectionImageKey(label: string): string {
 }
 
 /**
- * Charge une image et la ré-exporte en PNG via canvas.
- * jsPDF corrompt souvent les JPEG (rayures verticales) ; le PNG est fiable.
+ * Bandeau section rasterisé (photo + voile + liseré + textes) en une seule image PNG.
+ * Évite les bugs jsPDF (JPEG/PNG palette, superpositions, liserés blancs).
  */
-async function loadSectionImagePng(path: string): Promise<string | null> {
+async function buildSectionBandDataUrl(
+  photoPath: string,
+  pageWidthMm: number,
+  bandHeightMm: number,
+  title: string,
+  subtotalText: string,
+): Promise<string | null> {
+  const PX_PER_MM = 8;
   try {
-    const res = await fetch(path);
-    if (!res.ok) return null;
-    const blob = await res.blob();
-    const objectUrl = URL.createObjectURL(blob);
-    try {
-      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-        const el = new Image();
-        el.onload = () => resolve(el);
-        el.onerror = () => reject(new Error("image load failed"));
-        el.src = objectUrl;
-      });
-      const canvas = document.createElement("canvas");
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return null;
-      ctx.drawImage(img, 0, 0);
-      return canvas.toDataURL("image/png");
-    } finally {
-      URL.revokeObjectURL(objectUrl);
-    }
+    const url = photoPath.startsWith("http") ? photoPath : `${window.location.origin}${photoPath}`;
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.crossOrigin = "anonymous";
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error("photo load failed"));
+      el.src = url;
+    });
+
+    const w = Math.round(pageWidthMm * PX_PER_MM);
+    const h = Math.round(bandHeightMm * PX_PER_MM);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+
+    ctx.fillStyle = "#101216";
+    ctx.fillRect(0, 0, w, h);
+
+    const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+    const dw = img.naturalWidth * scale;
+    const dh = img.naturalHeight * scale;
+    ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
+
+    ctx.fillStyle = "rgba(16, 18, 22, 0.42)";
+    ctx.fillRect(0, 0, w, h);
+
+    const stripeW = Math.round(3.5 * PX_PER_MM);
+    ctx.fillStyle = `rgb(${AMBER[0]}, ${AMBER[1]}, ${AMBER[2]})`;
+    ctx.fillRect(0, 0, stripeW, h);
+
+    const textY = h / 2;
+    ctx.fillStyle = "#ffffff";
+    ctx.textBaseline = "middle";
+    ctx.font = `bold ${Math.round(4.2 * PX_PER_MM)}px Helvetica, Arial, sans-serif`;
+    ctx.fillText(title.toUpperCase(), stripeW + Math.round(2 * PX_PER_MM), textY);
+    ctx.font = `${Math.round(3.2 * PX_PER_MM)}px Helvetica, Arial, sans-serif`;
+    ctx.textAlign = "right";
+    ctx.fillText(subtotalText, w - Math.round(2 * PX_PER_MM), textY);
+
+    return canvas.toDataURL("image/png");
   } catch {
     return null;
   }
@@ -289,52 +317,36 @@ export async function generateDevisPDF(devis: Devis) {
       subtotal: items.reduce((s, i) => s + i.subtotal, 0),
     }));
 
-    // Précharger les images de fond thématiques (PNG via canvas — jsPDF corrompt les JPEG)
-    const imgCache: Record<string, string | null> = {};
-    for (const sec of sectionList) {
-      const key = sectionImageKey(sec.label);
-      if (!(key in imgCache)) imgCache[key] = await loadSectionImagePng(`/sections/${key}.png`);
-    }
-
     let currentY = tableY;
     const bandH = 18;
-    const GStateCtor = (doc as unknown as { GState?: new (o: { opacity: number }) => unknown }).GState;
-    const setGState = (doc as unknown as { setGState?: (g: unknown) => void }).setGState?.bind(doc);
-    const withOpacity = (op: number, fn: () => void) => {
-      if (GStateCtor && setGState) { setGState(new GStateCtor({ opacity: op })); fn(); setGState(new GStateCtor({ opacity: 1 })); }
-      else { fn(); }
-    };
     const ensureSpace = (h: number) => {
       if (currentY + h > pageH - footerReserve) { doc.addPage(); currentY = 14; }
     };
 
     for (const sec of sectionList) {
-      // En-tête full-bleed (bord à bord) avec image de fond thématique
       ensureSpace(bandH + 20);
       const y = currentY;
-      const img = imgCache[sectionImageKey(sec.label)];
-      // Fond sombre sous l'image (évite tout trou blanc)
-      doc.setFillColor(16, 18, 22);
-      doc.rect(0, y, W, bandH, "F");
-      if (img) {
-        doc.addImage(img, "PNG", 0, y, W, bandH);
-        // voile sombre pour la lisibilité du texte blanc
-        withOpacity(0.42, () => { doc.setFillColor(16, 18, 22); doc.rect(0, y, W, bandH, "F"); });
+      const key = sectionImageKey(sec.label);
+      const bandUrl = await buildSectionBandDataUrl(
+        `/sections/${key}.png`,
+        W,
+        bandH,
+        sec.label,
+        `Sous-total HT : ${sec.subtotal.toFixed(2)} €`,
+      );
+      if (bandUrl) {
+        doc.addImage(bandUrl, "PNG", 0, y, W, bandH);
       } else {
         doc.setFillColor(AMBER[0], AMBER[1], AMBER[2]);
         doc.rect(0, y, W, bandH, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text(sec.label.toUpperCase(), L + 2, y + 11);
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Sous-total HT : ${sec.subtotal.toFixed(2)} €`, R, y + 11, { align: "right" });
       }
-      // liseré amber collé au bord gauche
-      doc.setFillColor(AMBER[0], AMBER[1], AMBER[2]);
-      doc.rect(0, y, 3.5, bandH, "F");
-      // titre + sous-total
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "bold");
-      doc.text(sec.label.toUpperCase(), L + 2, y + 11);
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "normal");
-      doc.text(`Sous-total HT : ${sec.subtotal.toFixed(2)} €`, R, y + 11, { align: "right" });
       currentY = y + bandH + 2;
 
       autoTable(doc, {

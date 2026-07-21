@@ -6,8 +6,13 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## Autolearning
 
-### Devis PDF — liseré blanc / rayures sur bandeau image
-- **Problème** : espace blanc / écart avec le bord ; image en rayures verticales.
-- **Cause** : (1) bandeau dessiné avec marge `L=14` → écart blanc ; (2) jsPDF `addImage` **JPEG** corrompt souvent le rendu (rayures).
-- **Fix** : bandeau **full-bleed** (`x=0`, `width=pageWidth`) ; images en **PNG** (`public/sections/*.png`) + chargement canvas→PNG.
-- **Règle** : pour les fonds photo dans jsPDF, utiliser PNG (pas JPEG) et coller le bandeau au bord de page si l’UI le demande.
+### Devis PDF — bandeau image (rayures / trou blanc)
+- **Problème** : rayures verticales, liseré blanc, photo absente ou incorrecte.
+- **Causes** :
+  1. `/sections/*` **bloqué par le middleware** (redirect `/` sans cookie) → `fetch`/`Image` peut échouer ou charger autre chose que le PNG.
+  2. jsPDF `addImage` **JPEG** ou PNG palette + superpositions (voile GState) → rendu corrompu dans le navigateur.
+- **Fix** :
+  - Autoriser `pathname.startsWith("/sections/")` dans `middleware.ts`.
+  - Rasteriser tout le bandeau en **une seule image canvas** (cover + voile + liseré + textes) puis un seul `addImage` PNG.
+  - Assets `public/sections/*.png` en **RGB** (pas palette pngquant).
+- **Vérif** : `node scripts/verify-pdf-band.mjs` (Chromium + analyse pixels PDF).
