@@ -9,6 +9,7 @@ import { formatCurrency, formatDate, STATUS_COLORS } from "@/lib/utils";
 import { useStore } from "@/lib/store";
 import { Select } from "@/components/ui/SelectV2";
 import { DISHES } from "@/lib/data/dishes";
+import { ALL_KNOWN_CATEGORIES, SUBSECTION_MAP } from "@/lib/data/subsections";
 
 interface Props {
   devis: Devis;
@@ -17,26 +18,6 @@ interface Props {
 }
 
 const STATUS_OPTIONS: DevisStatus[] = ["Brouillon", "Envoyé", "Confirmé", "Annulé"];
-
-// Hiérarchie des sous-sections
-const SUBSECTION_MAP = [
-  { label: "Entrées", categories: ["Entrées"] },
-  {
-    label: "Plats",
-    categories: ["Plats principaux", "Grillades", "Poissons", "Accompagnements"],
-    subGroups: [
-      { label: "Plats principaux (accompagnements inclus)", categories: ["Plats principaux"] },
-      { label: "Grillades", categories: ["Grillades"] },
-      { label: "Poissons", categories: ["Poissons"] },
-      { label: "Accompagnements", categories: ["Accompagnements"] },
-    ],
-  },
-  { label: "Desserts", categories: ["Desserts"] },
-  { label: "Boissons", categories: ["Cocktails & Boissons"] },
-  { label: "Services", categories: ["Services"] },
-] as const;
-
-const ALL_KNOWN_CATEGORIES = SUBSECTION_MAP.flatMap(s => s.categories);
 
 function getDishCategory(dishId: number): string {
   return DISHES.find(d => d.id === dishId)?.category ?? "";
@@ -273,7 +254,7 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => generateDevisPDF(devis)}
+              onClick={() => generateDevisPDF({ ...devis, items, totalHT, totalTTC })}
               title="Générer PDF"
               className="flex items-center gap-1.5 h-8 px-3 rounded-xl bg-[var(--amber)]/10 text-[var(--amber)] text-xs font-semibold hover:bg-[var(--amber)]/20 transition-colors"
             >
