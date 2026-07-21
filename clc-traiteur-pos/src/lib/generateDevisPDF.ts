@@ -1,10 +1,79 @@
-import { Devis } from "@/lib/types";
+import { Devis, DevisItem } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
+import { DISHES } from "@/lib/data/dishes";
 
 const AMBER: [number, number, number] = [232, 150, 12];
 const DARK: [number, number, number] = [26, 30, 36];
 const GRAY: [number, number, number] = [87, 96, 106];
 const LIGHT_BG: [number, number, number] = [246, 248, 250];
+const SUBCAT_BG: [number, number, number] = [255, 240, 214];
+
+// ── Sous-catégories (sous-onglets) : Entrées, Plats, Desserts, Boissons, Services ──
+const SUBCATS: { label: string; cats: string[] }[] = [
+  { label: "Entrées", cats: ["Entrées"] },
+  { label: "Plats", cats: ["Plats principaux", "Grillades", "Poissons", "Accompagnements"] },
+  { label: "Desserts", cats: ["Desserts"] },
+  { label: "Boissons", cats: ["Cocktails & Boissons"] },
+  { label: "Services", cats: ["Services"] },
+];
+const KNOWN_CATS = new Set(SUBCATS.flatMap((s) => s.cats));
+const DISH_CATEGORY = new Map<number, string>(DISHES.map((d) => [d.id, d.category]));
+const itemCategory = (item: DevisItem) => DISH_CATEGORY.get(item.dishId) ?? "";
+
+// Regroupe une liste d'items par sous-catégorie (dans l'ordre défini)
+function groupItemsBySubcat(items: DevisItem[]): { label: string; items: DevisItem[] }[] {
+  const groups: { label: string; items: DevisItem[] }[] = [];
+  for (const sc of SUBCATS) {
+    const its = items.filter((i) => sc.cats.includes(itemCategory(i)));
+    if (its.length) groups.push({ label: sc.label, items: its });
+  }
+  const autres = items.filter((i) => !KNOWN_CATS.has(itemCategory(i)));
+  if (autres.length) groups.push({ label: "Autres", items: autres });
+  return groups;
+}
+
+// Construit le corps du tableau autoTable avec des lignes-titres de sous-catégorie (colSpan)
+function buildCategorizedBody(items: DevisItem[]): (string | { content: string; colSpan: number; styles: Record<string, unknown> })[][] {
+  const groups = groupItemsBySubcat(items);
+  const showLabels = groups.length > 1 || (groups.length === 1 && groups[0].label !== "Autres");
+  const body: (string | { content: string; colSpan: number; styles: Record<string, unknown> })[][] = [];
+  for (const g of groups) {
+    if (showLabels) {
+      body.push([{ content: g.label, colSpan: 3, styles: { fillColor: SUBCAT_BG, textColor: DARK, fontStyle: "bold", halign: "left", fontSize: 9 } }]);
+    }
+    for (const it of g.items) {
+      body.push([it.dishName, String(it.quantity), `${it.subtotal.toFixed(2)} €`]);
+    }
+  }
+  return body;
+}
+
+// Associe un moment (section) à une image de fond thématique
+function sectionImageKey(label: string): string {
+  const s = label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (/(vin d.?honneur|aperitif|apero|cocktail|after)/.test(s)) return "aperitif";
+  if (/(dessert|gateau|gouter|douceur)/.test(s)) return "dessert";
+  if (/(cafe|pause|viennoiserie|petit.?dejeuner)/.test(s)) return "cafe";
+  if (/(buffet|brunch|dejeuner)/.test(s)) return "buffet";
+  if (/(diner|dinner|soiree|gala|repas|reception|rencontre)/.test(s)) return "diner";
+  return "generique";
+}
+
+async function loadImageData(path: string): Promise<string | null> {
+  try {
+    const res = await fetch(path);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise<string | null>((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
 
 const CLC = {
   nom: "C.LC. Traiteur",
@@ -175,28 +244,55 @@ export async function generateDevisPDF(devis: Devis) {
       subtotal: items.reduce((s, i) => s + i.subtotal, 0),
     }));
 
+    // Précharger les images de fond thématiques (une par clé, mise en cache)
+    const imgCache: Record<string, string | null> = {};
+    for (const sec of sectionList) {
+      const key = sectionImageKey(sec.label);
+      if (!(key in imgCache)) imgCache[key] = await loadImageData(`/sections/${key}.jpg`);
+    }
+
     let currentY = tableY;
+    const bandH = 18;
+    const GStateCtor = (doc as unknown as { GState?: new (o: { opacity: number }) => unknown }).GState;
+    const setGState = (doc as unknown as { setGState?: (g: unknown) => void }).setGState?.bind(doc);
+    const withOpacity = (op: number, fn: () => void) => {
+      if (GStateCtor && setGState) { setGState(new GStateCtor({ opacity: op })); fn(); setGState(new GStateCtor({ opacity: 1 })); }
+      else { fn(); }
+    };
+    const ensureSpace = (h: number) => {
+      if (currentY + h > pageH - footerReserve) { doc.addPage(); currentY = 14; }
+    };
 
     for (const sec of sectionList) {
-      // En-tête de section coloré
+      // En-tête de moment avec image de fond thématique
+      ensureSpace(bandH + 20);
+      const y = currentY;
+      const img = imgCache[sectionImageKey(sec.label)];
+      if (img) {
+        doc.addImage(img, "JPEG", L, y, TW, bandH);
+        // voile sombre pour la lisibilité du texte blanc
+        withOpacity(0.42, () => { doc.setFillColor(16, 18, 22); doc.rect(L, y, TW, bandH, "F"); });
+      } else {
+        doc.setFillColor(AMBER[0], AMBER[1], AMBER[2]);
+        doc.rect(L, y, TW, bandH, "F");
+      }
+      // liseré amber à gauche
       doc.setFillColor(AMBER[0], AMBER[1], AMBER[2]);
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
+      doc.rect(L, y, 3, bandH, "F");
+      // titre + sous-total
       doc.setTextColor(255, 255, 255);
-      const secHeaderH = 7;
-      doc.roundedRect(L, currentY, TW, secHeaderH, 1, 1, "F");
-      doc.text(sec.label.toUpperCase(), L + 4, currentY + 5);
-      doc.text(`Sous-total HT : ${sec.subtotal.toFixed(2)} €`, R - 4, currentY + 5, { align: "right" });
-      currentY += secHeaderH + 1;
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text(sec.label.toUpperCase(), L + 8, y + 11);
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Sous-total HT : ${sec.subtotal.toFixed(2)} €`, R - 4, y + 11, { align: "right" });
+      currentY = y + bandH + 2;
 
       autoTable(doc, {
         startY: currentY,
         head: [["Prestation", "Qté", "Sous-total HT"]],
-        body: sec.items.map(item => [
-          item.dishName,
-          String(item.quantity),
-          `${item.subtotal.toFixed(2)} €`,
-        ]),
+        body: buildCategorizedBody(sec.items) as never,
         alternateRowStyles: { fillColor: LIGHT_BG },
         columnStyles: colStyles,
         headStyles: { fillColor: [45, 52, 60] as [number,number,number], textColor: [255,255,255] as [number,number,number], fontStyle: "bold", fontSize: 9 },
@@ -204,7 +300,7 @@ export async function generateDevisPDF(devis: Devis) {
         margin: { left: L, right: L },
       });
 
-      currentY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4;
+      currentY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 5;
     }
 
     // Récap sections
@@ -268,11 +364,7 @@ export async function generateDevisPDF(devis: Devis) {
     autoTable(doc, {
       startY: tableY,
       head: [["Prestation", "Qté", "Sous-total HT"]],
-      body: devis.items.map(item => [
-        item.dishName,
-        String(item.quantity),
-        `${item.subtotal.toFixed(2)} €`,
-      ]),
+      body: buildCategorizedBody(devis.items) as never,
       alternateRowStyles: { fillColor: LIGHT_BG },
       columnStyles: colStyles,
       headStyles: { fillColor: DARK, textColor: [255,255,255] as [number,number,number], fontStyle: "bold", fontSize: 10 },
