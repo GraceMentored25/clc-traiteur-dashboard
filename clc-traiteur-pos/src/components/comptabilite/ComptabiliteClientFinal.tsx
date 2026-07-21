@@ -16,9 +16,13 @@ import {
   Trash,
   PiggyBank,
   PencilSimple,
+  Users,
+  UserPlus,
+  ListBullets,
+  Wallet,
 } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
-import { Devis, EntreeCapital } from "@/lib/types";
+import { Devis, EntreeCapital, PersonnelRole, Salaire } from "@/lib/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { ArrowDown, ArrowUp, ShoppingCart, Truck } from "@phosphor-icons/react";
 import { Select } from "@/components/ui/SelectV2";
@@ -32,17 +36,59 @@ const SOURCES: { value: EntreeCapital["source"]; label: string }[] = [
   { value: "autre", label: "Autre" },
 ];
 
+const ROLE_OPTIONS: { value: PersonnelRole; label: string }[] = [
+  { value: "associe", label: "Associé" },
+  { value: "commis", label: "Commis" },
+];
+const roleLabel = (r?: PersonnelRole) => ROLE_OPTIONS.find((o) => o.value === r)?.label ?? "—";
+
 const TVA_RATE = 0.20;
 
 export default function ComptabiliteClientFinal() {
   const { devisList, entreesCapital, addEntreeCapital, removeEntreeCapital,
-          demandesCourses, demandesLogistique } = useStore();
+          demandesCourses, demandesLogistique,
+          personnel, addPersonnel, removePersonnel,
+          salaires, addSalaire, removeSalaire } = useStore();
   const [period, setPeriod] = useState<Period>("all");
   const [docModal, setDocModal] = useState<"summary" | "invoices" | "tva" | null>(null);
   const [docModalPreview, setDocModalPreview] = useState(false);
   const [capitalModal, setCapitalModal] = useState(false);
   const [editingCapitalId, setEditingCapitalId] = useState<string | null>(null);
   const [capitalForm, setCapitalForm] = useState({ libelle: "", montant: "", date: new Date().toISOString().split("T")[0], source: "vente" as EntreeCapital["source"] });
+
+  // ── Salaires & personnel ──────────────────────────────────────
+  const [salaireModal, setSalaireModal] = useState(false);
+  const [salaireView, setSalaireView] = useState<"menu" | "list" | "staff" | "add">("menu");
+  const [staffForm, setStaffForm] = useState({ name: "", role: "commis" as PersonnelRole });
+  const [salaireForm, setSalaireForm] = useState({ personnelId: "", newName: "", montant: "", date: new Date().toISOString().split("T")[0], libelle: "" });
+
+  const openSalaireModal = () => { setSalaireView("menu"); setSalaireModal(true); };
+  const closeSalaireModal = () => { setSalaireModal(false); };
+
+  const handleAddStaff = () => {
+    if (!staffForm.name.trim()) return;
+    addPersonnel({ name: staffForm.name.trim(), role: staffForm.role });
+    setStaffForm({ name: "", role: staffForm.role });
+  };
+
+  const handleAddSalaire = () => {
+    const montant = parseFloat(salaireForm.montant.replace(",", "."));
+    if (isNaN(montant) || montant <= 0) return;
+    let name = "";
+    let role: PersonnelRole | undefined;
+    let personnelId: string | undefined;
+    if (salaireForm.personnelId === "__new__") {
+      name = salaireForm.newName.trim();
+      if (!name) return;
+    } else {
+      const p = personnel.find((x) => x.id === salaireForm.personnelId);
+      if (!p) return;
+      name = p.name; role = p.role; personnelId = p.id;
+    }
+    addSalaire({ personnelId, name, role, montant, date: salaireForm.date, libelle: salaireForm.libelle.trim() || undefined });
+    setSalaireForm({ personnelId: "", newName: "", montant: "", date: new Date().toISOString().split("T")[0], libelle: "" });
+    setSalaireView("list");
+  };
 
   const confirmed = useMemo(() => {
     const now = new Date();
@@ -76,6 +122,22 @@ export default function ComptabiliteClientFinal() {
     });
   }, [entreesCapital, period]);
 
+  // Salaires filtrés par période (même logique que les entrées de capital)
+  const confirmedSalaires = useMemo(() => {
+    const now = new Date();
+    return salaires.filter((s) => {
+      if (period === "all") return true;
+      const date = new Date(s.date);
+      if (period === "month") return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+      if (period === "quarter") {
+        const q = Math.floor(now.getMonth() / 3);
+        return Math.floor(date.getMonth() / 3) === q && date.getFullYear() === now.getFullYear();
+      }
+      if (period === "year") return date.getFullYear() === now.getFullYear();
+      return true;
+    });
+  }, [salaires, period]);
+
   // Sorties confirmées (courses repas + logistique)
   const sortiesRepas = useMemo(() =>
     demandesCourses.filter((d) => d.statut === "confirmé"), [demandesCourses]);
@@ -102,10 +164,11 @@ export default function ComptabiliteClientFinal() {
     const totalEntrees = totalTTC + totalCapital;
     const totalSortiesRepas = sortiesRepas.reduce((s, d) => s + d.totalEstime, 0);
     const totalSortiesLog = sortiesLogistique.reduce((s, d) => s + (d.totalEstime ?? 0), 0);
-    const totalSorties = totalSortiesRepas + totalSortiesLog;
+    const totalSalaires = confirmedSalaires.reduce((s, sal) => s + sal.montant, 0);
+    const totalSorties = totalSortiesRepas + totalSortiesLog + totalSalaires;
     const solde = totalEntrees - totalSorties;
-    return { totalHT, totalTVA, totalTTC, avgDevis, count: confirmed.length, totalCapital, totalEntrees, totalSorties, solde };
-  }, [confirmed, confirmedCapital, sortiesRepas, sortiesLogistique]);
+    return { totalHT, totalTVA, totalTTC, avgDevis, count: confirmed.length, totalCapital, totalEntrees, totalSorties, totalSalaires, solde };
+  }, [confirmed, confirmedCapital, sortiesRepas, sortiesLogistique, confirmedSalaires]);
 
   const handleAddCapital = () => {
     const montant = parseFloat(capitalForm.montant.replace(",", "."));
@@ -146,6 +209,14 @@ export default function ComptabiliteClientFinal() {
             <Plus size={14} weight="bold" />
             <span className="hidden sm:inline">Entrée de capital</span>
             <span className="sm:hidden">Capital</span>
+          </m.button>
+          <m.button
+            whileTap={{ scale: 0.97 }}
+            onClick={openSalaireModal}
+            className="flex items-center gap-2 h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--amber)] hover:border-[var(--amber)]/40 text-xs font-semibold transition-colors"
+          >
+            <Users size={14} weight="fill" />
+            <span>Salaire</span>
           </m.button>
           <m.button
             whileTap={{ scale: 0.97 }}
@@ -513,6 +584,275 @@ export default function ComptabiliteClientFinal() {
         </div>
       )}
 
+      {/* ── Salaires versés (sorties) ──────────────────────────── */}
+      {confirmedSalaires.length > 0 && (
+        <div className="rounded-2xl border border-[var(--border)] overflow-hidden bg-[var(--surface-1)] mb-6">
+          <div className="px-4 lg:px-6 py-4 border-b border-[var(--border)] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Wallet size={16} className="text-[var(--amber)]" />
+              <h2 className="font-bold text-[var(--text-primary)] text-sm">Salaires versés</h2>
+            </div>
+            <span className="text-xs font-mono font-bold text-[var(--amber)]">{formatCurrency(metrics.totalSalaires)}</span>
+          </div>
+          {/* Desktop header */}
+          <div className="hidden md:grid gap-0 px-6 py-3 border-b border-[var(--border)]" style={{ gridTemplateColumns: "80px 1fr 130px 110px 110px 120px" }}>
+            <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide" style={{ gridColumn: "1 / 3" }}>Personne</p>
+            <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Rôle</p>
+            <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide text-right pr-2" style={{ gridColumn: "4 / 6" }}>Date</p>
+            <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide text-right pr-2">Montant</p>
+          </div>
+          {confirmedSalaires.map((s) => (
+            <div key={s.id}>
+              {/* Desktop */}
+              <div className="hidden md:grid items-center gap-0 px-6 py-3 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors group" style={{ gridTemplateColumns: "80px 1fr 130px 110px 110px 120px" }}>
+                <div className="min-w-0" style={{ gridColumn: "1 / 3" }}>
+                  <p className="text-sm font-medium text-[var(--text-primary)] truncate">{s.name}</p>
+                  {s.libelle && <p className="text-xs text-[var(--text-muted)] truncate">{s.libelle}</p>}
+                </div>
+                <p className="text-xs text-[var(--text-secondary)]">{roleLabel(s.role)}</p>
+                <div className="flex w-full items-center justify-end gap-1 text-xs text-[var(--text-muted)] pr-2" style={{ gridColumn: "4 / 6" }}><Calendar size={11}/>{formatDate(s.date)}</div>
+                <div className="flex items-center justify-end gap-1">
+                  <button onClick={() => removeSalaire(s.id)} className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100">
+                    <Trash size={13} />
+                  </button>
+                  <p className="text-sm font-mono font-bold text-[var(--amber)] min-w-[80px] text-right">{formatCurrency(s.montant)}</p>
+                </div>
+              </div>
+              {/* Mobile */}
+              <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-[var(--border)] last:border-0">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-[var(--text-primary)] truncate">{s.name}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-[var(--text-secondary)]">{roleLabel(s.role)}</span>
+                    <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Calendar size={10}/>{formatDate(s.date)}</span>
+                  </div>
+                </div>
+                <p className="text-sm font-mono font-bold text-[var(--amber)] shrink-0">{formatCurrency(s.montant)}</p>
+                <button onClick={() => removeSalaire(s.id)} className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition-all shrink-0">
+                  <Trash size={13} />
+                </button>
+              </div>
+            </div>
+          ))}
+          {/* Total */}
+          <div className="flex items-center justify-between px-4 lg:px-6 py-3 bg-[var(--surface-2)] border-t-2 border-[var(--amber)]/20">
+            <p className="text-sm font-bold text-[var(--text-primary)]">Total salaires versés</p>
+            <p className="text-sm font-mono font-bold text-[var(--amber)] pr-0 lg:pr-2">{formatCurrency(metrics.totalSalaires)}</p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Salaire / Personnel ──────────────────────────── */}
+      <AnimatePresence>
+        {salaireModal && (
+          <>
+            <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={closeSalaireModal} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" />
+            <m.div
+              initial={{ scale: 0.93, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 28 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-full max-w-md bg-[var(--surface-1)] rounded-2xl border border-[var(--border)] shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
+                {/* Header modal */}
+                <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--border)]">
+                  <div className="flex items-center gap-2.5">
+                    <Users size={18} weight="fill" className="text-[var(--amber)]" />
+                    <h2 className="font-bold text-[var(--text-primary)]">
+                      {salaireView === "menu" && "Salaires & personnel"}
+                      {salaireView === "list" && "Salaires versés"}
+                      {salaireView === "staff" && "Ajouter du personnel"}
+                      {salaireView === "add" && "Ajouter un salaire"}
+                    </h2>
+                  </div>
+                  <button onClick={closeSalaireModal} className="w-8 h-8 rounded-xl bg-[var(--surface-2)] hover:bg-[var(--surface-3)] flex items-center justify-center text-[var(--text-secondary)] transition-colors">
+                    <X size={16} />
+                  </button>
+                </div>
+
+                <div className="px-6 py-5 overflow-y-auto">
+                  {/* Menu */}
+                  {salaireView === "menu" && (
+                    <div className="space-y-3">
+                      <button onClick={() => setSalaireView("list")} className="w-full flex items-center gap-4 p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--amber)]/30 transition-all text-left">
+                        <div className="w-10 h-10 rounded-xl bg-[var(--amber)]/10 text-[var(--amber)] flex items-center justify-center shrink-0"><ListBullets size={20} weight="fill" /></div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-[var(--text-primary)]">Consulter les salaires versés</p>
+                          <p className="text-[11px] text-[var(--text-muted)] mt-0.5">{salaires.length} versement{salaires.length > 1 ? "s" : ""} · {formatCurrency(salaires.reduce((a, s) => a + s.montant, 0))}</p>
+                        </div>
+                      </button>
+                      <button onClick={() => setSalaireView("staff")} className="w-full flex items-center gap-4 p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--amber)]/30 transition-all text-left">
+                        <div className="w-10 h-10 rounded-xl bg-[var(--amber)]/10 text-[var(--amber)] flex items-center justify-center shrink-0"><UserPlus size={20} weight="fill" /></div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-[var(--text-primary)]">Ajouter du personnel</p>
+                          <p className="text-[11px] text-[var(--text-muted)] mt-0.5">{personnel.length} personne{personnel.length > 1 ? "s" : ""} enregistrée{personnel.length > 1 ? "s" : ""}</p>
+                        </div>
+                      </button>
+                      <button onClick={() => setSalaireView("add")} className="w-full flex items-center gap-4 p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--amber)]/30 transition-all text-left">
+                        <div className="w-10 h-10 rounded-xl bg-[var(--amber)]/10 text-[var(--amber)] flex items-center justify-center shrink-0"><Plus size={20} weight="bold" /></div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-[var(--text-primary)]">Ajouter un salaire</p>
+                          <p className="text-[11px] text-[var(--text-muted)] mt-0.5">Choisir une personne existante ou nouvelle</p>
+                        </div>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Liste des salaires */}
+                  {salaireView === "list" && (
+                    <div className="space-y-2">
+                      {salaires.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-10 text-center">
+                          <Wallet size={32} className="text-[var(--text-muted)] mb-2" />
+                          <p className="text-sm text-[var(--text-secondary)]">Aucun salaire versé</p>
+                        </div>
+                      ) : (
+                        <>
+                          {salaires.map((s) => (
+                            <div key={s.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[var(--surface-2)] group">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-[var(--text-primary)] truncate">{s.name} <span className="text-[10px] text-[var(--text-muted)]">· {roleLabel(s.role)}</span></p>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  {s.libelle && <span className="text-xs text-[var(--text-muted)] truncate">{s.libelle}</span>}
+                                  <span className="text-xs text-[var(--text-muted)] flex items-center gap-1 shrink-0"><Calendar size={10}/>{formatDate(s.date)}</span>
+                                </div>
+                              </div>
+                              <p className="text-sm font-mono font-bold text-[var(--amber)] shrink-0">{formatCurrency(s.montant)}</p>
+                              <button onClick={() => removeSalaire(s.id)} className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition-all shrink-0">
+                                <Trash size={13} />
+                              </button>
+                            </div>
+                          ))}
+                          <div className="flex items-center justify-between px-3 pt-3 border-t border-[var(--border)]">
+                            <p className="text-sm font-bold text-[var(--text-primary)]">Total</p>
+                            <p className="text-sm font-mono font-bold text-[var(--amber)]">{formatCurrency(salaires.reduce((a, s) => a + s.montant, 0))}</p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Ajouter du personnel */}
+                  {salaireView === "staff" && (
+                    <div className="space-y-4">
+                      <div className="flex items-end gap-2">
+                        <div className="flex-1">
+                          <label className="text-xs text-[var(--text-muted)] mb-1 block">Nom *</label>
+                          <input autoFocus value={staffForm.name}
+                            onChange={(e) => setStaffForm((f) => ({ ...f, name: e.target.value }))}
+                            onKeyDown={(e) => { if (e.key === "Enter") handleAddStaff(); }}
+                            placeholder="Nom de la personne"
+                            className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all" />
+                        </div>
+                        <div className="w-32">
+                          <label className="text-xs text-[var(--text-muted)] mb-1 block">Rôle</label>
+                          <Select value={staffForm.role} onChange={(v) => setStaffForm((f) => ({ ...f, role: v as PersonnelRole }))} options={ROLE_OPTIONS} className="w-full" />
+                        </div>
+                        <button onClick={handleAddStaff} disabled={!staffForm.name.trim()}
+                          className="h-9 px-3 rounded-xl bg-[var(--amber)] hover:bg-[var(--amber-light)] text-[var(--surface)] font-semibold text-sm transition-colors disabled:opacity-40 shrink-0">
+                          <Plus size={16} weight="bold" />
+                        </button>
+                      </div>
+
+                      {ROLE_OPTIONS.map((ro) => {
+                        const list = personnel.filter((p) => p.role === ro.value);
+                        if (list.length === 0) return null;
+                        return (
+                          <div key={ro.value}>
+                            <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">{ro.label}s</p>
+                            <div className="flex flex-wrap gap-2">
+                              {list.map((p) => (
+                                <span key={p.id} className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-xs text-[var(--text-primary)]">
+                                  {p.name}
+                                  <button onClick={() => removePersonnel(p.id)} className="w-5 h-5 rounded-md flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition-all">
+                                    <X size={11} />
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Ajouter un salaire */}
+                  {salaireView === "add" && (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs text-[var(--text-muted)] mb-1 block">Personne *</label>
+                        <Select
+                          value={salaireForm.personnelId}
+                          onChange={(v) => setSalaireForm((f) => ({ ...f, personnelId: v }))}
+                          placeholder="Sélectionner une personne…"
+                          options={[
+                            ...personnel.map((p) => ({ value: p.id, label: `${p.name} — ${roleLabel(p.role)}` })),
+                            { value: "__new__", label: "＋ Nouvelle personne" },
+                          ]}
+                          className="w-full"
+                        />
+                      </div>
+                      {salaireForm.personnelId === "__new__" && (
+                        <div>
+                          <label className="text-xs text-[var(--text-muted)] mb-1 block">Nom de la nouvelle personne *</label>
+                          <input autoFocus value={salaireForm.newName}
+                            onChange={(e) => setSalaireForm((f) => ({ ...f, newName: e.target.value }))}
+                            placeholder="Nom"
+                            className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all" />
+                        </div>
+                      )}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs text-[var(--text-muted)] mb-1 block">Montant (€) *</label>
+                          <input type="number" min="0" step="0.01" value={salaireForm.montant}
+                            onChange={(e) => setSalaireForm((f) => ({ ...f, montant: e.target.value }))}
+                            placeholder="0.00"
+                            className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                        </div>
+                        <div>
+                          <label className="text-xs text-[var(--text-muted)] mb-1 block">Date</label>
+                          <input type="date" value={salaireForm.date}
+                            onChange={(e) => setSalaireForm((f) => ({ ...f, date: e.target.value }))}
+                            className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs text-[var(--text-muted)] mb-1 block">Libellé (optionnel)</label>
+                        <input value={salaireForm.libelle}
+                          onChange={(e) => setSalaireForm((f) => ({ ...f, libelle: e.target.value }))}
+                          placeholder="Ex: Salaire juillet, prime événement…"
+                          className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer modal */}
+                <div className="px-6 py-4 border-t border-[var(--border)] flex gap-3">
+                  {salaireView === "menu" ? (
+                    <button onClick={closeSalaireModal} className="flex-1 h-10 rounded-xl border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-2)] transition-colors">Fermer</button>
+                  ) : (
+                    <>
+                      <button onClick={() => setSalaireView("menu")} className="flex-1 h-10 rounded-xl border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-2)] transition-colors">Retour</button>
+                      {salaireView === "add" && (
+                        <button onClick={handleAddSalaire}
+                          disabled={!salaireForm.montant || (!salaireForm.personnelId) || (salaireForm.personnelId === "__new__" && !salaireForm.newName.trim())}
+                          className="flex-1 h-10 rounded-xl bg-[var(--amber)] hover:bg-[var(--amber-light)] text-[var(--surface)] font-semibold text-sm transition-colors disabled:opacity-40">
+                          Enregistrer le salaire
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            </m.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* ── Bilan général ──────────────────────────────────────── */}
       <div className="rounded-2xl border-2 border-[var(--amber)]/30 overflow-hidden bg-[var(--surface-1)] mb-6">
         <div className="px-4 lg:px-6 py-4 border-b border-[var(--amber)]/20 bg-[var(--amber)]/5 flex items-center gap-2">
@@ -540,6 +880,12 @@ export default function ComptabiliteClientFinal() {
                 <span className="text-sm text-[var(--text-secondary)]">Sorties confirmées</span>
                 <span className="text-sm font-mono font-semibold text-[var(--amber)]">− {formatCurrency(metrics.totalSorties)}</span>
               </div>
+              {metrics.totalSalaires > 0 && (
+                <div className="flex items-center justify-between px-4 lg:px-6 py-2 pl-6 lg:pl-10">
+                  <span className="text-xs text-[var(--text-muted)]">dont salaires versés</span>
+                  <span className="text-xs font-mono text-[var(--text-muted)]">{formatCurrency(metrics.totalSalaires)}</span>
+                </div>
+              )}
             </>
           )}
           <div className="flex items-center justify-between px-4 lg:px-6 py-4 bg-[var(--amber)]/8">
@@ -610,7 +956,7 @@ export default function ComptabiliteClientFinal() {
                       title={doc.title}
                       desc={doc.desc}
                       preview={docModalPreview}
-                      onGenerate={() => handleGenerate(doc.id, confirmed, metrics, confirmedCapital, sortiesRepas, sortiesLogistique, docModalPreview)}
+                      onGenerate={() => handleGenerate(doc.id, confirmed, metrics, confirmedCapital, sortiesRepas, sortiesLogistique, confirmedSalaires, docModalPreview)}
                     />
                   ))}
                 </div>
@@ -684,10 +1030,11 @@ function DocButton({ icon, title, desc, preview, onGenerate }: {
 async function handleGenerate(
   type: string,
   confirmed: Devis[],
-  metrics: { totalHT: number; totalTVA: number; totalTTC: number; count: number; avgDevis: number; totalCapital?: number; totalEntrees?: number; totalSorties?: number; solde?: number },
+  metrics: { totalHT: number; totalTVA: number; totalTTC: number; count: number; avgDevis: number; totalCapital?: number; totalEntrees?: number; totalSorties?: number; totalSalaires?: number; solde?: number },
   entreesCapital: EntreeCapital[] = [],
   sortiesRepas: import("@/lib/types").DemandeCoursesRepas[] = [],
   sortiesLogistique: import("@/lib/types").DemandeLogistique[] = [],
+  salaires: Salaire[] = [],
   preview = false
 ) {
   const { jsPDF } = await import("jspdf");
@@ -801,6 +1148,7 @@ async function handleGenerate(
     const toutesLesSorties = [
       ...sortiesRepas.map(d => [`Courses repas`, d.clientName, formatDate(d.eventDate), `${d.totalEstime.toFixed(2)} €`]),
       ...sortiesLogistique.map(d => [`Logistique`, d.clientName, formatDate(d.eventDate), `${(d.totalEstime ?? 0).toFixed(2)} €`]),
+      ...salaires.map(s => [`Salaire`, s.libelle ? `${s.name} — ${s.libelle}` : s.name, formatDate(s.date), `${s.montant.toFixed(2)} €`]),
     ];
     if (toutesLesSorties.length > 0) {
       if (y > 220) { doc.addPage(); y = 20; }

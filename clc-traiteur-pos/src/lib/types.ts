@@ -59,6 +59,26 @@ export interface EntreeCapital {
   source: "vente" | "apport" | "subvention" | "autre";
 }
 
+// ── Personnel & Salaires ──────────────────────────────────────────────────
+
+export type PersonnelRole = "associe" | "commis";
+
+export interface Personnel {
+  id: string;
+  name: string;
+  role: PersonnelRole;
+}
+
+export interface Salaire {
+  id: string;
+  personnelId?: string; // référence au personnel (absent si personne ponctuelle)
+  name: string;         // nom figé au moment du versement
+  role?: PersonnelRole;
+  montant: number;
+  date: string;         // ISO
+  libelle?: string;     // motif / période (ex: "Salaire juillet")
+}
+
 // ── Stocks & Gestion ──────────────────────────────────────────────────────
 
 export interface Ingredient {
