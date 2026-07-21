@@ -532,7 +532,7 @@ export default function ComptabiliteClientFinal() {
             <div key={d.id} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors">
               {/* Desktop */}
               <div className="hidden md:grid items-center gap-0 px-6 py-3" style={{ gridTemplateColumns: "80px 1fr 130px 110px 110px 120px" }}>
-                <div style={{ gridColumn: "1" }} className="flex items-center gap-1.5"><ShoppingCart size={12} className="text-[var(--text-muted)]"/><span className="text-xs text-[var(--text-secondary)]">Repas</span></div>
+                <div style={{ gridColumn: "1" }} className="flex items-center gap-1.5"><ShoppingCart size={12} className="text-[var(--text-muted)]"/><span className="text-xs text-[var(--text-secondary)]">Courses</span></div>
                 <p style={{ gridColumn: "2" }} className="text-sm font-medium text-[var(--text-primary)] truncate">{d.clientName}</p>
                 <div style={{ gridColumn: "3" }}></div>
                 <div style={{ gridColumn: "4 / 6" }} className="flex w-full items-center justify-end gap-1 text-xs text-[var(--text-muted)] pr-2"><Calendar size={11}/>{formatDate(d.eventDate)}</div>
@@ -541,7 +541,7 @@ export default function ComptabiliteClientFinal() {
               {/* Mobile */}
               <div className="md:hidden flex items-center justify-between px-4 py-3 gap-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-[var(--text-primary)] truncate">Courses repas — {d.clientName}</p>
+                  <p className="text-sm font-medium text-[var(--text-primary)] truncate">Courses — {d.clientName}</p>
                   <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Calendar size={10}/>{formatDate(d.eventDate)}</span>
                 </div>
                 <p className="text-sm font-mono font-bold text-[var(--amber)] shrink-0">{formatCurrency(d.totalEstime)}</p>
@@ -1146,7 +1146,7 @@ async function handleGenerate(
 
     // ── Section 3 : Sorties confirmées ────────────────────────────────
     const toutesLesSorties = [
-      ...sortiesRepas.map(d => [`Courses repas`, d.clientName, formatDate(d.eventDate), `${d.totalEstime.toFixed(2)} €`]),
+      ...sortiesRepas.map(d => [`Courses`, d.clientName, formatDate(d.eventDate), `${d.totalEstime.toFixed(2)} €`]),
       ...sortiesLogistique.map(d => [`Logistique`, d.clientName, formatDate(d.eventDate), `${(d.totalEstime ?? 0).toFixed(2)} €`]),
       ...salaires.map(s => [`Salaire`, s.libelle ? `${s.name} — ${s.libelle}` : s.name, formatDate(s.date), `${s.montant.toFixed(2)} €`]),
     ];
