@@ -14,6 +14,11 @@ import StatusSelect from "./StatusSelect";
 
 const STATUS_OPTIONS: (DevisStatus | "Tous")[] = ["Tous", "Brouillon", "Envoyé", "Confirmé", "Annulé"];
 
+// Gabarit des colonnes du tableau desktop.
+// Défini en style inline (et non via une classe arbitraire Tailwind) car la virgule
+// de minmax(0,240px) casse la génération de la classe `grid-cols-[…]` par Tailwind v4.
+const GRID_TEMPLATE = "80px minmax(0, 240px) 130px 120px 1fr 120px 100px 80px";
+
 export default function DevisClient() {
   const { devisList, updateDevisStatus, updateDevis, deleteDevis } = useStore();
   const router = useRouter();
@@ -136,7 +141,7 @@ export default function DevisClient() {
         ) : (
           <>
             {/* Desktop header */}
-            <div className="hidden md:grid grid-cols-[80px_minmax(0,240px)_130px_120px_1fr_120px_100px_80px] gap-0 px-4 py-3 border-b border-[var(--border)]">
+            <div className="hidden md:grid gap-0 px-4 py-3 border-b border-[var(--border)]" style={{ gridTemplateColumns: GRID_TEMPLATE }}>
               {["Réf.", "Client", "Événement", "Date", "", "Total TTC", "Statut", "Actions"].map((h, hi) => (
                 <p key={h || `spacer-${hi}`} className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">{h}</p>
               ))}
@@ -152,7 +157,8 @@ export default function DevisClient() {
                 >
                   {/* Desktop row */}
                   <div
-                    className="hidden md:grid grid-cols-[80px_minmax(0,240px)_130px_120px_1fr_120px_100px_80px] gap-0 px-4 py-3.5 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors group cursor-pointer"
+                    className="hidden md:grid gap-0 px-4 py-3.5 border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)] transition-colors group cursor-pointer"
+                    style={{ gridTemplateColumns: GRID_TEMPLATE }}
                     onClick={() => setSelected(devis)}
                   >
                     <p className="text-xs font-mono font-medium text-[var(--amber)] self-center">{devis.id}</p>
