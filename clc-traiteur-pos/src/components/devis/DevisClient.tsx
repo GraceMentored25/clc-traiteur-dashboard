@@ -6,10 +6,11 @@ import { MagnifyingGlass, Plus, Calendar, Receipt, PencilSimple, Trash, Warning,
 import { generateDevisPDF } from "@/lib/generateDevisPDF";
 import { useStore } from "@/lib/store";
 import { Devis, DevisStatus } from "@/lib/types";
-import { formatCurrency, formatDate, STATUS_COLORS } from "@/lib/utils";
+import { formatCurrency, formatDate } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import DevisDetail from "./DevisDetail";
 import DevisEditModal from "./DevisEditModal";
+import StatusSelect from "./StatusSelect";
 
 const STATUS_OPTIONS: (DevisStatus | "Tous")[] = ["Tous", "Brouillon", "Envoyé", "Confirmé", "Annulé"];
 
@@ -166,10 +167,11 @@ export default function DevisClient() {
                     </div>
                     <div aria-hidden />
                     <p className="text-sm font-mono font-bold text-[var(--text-primary)] self-center">{formatCurrency(devis.totalTTC)}</p>
-                    <div className="self-center">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold ${STATUS_COLORS[devis.status]}`}>
-                        {devis.status}
-                      </span>
+                    <div className="self-center" onClick={(e) => e.stopPropagation()}>
+                      <StatusSelect
+                        value={devis.status}
+                        onChange={(status) => updateDevisStatus(devis.id, status)}
+                      />
                     </div>
                     <div className="self-center flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                       <button onClick={() => generateDevisPDF(devis)} title="Générer PDF" className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 transition-all">
@@ -192,9 +194,12 @@ export default function DevisClient() {
                     <div className="flex items-start justify-between gap-3 mb-2">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="text-xs font-mono font-medium text-[var(--amber)] shrink-0">{devis.id}</span>
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-semibold shrink-0 ${STATUS_COLORS[devis.status]}`}>
-                          {devis.status}
-                        </span>
+                        <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <StatusSelect
+                            value={devis.status}
+                            onChange={(status) => updateDevisStatus(devis.id, status)}
+                          />
+                        </div>
                       </div>
                       <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                         <button onClick={() => generateDevisPDF(devis)} title="PDF" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 transition-all">
