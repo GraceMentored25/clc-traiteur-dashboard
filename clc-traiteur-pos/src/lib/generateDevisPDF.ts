@@ -88,17 +88,33 @@ function sectionImageKey(label: string): string {
   return "generique";
 }
 
-async function loadImageData(path: string): Promise<string | null> {
+/**
+ * Charge une image et la ré-exporte en PNG via canvas.
+ * jsPDF corrompt souvent les JPEG (rayures verticales) ; le PNG est fiable.
+ */
+async function loadSectionImagePng(path: string): Promise<string | null> {
   try {
     const res = await fetch(path);
     if (!res.ok) return null;
     const blob = await res.blob();
-    return await new Promise<string | null>((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
+    const objectUrl = URL.createObjectURL(blob);
+    try {
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const el = new Image();
+        el.onload = () => resolve(el);
+        el.onerror = () => reject(new Error("image load failed"));
+        el.src = objectUrl;
+      });
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return null;
+      ctx.drawImage(img, 0, 0);
+      return canvas.toDataURL("image/png");
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
   } catch {
     return null;
   }
@@ -273,11 +289,11 @@ export async function generateDevisPDF(devis: Devis) {
       subtotal: items.reduce((s, i) => s + i.subtotal, 0),
     }));
 
-    // Précharger les images de fond thématiques (une par clé, mise en cache)
+    // Précharger les images de fond thématiques (PNG via canvas — jsPDF corrompt les JPEG)
     const imgCache: Record<string, string | null> = {};
     for (const sec of sectionList) {
       const key = sectionImageKey(sec.label);
-      if (!(key in imgCache)) imgCache[key] = await loadImageData(`/sections/${key}.jpg`);
+      if (!(key in imgCache)) imgCache[key] = await loadSectionImagePng(`/sections/${key}.png`);
     }
 
     let currentY = tableY;
@@ -293,32 +309,32 @@ export async function generateDevisPDF(devis: Devis) {
     };
 
     for (const sec of sectionList) {
-      // En-tête de moment avec image de fond thématique
+      // En-tête full-bleed (bord à bord) avec image de fond thématique
       ensureSpace(bandH + 20);
       const y = currentY;
       const img = imgCache[sectionImageKey(sec.label)];
-      // Fond sombre sous l'image → aucun liseré blanc (arrondi jsPDF / JPEG)
+      // Fond sombre sous l'image (évite tout trou blanc)
       doc.setFillColor(16, 18, 22);
-      doc.rect(L, y, TW, bandH, "F");
+      doc.rect(0, y, W, bandH, "F");
       if (img) {
-        doc.addImage(img, "JPEG", L, y, TW, bandH);
+        doc.addImage(img, "PNG", 0, y, W, bandH);
         // voile sombre pour la lisibilité du texte blanc
-        withOpacity(0.42, () => { doc.setFillColor(16, 18, 22); doc.rect(L, y, TW, bandH, "F"); });
+        withOpacity(0.42, () => { doc.setFillColor(16, 18, 22); doc.rect(0, y, W, bandH, "F"); });
       } else {
         doc.setFillColor(AMBER[0], AMBER[1], AMBER[2]);
-        doc.rect(L, y, TW, bandH, "F");
+        doc.rect(0, y, W, bandH, "F");
       }
-      // liseré amber à gauche (après l'image pour rester net sur toute la hauteur)
+      // liseré amber collé au bord gauche
       doc.setFillColor(AMBER[0], AMBER[1], AMBER[2]);
-      doc.rect(L, y, 3, bandH, "F");
+      doc.rect(0, y, 3.5, bandH, "F");
       // titre + sous-total
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
-      doc.text(sec.label.toUpperCase(), L + 8, y + 11);
+      doc.text(sec.label.toUpperCase(), L + 2, y + 11);
       doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
-      doc.text(`Sous-total HT : ${sec.subtotal.toFixed(2)} €`, R - 4, y + 11, { align: "right" });
+      doc.text(`Sous-total HT : ${sec.subtotal.toFixed(2)} €`, R, y + 11, { align: "right" });
       currentY = y + bandH + 2;
 
       autoTable(doc, {
