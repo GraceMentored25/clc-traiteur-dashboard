@@ -29,14 +29,15 @@ type BodyCell = string | { content: string; colSpan: number; styles: Record<stri
 
 function pushItems(body: BodyCell[][], items: DevisItem[]) {
   for (const it of items) {
-    body.push([it.dishName, String(it.quantity), `${it.subtotal.toFixed(2)} €`]);
+    // Lignes : Prestation + Nb. convives uniquement (pas de sous-total ligne)
+    body.push([it.dishName, String(it.quantity)]);
   }
 }
 
 function pushSubTabTitle(body: BodyCell[][], label: string) {
   body.push([{
     content: label.toUpperCase(),
-    colSpan: 3,
+    colSpan: 2,
     styles: {
       fillColor: PARCHMENT,
       textColor: LEAF,
@@ -51,7 +52,7 @@ function pushSubTabTitle(body: BodyCell[][], label: string) {
 function pushSubTitle(body: BodyCell[][], label: string) {
   body.push([{
     content: label.toUpperCase(),
-    colSpan: 3,
+    colSpan: 2,
     styles: {
       fillColor: IVORY,
       textColor: MUTED,
@@ -451,15 +452,13 @@ export async function generateDevisPDF(devis: Devis) {
   doc.text("Détail des prestations", L, tableY - 4);
 
   const TW = R - L;
-  const QTY_W = 24;
-  const SUB_W = 40;
-  const PRE_W = TW - QTY_W - SUB_W;
+  // 2 colonnes : Prestation + Nb. convives (sous-total uniquement sur le bandeau de section)
+  const QTY_W = 36;
+  const PRE_W = TW - QTY_W;
 
-  // Alignement QTÉ : toujours centré (head + body), largeur fixe
   const colStyles = {
     0: { halign: "left" as const, cellWidth: PRE_W },
     1: { halign: "center" as const, cellWidth: QTY_W, valign: "middle" as const },
-    2: { halign: "right" as const, cellWidth: SUB_W, fontStyle: "bold" as const },
   };
 
   const tableCommon = {
@@ -473,10 +472,8 @@ export async function generateDevisPDF(devis: Devis) {
       halign: "left" as const,
       cellPadding: { top: 3.5, bottom: 3.5, left: 4, right: 4 },
     },
-    // Forcer l’alignement Qté / Sous-total aussi sur le header
     didParseCell: (data: { column: { index: number }; cell: { styles: { halign?: string } } }) => {
       if (data.column.index === 1) data.cell.styles.halign = "center";
-      if (data.column.index === 2) data.cell.styles.halign = "right";
     },
     styles: {
       fontSize: 10,
@@ -543,7 +540,7 @@ export async function generateDevisPDF(devis: Devis) {
 
       autoTable(doc, {
         startY: currentY,
-        head: [["Prestation", "Qté", "Sous-total HT"]],
+        head: [["Prestation", "Nb. convives"]],
         body: buildCategorizedBody(sec.items) as never,
         ...(tableCommon as object),
       });
@@ -558,7 +555,7 @@ export async function generateDevisPDF(devis: Devis) {
   } else {
     autoTable(doc, {
       startY: tableY,
-      head: [["Prestation", "Qté", "Sous-total HT"]],
+      head: [["Prestation", "Nb. convives"]],
       body: buildCategorizedBody(devis.items) as never,
       ...(tableCommon as object),
     });

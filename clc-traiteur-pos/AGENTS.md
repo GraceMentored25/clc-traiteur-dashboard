@@ -22,4 +22,6 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - **Règles contenu** :
   - Sous-onglets (Entrées, Plats…) toujours affichés.
   - Sous-titre **« Plats principaux (accompagnements inclus) »** masqué dans le PDF.
-  - Colonne **Qté** toujours centrée (`columnStyles` + `didParseCell`).
+  - Colonnes tableau : **Prestation** + **Nb. convives** uniquement (pas de sous-total ligne).
+  - Sous-total uniquement sur le **bandeau de grande section** (Vin d’honneur, Soirée…).
+  - Colonne **Nb. convives** centrée (`columnStyles` + `didParseCell`).
