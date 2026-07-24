@@ -3,16 +3,27 @@ import { formatDate } from "@/lib/utils";
 import { DISHES } from "@/lib/data/dishes";
 import { ALL_KNOWN_CATEGORIES, SUBSECTION_MAP } from "@/lib/data/subsections";
 
-const AMBER: [number, number, number] = [232, 150, 12];
-const DARK: [number, number, number] = [26, 30, 36];
-const GRAY: [number, number, number] = [87, 96, 106];
-const LIGHT_BG: [number, number, number] = [246, 248, 250];
-const SUBCAT_BG: [number, number, number] = [255, 240, 214];
-const SUBGROUP_BG: [number, number, number] = [250, 246, 240];
+/** Palette Ébène & Cuivre */
+const COPPER: [number, number, number] = [196, 120, 58];
+const COPPER_LIGHT: [number, number, number] = [224, 160, 102];
+const EBONY: [number, number, number] = [26, 20, 16];
+const COCOA: [number, number, number] = [44, 33, 24];
+const IVORY: [number, number, number] = [248, 244, 238];
+const PARCHMENT: [number, number, number] = [239, 232, 220];
+const INK: [number, number, number] = [31, 26, 22];
+const MUTED: [number, number, number] = [107, 94, 82];
+const LINE: [number, number, number] = [217, 206, 191];
+const LEAF: [number, number, number] = [61, 92, 69];
+const WHITE: [number, number, number] = [255, 255, 255];
 
 const KNOWN_CATS = new Set(ALL_KNOWN_CATEGORIES);
 const DISH_CATEGORY = new Map<number, string>(DISHES.map((d) => [d.id, d.category]));
 const itemCategory = (item: DevisItem) => DISH_CATEGORY.get(item.dishId) ?? "";
+
+/** Sous-titres à ne pas afficher dans le PDF (ex: plats principaux) */
+function shouldHideSubTitle(label: string): boolean {
+  return /plats principaux/i.test(label);
+}
 
 type BodyCell = string | { content: string; colSpan: number; styles: Record<string, unknown> };
 
@@ -22,27 +33,38 @@ function pushItems(body: BodyCell[][], items: DevisItem[]) {
   }
 }
 
-/** Ligne titre de sous-onglet (Entrées, Plats, …) */
 function pushSubTabTitle(body: BodyCell[][], label: string) {
   body.push([{
     content: label.toUpperCase(),
     colSpan: 3,
-    styles: { fillColor: SUBCAT_BG, textColor: DARK, fontStyle: "bold", halign: "left", fontSize: 9 },
+    styles: {
+      fillColor: PARCHMENT,
+      textColor: LEAF,
+      fontStyle: "bold",
+      halign: "left",
+      fontSize: 9,
+      cellPadding: { top: 4, bottom: 3, left: 4, right: 4 },
+    },
   }]);
 }
 
-/** Ligne sous-titre (ex: Plats principaux…) sous un sous-onglet */
 function pushSubTitle(body: BodyCell[][], label: string) {
   body.push([{
-    content: label,
+    content: label.toUpperCase(),
     colSpan: 3,
-    styles: { fillColor: SUBGROUP_BG, textColor: GRAY, fontStyle: "bold", halign: "left", fontSize: 8 },
+    styles: {
+      fillColor: IVORY,
+      textColor: MUTED,
+      fontStyle: "bold",
+      halign: "left",
+      fontSize: 8,
+      cellPadding: { top: 3, bottom: 2, left: 4, right: 4 },
+    },
   }]);
 }
 
 /**
- * Corps du tableau : hiérarchie = sous-onglet → sous-titre (si besoin) → lignes.
- * Miroir de renderSectionBody dans DevisDetail.
+ * Corps du tableau : sous-onglet → sous-titre (sauf plats principaux) → lignes.
  */
 function buildCategorizedBody(items: DevisItem[]): BodyCell[][] {
   const body: BodyCell[][] = [];
@@ -58,7 +80,7 @@ function buildCategorizedBody(items: DevisItem[]): BodyCell[][] {
       for (const sg of sub.subGroups) {
         const sgItems = subItems.filter((i) => sg.categories.includes(itemCategory(i)));
         if (!sgItems.length) continue;
-        pushSubTitle(body, sg.label);
+        if (!shouldHideSubTitle(sg.label)) pushSubTitle(body, sg.label);
         pushItems(body, sgItems);
       }
     } else {
@@ -72,12 +94,10 @@ function buildCategorizedBody(items: DevisItem[]): BodyCell[][] {
     pushItems(body, others);
   }
 
-  // Aucune catégorie connue → liste plate
   if (!body.length) pushItems(body, items);
   return body;
 }
 
-// Associe un moment (section) à une image de fond thématique
 function sectionImageKey(label: string): string {
   const s = label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   if (/(vin d.?honneur|aperitif|apero|cocktail|after)/.test(s)) return "aperitif";
@@ -88,9 +108,19 @@ function sectionImageKey(label: string): string {
   return "generique";
 }
 
+async function loadImageElement(path: string): Promise<HTMLImageElement> {
+  const url = path.startsWith("http") ? path : `${window.location.origin}${path}`;
+  return new Promise((resolve, reject) => {
+    const el = new Image();
+    el.crossOrigin = "anonymous";
+    el.onload = () => resolve(el);
+    el.onerror = () => reject(new Error(`image load failed: ${path}`));
+    el.src = url;
+  });
+}
+
 /**
- * Bandeau section rasterisé (photo + voile + liseré + textes) en une seule image PNG.
- * Évite les bugs jsPDF (JPEG/PNG palette, superpositions, liserés blancs).
+ * Bandeau section rasterisé (photo cover + voile ébène + liseré cuivre + textes).
  */
 async function buildSectionBandDataUrl(
   photoPath: string,
@@ -101,15 +131,7 @@ async function buildSectionBandDataUrl(
 ): Promise<string | null> {
   const PX_PER_MM = 8;
   try {
-    const url = photoPath.startsWith("http") ? photoPath : `${window.location.origin}${photoPath}`;
-    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const el = new Image();
-      el.crossOrigin = "anonymous";
-      el.onload = () => resolve(el);
-      el.onerror = () => reject(new Error("photo load failed"));
-      el.src = url;
-    });
-
+    const img = await loadImageElement(photoPath);
     const w = Math.round(pageWidthMm * PX_PER_MM);
     const h = Math.round(bandHeightMm * PX_PER_MM);
     const canvas = document.createElement("canvas");
@@ -118,7 +140,7 @@ async function buildSectionBandDataUrl(
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
 
-    ctx.fillStyle = "#101216";
+    ctx.fillStyle = "#1a1410";
     ctx.fillRect(0, 0, w, h);
 
     const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
@@ -126,26 +148,125 @@ async function buildSectionBandDataUrl(
     const dh = img.naturalHeight * scale;
     ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
 
-    ctx.fillStyle = "rgba(16, 18, 22, 0.42)";
+    ctx.fillStyle = "rgba(26, 20, 16, 0.72)";
     ctx.fillRect(0, 0, w, h);
 
     const stripeW = Math.round(3.5 * PX_PER_MM);
-    ctx.fillStyle = `rgb(${AMBER[0]}, ${AMBER[1]}, ${AMBER[2]})`;
+    ctx.fillStyle = `rgb(${COPPER[0]}, ${COPPER[1]}, ${COPPER[2]})`;
     ctx.fillRect(0, 0, stripeW, h);
 
     const textY = h / 2;
     ctx.fillStyle = "#ffffff";
     ctx.textBaseline = "middle";
-    ctx.font = `bold ${Math.round(4.2 * PX_PER_MM)}px Helvetica, Arial, sans-serif`;
-    ctx.fillText(title.toUpperCase(), stripeW + Math.round(2 * PX_PER_MM), textY);
-    ctx.font = `${Math.round(3.2 * PX_PER_MM)}px Helvetica, Arial, sans-serif`;
+    ctx.textAlign = "left";
+    ctx.font = `600 ${Math.round(5 * PX_PER_MM)}px Georgia, "Times New Roman", serif`;
+    ctx.fillText(title, stripeW + Math.round(3 * PX_PER_MM), textY);
+    ctx.font = `500 ${Math.round(3 * PX_PER_MM)}px Helvetica, Arial, sans-serif`;
     ctx.textAlign = "right";
-    ctx.fillText(subtotalText, w - Math.round(2 * PX_PER_MM), textY);
+    ctx.fillStyle = "rgba(255,255,255,0.88)";
+    ctx.fillText(subtotalText, w - Math.round(3 * PX_PER_MM), textY);
 
     return canvas.toDataURL("image/png");
   } catch {
     return null;
   }
+}
+
+/** En-tête hero full-bleed (logo + marque + n° devis) */
+async function buildHeroDataUrl(
+  pageWidthMm: number,
+  heroHeightMm: number,
+  devisId: string,
+  now: string,
+  status: string,
+  logo: { data: string; w: number; h: number } | null,
+): Promise<string | null> {
+  const PX_PER_MM = 8;
+  try {
+    const img = await loadImageElement("/sections/diner.png");
+    const w = Math.round(pageWidthMm * PX_PER_MM);
+    const h = Math.round(heroHeightMm * PX_PER_MM);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+
+    ctx.fillStyle = "#1a1410";
+    ctx.fillRect(0, 0, w, h);
+    const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+    const dw = img.naturalWidth * scale;
+    const dh = img.naturalHeight * scale;
+    ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
+    const grad = ctx.createLinearGradient(0, 0, w, 0);
+    grad.addColorStop(0, "rgba(26,20,16,0.94)");
+    grad.addColorStop(0.48, "rgba(26,20,16,0.72)");
+    grad.addColorStop(1, "rgba(44,33,24,0.55)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+
+    const pad = Math.round(10 * PX_PER_MM);
+    let textX = pad;
+
+    if (logo) {
+      const logoImg = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const el = new Image();
+        el.onload = () => resolve(el);
+        el.onerror = () => reject(new Error("logo"));
+        el.src = logo.data;
+      });
+      const logoH = Math.round(18 * PX_PER_MM);
+      const logoW = (logo.w / logo.h) * logoH;
+      const logoY = (h - logoH) / 2;
+      ctx.fillStyle = "rgba(255,255,255,0.06)";
+      roundRect(ctx, pad - 4, logoY - 4, logoW + 8, logoH + 8, 8);
+      ctx.fill();
+      ctx.drawImage(logoImg, pad, logoY, logoW, logoH);
+      textX = pad + logoW + Math.round(5 * PX_PER_MM);
+    }
+
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.font = `700 ${Math.round(6.2 * PX_PER_MM)}px Georgia, "Times New Roman", serif`;
+    ctx.fillText(CLC.nom, textX, h * 0.38);
+    ctx.font = `300 ${Math.round(2.8 * PX_PER_MM)}px Helvetica, Arial, sans-serif`;
+    ctx.fillStyle = "rgba(255,255,255,0.72)";
+    ctx.fillText(CLC.sousTitre, textX, h * 0.58);
+
+    ctx.textAlign = "right";
+    const rightX = w - pad;
+    ctx.fillStyle = `rgb(${COPPER_LIGHT[0]}, ${COPPER_LIGHT[1]}, ${COPPER_LIGHT[2]})`;
+    ctx.font = `600 ${Math.round(2.4 * PX_PER_MM)}px Helvetica, Arial, sans-serif`;
+    ctx.fillText("DEVIS", rightX, h * 0.28);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = `600 ${Math.round(5.5 * PX_PER_MM)}px Georgia, "Times New Roman", serif`;
+    ctx.fillText(devisId, rightX, h * 0.48);
+    ctx.fillStyle = "rgba(255,255,255,0.65)";
+    ctx.font = `400 ${Math.round(2.6 * PX_PER_MM)}px Helvetica, Arial, sans-serif`;
+    ctx.fillText(`Émis le ${now} · ${status}`, rightX, h * 0.68);
+
+    // liseré cuivre bas
+    ctx.fillStyle = `rgb(${COPPER[0]}, ${COPPER[1]}, ${COPPER[2]})`;
+    ctx.fillRect(0, h - Math.round(1.2 * PX_PER_MM), w, Math.round(1.2 * PX_PER_MM));
+
+    return canvas.toDataURL("image/png");
+  } catch {
+    return null;
+  }
+}
+
+function roundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number, w: number, h: number, r: number,
+) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
 }
 
 const CLC = {
@@ -190,6 +311,59 @@ async function loadLogo(): Promise<{ data: string; w: number; h: number } | null
   }
 }
 
+function drawIvoryPageBg(doc: InstanceType<typeof import("jspdf").jsPDF>, W: number, pageH: number) {
+  doc.setFillColor(...IVORY);
+  doc.rect(0, 0, W, pageH, "F");
+}
+
+function drawTotalsBox(
+  doc: InstanceType<typeof import("jspdf").jsPDF>,
+  devis: Devis,
+  totalsLeft: number,
+  tY: number,
+  R: number,
+) {
+  const rowH = 8;
+  const totalsW = R - totalsLeft;
+  doc.setFillColor(...COCOA);
+  doc.roundedRect(totalsLeft, tY, totalsW, rowH * 3 + 8, 1.5, 1.5, "F");
+  doc.setFillColor(...COPPER);
+  doc.rect(totalsLeft, tY, totalsW, 1.2, "F");
+
+  const tLabelX = totalsLeft + 5;
+  const tValueX = R - 5;
+
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(220, 210, 200);
+  doc.text("Sous-total HT", tLabelX, tY + rowH + 1);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...WHITE);
+  doc.text(`${devis.totalHT.toFixed(2)} €`, tValueX, tY + rowH + 1, { align: "right" });
+
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(220, 210, 200);
+  doc.text("TVA (20%)", tLabelX, tY + rowH * 2 + 1);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...WHITE);
+  doc.text(`${(devis.totalTTC - devis.totalHT).toFixed(2)} €`, tValueX, tY + rowH * 2 + 1, { align: "right" });
+
+  doc.setDrawColor(255, 255, 255);
+  doc.setLineWidth(0.2);
+  // soft divider
+  doc.setDrawColor(120, 100, 80);
+  doc.line(tLabelX, tY + rowH * 2 + 4, tValueX, tY + rowH * 2 + 4);
+
+  doc.setFontSize(13);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...WHITE);
+  doc.text("TOTAL TTC", tLabelX, tY + rowH * 3 + 5);
+  doc.setTextColor(...COPPER_LIGHT);
+  doc.text(`${devis.totalTTC.toFixed(2)} €`, tValueX, tY + rowH * 3 + 5, { align: "right" });
+
+  return tY + rowH * 3 + 10;
+}
+
 export async function generateDevisPDF(devis: Devis) {
   const { jsPDF } = await import("jspdf");
   const autoTable = (await import("jspdf-autotable")).default;
@@ -205,106 +379,118 @@ export async function generateDevisPDF(devis: Devis) {
   const pageH = doc.internal.pageSize.getHeight();
   const footerReserve = 14;
 
-  // ── EN-TÊTE ──────────────────────────────────────────────────────────────
-  doc.setFillColor(...AMBER);
-  doc.rect(0, 0, W, 42, "F");
+  drawIvoryPageBg(doc, W, pageH);
 
-  let logoW = 0;
-  if (logo) {
-    const logoH = 30;
-    logoW = (logo.w / logo.h) * logoH;
-    doc.addImage(logo.data, "PNG", L, 6, logoW, logoH);
+  // ── EN-TÊTE HERO ─────────────────────────────────────────────────────────
+  const heroH = 42;
+  const heroUrl = await buildHeroDataUrl(W, heroH, devis.id, now, devis.status, logo);
+  if (heroUrl) {
+    doc.addImage(heroUrl, "PNG", 0, 0, W, heroH);
+  } else {
+    doc.setFillColor(...EBONY);
+    doc.rect(0, 0, W, heroH, "F");
+    doc.setFillColor(...COPPER);
+    doc.rect(0, heroH - 1.2, W, 1.2, "F");
+    doc.setTextColor(...WHITE);
+    doc.setFontSize(17);
+    doc.setFont("helvetica", "bold");
+    doc.text(CLC.nom, L, 18);
+    doc.setFontSize(14);
+    doc.text(`DEVIS ${devis.id}`, R, 18, { align: "right" });
   }
 
-  const textX = logoW > 0 ? L + logoW + 5 : L;
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(17);
-  doc.setFont("helvetica", "bold");
-  doc.text(CLC.nom, textX, 14);
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.text(CLC.sousTitre, textX, 21);
-  doc.text(CLC.adresse, textX, 27);
-  doc.text(`${CLC.tel} · ${CLC.email}`, textX, 33);
-
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.text(`DEVIS N° ${devis.id}`, R, 14, { align: "right" });
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.text(`Émis le ${now}`, R, 22, { align: "right" });
-  doc.text(`Statut : ${devis.status}`, R, 30, { align: "right" });
-
   // ── CLIENT / ÉVÉNEMENT ───────────────────────────────────────────────────
-  const infoY = 50;
+  const infoY = heroH + 10;
+  const boxH = 32;
+  doc.setDrawColor(...LINE);
+  doc.setLineWidth(0.35);
+  doc.setFillColor(255, 255, 255);
+  doc.rect(L, infoY, R - L, boxH, "FD");
+  doc.line(W / 2, infoY, W / 2, infoY + boxH);
 
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...COPPER);
+  doc.text("CLIENT", L + 5, infoY + 7);
+  doc.setFontSize(13);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...EBONY);
+  doc.text(devis.clientName, L + 5, infoY + 16);
   doc.setFontSize(9);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...GRAY);
-  doc.text("CLIENT", L, infoY);
-  doc.setDrawColor(...AMBER);
-  doc.setLineWidth(0.4);
-  doc.line(L, infoY + 2, L + 32, infoY + 2);
-
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...DARK);
-  doc.text(devis.clientName, L, infoY + 9);
-  doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(...GRAY);
-  doc.text(devis.clientPhone, L, infoY + 16);
+  doc.setTextColor(...MUTED);
+  doc.text(devis.clientPhone, L + 5, infoY + 23);
 
-  const evX = W / 2;
-  doc.setFontSize(9);
+  const evX = W / 2 + 5;
+  doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(...GRAY);
-  doc.text("ÉVÉNEMENT", evX, infoY);
-  doc.setDrawColor(...AMBER);
-  doc.line(evX, infoY + 2, evX + 40, infoY + 2);
+  doc.setTextColor(...COPPER);
+  doc.text("ÉVÉNEMENT", evX, infoY + 7);
 
   const evRows: [string, string][] = [
-    ["Type :", devis.eventType],
-    ["Date :", formatDate(devis.eventDate)],
-    ["Convives :", `${devis.guestCount} personnes`],
+    ["Type", devis.eventType],
+    ["Date", formatDate(devis.eventDate)],
+    ["Convives", `${devis.guestCount} personnes`],
   ];
   evRows.forEach(([label, val], i) => {
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...DARK);
-    doc.text(label, evX, infoY + 9 + i * 7);
+    const y = infoY + 14 + i * 5.5;
+    doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
-    doc.text(val, evX + 24, infoY + 9 + i * 7);
+    doc.setTextColor(...MUTED);
+    doc.text(label, evX, y);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...INK);
+    doc.text(val, evX + 22, y);
   });
 
-  doc.setDrawColor(220, 220, 220);
-  doc.setLineWidth(0.3);
-  doc.line(L, infoY + 32, R, infoY + 32);
-
   // ── TABLEAU PRESTATIONS ──────────────────────────────────────────────────
-  const tableY = infoY + 39;
+  const tableY = infoY + boxH + 12;
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(...DARK);
+  doc.setTextColor(...EBONY);
   doc.text("Détail des prestations", L, tableY - 4);
 
-  // Largeurs colonnes — L=14, R=196, total table = 182mm
-  const TW = R - L; // 182mm
-  const QTY_W = 22;
+  const TW = R - L;
+  const QTY_W = 24;
   const SUB_W = 40;
-  const PRE_W = TW - QTY_W - SUB_W; // 120mm
+  const PRE_W = TW - QTY_W - SUB_W;
 
+  // Alignement QTÉ : toujours centré (head + body), largeur fixe
   const colStyles = {
-    0: { halign: "left"   as const, cellWidth: PRE_W },
-    1: { halign: "center" as const, cellWidth: QTY_W },
-    2: { halign: "right"  as const, cellWidth: SUB_W, fontStyle: "bold" as const },
+    0: { halign: "left" as const, cellWidth: PRE_W },
+    1: { halign: "center" as const, cellWidth: QTY_W, valign: "middle" as const },
+    2: { halign: "right" as const, cellWidth: SUB_W, fontStyle: "bold" as const },
   };
 
-  // Détecter si le devis a des sections
-  const hasSections = devis.items.some(i => i.section);
+  const tableCommon = {
+    alternateRowStyles: { fillColor: PARCHMENT },
+    columnStyles: colStyles,
+    headStyles: {
+      fillColor: COCOA,
+      textColor: WHITE,
+      fontStyle: "bold" as const,
+      fontSize: 8,
+      halign: "left" as const,
+      cellPadding: { top: 3.5, bottom: 3.5, left: 4, right: 4 },
+    },
+    // Forcer l’alignement Qté / Sous-total aussi sur le header
+    didParseCell: (data: { column: { index: number }; cell: { styles: { halign?: string } } }) => {
+      if (data.column.index === 1) data.cell.styles.halign = "center";
+      if (data.column.index === 2) data.cell.styles.halign = "right";
+    },
+    styles: {
+      fontSize: 10,
+      textColor: INK,
+      lineColor: LINE,
+      lineWidth: 0.15,
+      cellPadding: { top: 3.2, bottom: 3.2, left: 4, right: 4 },
+    },
+    margin: { left: L, right: L },
+  };
+
+  const hasSections = devis.items.some((i) => i.section);
 
   if (hasSections) {
-    // Grouper les items par section dans l'ordre d'apparition
     const sectionMap = new Map<string, typeof devis.items>();
     for (const item of devis.items) {
       const key = item.section ?? "Autres";
@@ -320,11 +506,15 @@ export async function generateDevisPDF(devis: Devis) {
     let currentY = tableY;
     const bandH = 18;
     const ensureSpace = (h: number) => {
-      if (currentY + h > pageH - footerReserve) { doc.addPage(); currentY = 14; }
+      if (currentY + h > pageH - footerReserve) {
+        doc.addPage();
+        drawIvoryPageBg(doc, W, pageH);
+        currentY = 14;
+      }
     };
 
     for (const sec of sectionList) {
-      ensureSpace(bandH + 20);
+      ensureSpace(bandH + 28);
       const y = currentY;
       const key = sectionImageKey(sec.label);
       const bandUrl = await buildSectionBandDataUrl(
@@ -332,191 +522,107 @@ export async function generateDevisPDF(devis: Devis) {
         W,
         bandH,
         sec.label,
-        `Sous-total HT : ${sec.subtotal.toFixed(2)} €`,
+        `Sous-total HT · ${sec.subtotal.toFixed(2)} €`,
       );
       if (bandUrl) {
         doc.addImage(bandUrl, "PNG", 0, y, W, bandH);
       } else {
-        doc.setFillColor(AMBER[0], AMBER[1], AMBER[2]);
+        doc.setFillColor(...COCOA);
         doc.rect(0, y, W, bandH, "F");
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(12);
-        doc.setFont("helvetica", "bold");
-        doc.text(sec.label.toUpperCase(), L + 2, y + 11);
-        doc.setFontSize(9);
+        doc.setFillColor(...COPPER);
+        doc.rect(0, y, 3.5, bandH, "F");
+        doc.setTextColor(...WHITE);
+        doc.setFontSize(13);
+        doc.setFont("times", "bold");
+        doc.text(sec.label, L + 2, y + 11);
         doc.setFont("helvetica", "normal");
-        doc.text(`Sous-total HT : ${sec.subtotal.toFixed(2)} €`, R, y + 11, { align: "right" });
+        doc.setFontSize(9);
+        doc.text(`Sous-total HT · ${sec.subtotal.toFixed(2)} €`, R, y + 11, { align: "right" });
       }
-      currentY = y + bandH + 2;
+      currentY = y + bandH + 3;
 
       autoTable(doc, {
         startY: currentY,
         head: [["Prestation", "Qté", "Sous-total HT"]],
         body: buildCategorizedBody(sec.items) as never,
-        alternateRowStyles: { fillColor: LIGHT_BG },
-        columnStyles: colStyles,
-        headStyles: { fillColor: [45, 52, 60] as [number,number,number], textColor: [255,255,255] as [number,number,number], fontStyle: "bold", fontSize: 9 },
-        styles: { fontSize: 10, cellPadding: { top: 3, bottom: 3, left: 4, right: 4 } },
-        margin: { left: L, right: L },
+        ...(tableCommon as object),
       });
 
-      currentY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 5;
+      currentY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
     }
 
-    // Récap sections
-    const recapY = currentY;
-    const recapBoxH = sectionList.length * 6 + 4;
-    doc.setFillColor(255, 248, 230);
-    doc.roundedRect(R - 90, recapY, 90 - (W - R), recapBoxH, 2, 2, "F");
-    sectionList.forEach((sec, i) => {
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(...GRAY);
-      doc.text(sec.label, R - 86, recapY + 5 + i * 6);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...DARK);
-      doc.text(`${sec.subtotal.toFixed(2)} €`, R - 4, recapY + 5 + i * 6, { align: "right" });
-    });
-    currentY = recapY + recapBoxH + 2;
-
-    // ── TOTAUX avec sections ────────────────────────────────────────────────
-    const tY = currentY;
-    const rowH = 8;
-    const totalsLeft = R - 78;
-    const totalsW = R - totalsLeft;
-    doc.setFillColor(...LIGHT_BG);
-    doc.roundedRect(totalsLeft, tY, totalsW, rowH * 3 + 6, 2, 2, "F");
-
-    const tLabelX = totalsLeft + 5;
-    const tValueX = R - 5;
-
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...GRAY);
-    doc.text("Sous-total HT :", tLabelX, tY + rowH - 1);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...DARK);
-    doc.text(`${devis.totalHT.toFixed(2)} €`, tValueX, tY + rowH - 1, { align: "right" });
-
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...GRAY);
-    doc.text("TVA (20%) :", tLabelX, tY + rowH * 2 - 1);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...DARK);
-    doc.text(`${(devis.totalTTC - devis.totalHT).toFixed(2)} €`, tValueX, tY + rowH * 2 - 1, { align: "right" });
-
-    doc.setDrawColor(...AMBER);
-    doc.setLineWidth(0.5);
-    doc.line(tLabelX, tY + rowH * 2 + 2, tValueX, tY + rowH * 2 + 2);
-
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...DARK);
-    doc.text("TOTAL TTC :", tLabelX, tY + rowH * 3 + 2);
-    doc.setTextColor(AMBER[0], AMBER[1], AMBER[2]);
-    doc.text(`${devis.totalTTC.toFixed(2)} €`, tValueX, tY + rowH * 3 + 2, { align: "right" });
-
-    // Réaffecter afterTable pour la suite (notes, acompte…)
-    (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY = tY + rowH * 3 + 8;
-
+    // Totaux
+    ensureSpace(40);
+    const endY = drawTotalsBox(doc, devis, R - 78, currentY, R);
+    (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY = endY;
   } else {
-    // ── Mode classique sans sections ──────────────────────────────────────
     autoTable(doc, {
       startY: tableY,
       head: [["Prestation", "Qté", "Sous-total HT"]],
       body: buildCategorizedBody(devis.items) as never,
-      alternateRowStyles: { fillColor: LIGHT_BG },
-      columnStyles: colStyles,
-      headStyles: { fillColor: DARK, textColor: [255,255,255] as [number,number,number], fontStyle: "bold", fontSize: 10 },
-      styles: { fontSize: 10, cellPadding: { top: 3.5, bottom: 3.5, left: 4, right: 4 } },
-      margin: { left: L, right: L },
+      ...(tableCommon as object),
     });
   }
 
   const afterTable = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
-  const totalsLeft = R - 78; // boîte totaux : 78mm depuis la marge droite
 
-  // ── TOTAUX (mode sans sections seulement) ────────────────────────────────
   if (!hasSections) {
-    const tY = afterTable + 4;
-    const rowH = 8;
-    const totalsW = R - totalsLeft;
-    doc.setFillColor(...LIGHT_BG);
-    doc.roundedRect(totalsLeft, tY, totalsW, rowH * 3 + 6, 2, 2, "F");
-
-    const tLabelX = totalsLeft + 5;
-    const tValueX = R - 5;
-
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...GRAY);
-    doc.text("Sous-total HT :", tLabelX, tY + rowH - 1);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...DARK);
-    doc.text(`${devis.totalHT.toFixed(2)} €`, tValueX, tY + rowH - 1, { align: "right" });
-
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...GRAY);
-    doc.text("TVA (20%) :", tLabelX, tY + rowH * 2 - 1);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...DARK);
-    doc.text(`${(devis.totalTTC - devis.totalHT).toFixed(2)} €`, tValueX, tY + rowH * 2 - 1, { align: "right" });
-
-    doc.setDrawColor(...AMBER);
-    doc.setLineWidth(0.5);
-    doc.line(tLabelX, tY + rowH * 2 + 2, tValueX, tY + rowH * 2 + 2);
-
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...DARK);
-    doc.text("TOTAL TTC :", tLabelX, tY + rowH * 3 + 2);
-    doc.setTextColor(AMBER[0], AMBER[1], AMBER[2]);
-    doc.text(`${devis.totalTTC.toFixed(2)} €`, tValueX, tY + rowH * 3 + 2, { align: "right" });
-
-    (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY = tY + rowH * 3 + 8;
+    const endY = drawTotalsBox(doc, devis, R - 78, afterTable + 4, R);
+    (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY = endY;
   }
 
-  // ── NOTES + ACOMPTE (commun aux deux modes) ───────────────────────────────
+  // ── NOTES + ACOMPTE ───────────────────────────────────────────────────────
   let currentY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 5;
   if (devis.notes) {
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(...DARK);
-    doc.text("Notes :", L, currentY);
+    doc.setTextColor(...EBONY);
+    doc.text("Notes", L, currentY);
     doc.setFont("helvetica", "italic");
-    doc.setTextColor(...GRAY);
+    doc.setTextColor(...MUTED);
     const noteLines = doc.splitTextToSize(devis.notes, R - L);
     doc.text(noteLines, L, currentY + 6);
     currentY += 6 + noteLines.length * 6 + 4;
   }
 
-  // Acompte
   const aY = currentY + 3;
-  doc.setFillColor(255, 248, 230);
-  doc.roundedRect(L, aY, R - L, 28, 2, 2, "F");
-  doc.setDrawColor(...AMBER);
-  doc.setLineWidth(0.4);
-  doc.roundedRect(L, aY, R - L, 28, 2, 2, "D");
+  doc.setFillColor(...PARCHMENT);
+  doc.roundedRect(L, aY, R - L, 28, 1.5, 1.5, "F");
+  doc.setDrawColor(...COPPER);
+  doc.setLineWidth(0.45);
+  doc.roundedRect(L, aY, R - L, 28, 1.5, 1.5, "D");
+
+  // Pastille %
+  doc.setFillColor(...COPPER);
+  doc.circle(L + 10, aY + 14, 5, "F");
+  doc.setTextColor(...WHITE);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text("%", L + 10, aY + 15.5, { align: "center" });
 
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(...DARK);
-  doc.text(`Acompte de ${pct}% requis à la validation — ${montant.toFixed(2)} €`, L + 5, aY + 8);
-  doc.setFontSize(10);
+  doc.setTextColor(...EBONY);
+  doc.text(`Acompte de ${pct}% à la validation — ${montant.toFixed(2)} €`, L + 20, aY + 10);
+  doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(...GRAY);
-  doc.text(`Date limite de versement : ${deadlineStr} (${monthsBefore} mois avant l'événement)`, L + 5, aY + 16);
-  doc.text("En cas de rétractation après versement, l'acompte ne sera pas remboursé.", L + 5, aY + 23);
+  doc.setTextColor(...MUTED);
+  doc.text(`Date limite : ${deadlineStr} (${monthsBefore} mois avant l'événement)`, L + 20, aY + 17);
+  doc.text("En cas de rétractation après versement, l'acompte ne sera pas remboursé.", L + 20, aY + 23);
 
-  // ── CONDITIONS GÉNÉRALES + SIGNATURES → toujours page 2 ─────────────────
+  // ── CGV + SIGNATURES → page 2 ────────────────────────────────────────────
   doc.addPage();
-  const cgY = 14;
-  doc.setFontSize(10);
+  drawIvoryPageBg(doc, W, pageH);
+  const cgY = 18;
+  doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(...DARK);
+  doc.setTextColor(...EBONY);
   doc.text("Conditions générales de vente", L, cgY);
+  doc.setFillColor(...COPPER);
+  doc.rect(L, cgY + 2, 28, 0.8, "F");
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(...GRAY);
+  doc.setTextColor(...MUTED);
+  doc.setFontSize(9.5);
   const cg = [
     `• Devis valable 30 jours à compter du ${now}.`,
     `• Acompte de ${pct}% du TTC exigé à la signature pour confirmer la réservation.`,
@@ -525,83 +631,58 @@ export async function generateDevisPDF(devis: Devis) {
     "• Solde exigible au plus tard 7 jours avant la date de la prestation.",
     "• Tout litige fera l'objet d'une tentative de résolution amiable préalable.",
   ];
-  cg.forEach((line, i) => doc.text(line, L, cgY + 7 + i * 6, { maxWidth: R - L }));
+  cg.forEach((line, i) => doc.text(line, L, cgY + 12 + i * 7, { maxWidth: R - L }));
 
-  // ── SIGNATURES ───────────────────────────────────────────────────────────
-  const sigY = cgY + 52;
-  const sigBlockH = 55;
-  const needNewPage = sigY + sigBlockH > pageH - footerReserve;
-  if (needNewPage) doc.addPage();
+  const sigY = cgY + 62;
+  const needNewPage = sigY + 55 > pageH - footerReserve;
+  if (needNewPage) {
+    doc.addPage();
+    drawIvoryPageBg(doc, W, pageH);
+  }
   const sY = needNewPage ? 24 : sigY;
-
   const sigW = (R - L - 8) / 2;
   const sigH = 44;
 
-  // Cadre client
-  doc.setFillColor(...LIGHT_BG);
-  doc.roundedRect(L, sY, sigW, sigH, 2, 2, "F");
-  doc.setDrawColor(200, 200, 200);
-  doc.setLineWidth(0.3);
-  doc.roundedRect(L, sY, sigW, sigH, 2, 2, "D");
+  const drawSigBox = (x: number, title: string, subtitle: string, bottom: string) => {
+    doc.setFillColor(...PARCHMENT);
+    doc.roundedRect(x, sY, sigW, sigH, 1.5, 1.5, "F");
+    doc.setDrawColor(...LINE);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(x, sY, sigW, sigH, 1.5, 1.5, "D");
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...EBONY);
+    doc.text(title, x + 4, sY + 7);
+    doc.setFontSize(8.5);
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(...MUTED);
+    doc.text(subtitle, x + 4, sY + 13);
+    doc.setDrawColor(...COPPER);
+    doc.setLineWidth(0.4);
+    doc.roundedRect(x + 4, sY + 16, sigW - 8, 20, 1, 1, "D");
+    doc.setFontSize(9);
+    doc.setTextColor(180, 170, 160);
+    doc.text("Signer ici", x + 4 + (sigW - 8) / 2, sY + 27, { align: "center" });
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...MUTED);
+    doc.text(bottom, x + 4, sY + 40);
+  };
 
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...DARK);
-  doc.text("Signature du client", L + 4, sY + 7);
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "italic");
-  doc.setTextColor(...GRAY);
-  doc.text("Précédée de « Bon pour accord »", L + 4, sY + 13);
-
-  doc.setDrawColor(...AMBER);
-  doc.setLineWidth(0.4);
-  doc.roundedRect(L + 4, sY + 16, sigW - 8, 20, 1, 1, "D");
-  doc.setFontSize(9);
-  doc.setTextColor(200, 200, 200);
-  doc.text("Signer ici", L + 4 + (sigW - 8) / 2, sY + 27, { align: "center" });
-
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(...GRAY);
-  doc.text(devis.clientName, L + 4, sY + 40);
-
-  // Cadre CLC
-  const sig2X = L + sigW + 8;
-  doc.setFillColor(...LIGHT_BG);
-  doc.roundedRect(sig2X, sY, sigW, sigH, 2, 2, "F");
-  doc.setDrawColor(200, 200, 200);
-  doc.setLineWidth(0.3);
-  doc.roundedRect(sig2X, sY, sigW, sigH, 2, 2, "D");
-
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...DARK);
-  doc.text("Signature C.LC. Traiteur", sig2X + 4, sY + 7);
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "italic");
-  doc.setTextColor(...GRAY);
-  doc.text("Représentant(e) autorisé(e)", sig2X + 4, sY + 13);
-
-  doc.setDrawColor(...AMBER);
-  doc.setLineWidth(0.4);
-  doc.roundedRect(sig2X + 4, sY + 16, sigW - 8, 20, 1, 1, "D");
-  doc.setFontSize(9);
-  doc.setTextColor(200, 200, 200);
-  doc.text("Signer ici", sig2X + 4 + (sigW - 8) / 2, sY + 27, { align: "center" });
-
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(...GRAY);
-  doc.text("Chez La Camerounaise", sig2X + 4, sY + 40);
+  drawSigBox(L, "Signature du client", "Précédée de « Bon pour accord »", devis.clientName);
+  drawSigBox(L + sigW + 8, "Signature C.LC. Traiteur", "Représentant(e) autorisé(e)", "Chez La Camerounaise");
 
   // ── PIED DE PAGE ─────────────────────────────────────────────────────────
   const pages = doc.getNumberOfPages();
   for (let i = 1; i <= pages; i++) {
     doc.setPage(i);
     const fY = doc.internal.pageSize.getHeight() - 7;
-    doc.setFontSize(8);
+    doc.setDrawColor(...LINE);
+    doc.setLineWidth(0.2);
+    doc.line(L, fY - 4, R, fY - 4);
+    doc.setFontSize(7.5);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(...GRAY);
+    doc.setTextColor(...MUTED);
     doc.text(`${CLC.nom} — SIRET : ${CLC.siret} — TVA : ${CLC.tva} — ${CLC.adresse}`, L, fY);
     doc.text(`Devis ${devis.id} · Page ${i}/${pages}`, R, fY, { align: "right" });
   }

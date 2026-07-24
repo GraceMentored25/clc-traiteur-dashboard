@@ -16,3 +16,10 @@ This version has breaking changes — APIs, conventions, and file structure may 
   - Rasteriser tout le bandeau en **une seule image canvas** (cover + voile + liseré + textes) puis un seul `addImage` PNG.
   - Assets `public/sections/*.png` en **RGB** (pas palette pngquant).
 - **Vérif** : `node scripts/verify-pdf-band.mjs` (Chromium + analyse pixels PDF).
+
+### Devis PDF — template Ébène & Cuivre
+- **Direction** : palette ébène/cacao + cuivre (plus d’ambre), fond ivoire, bandeaux photo full-bleed.
+- **Règles contenu** :
+  - Sous-onglets (Entrées, Plats…) toujours affichés.
+  - Sous-titre **« Plats principaux (accompagnements inclus) »** masqué dans le PDF.
+  - Colonne **Qté** toujours centrée (`columnStyles` + `didParseCell`).
