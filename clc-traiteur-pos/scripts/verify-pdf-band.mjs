@@ -27,7 +27,7 @@ console.log("OK fetch /sections:", fetchCheck);
 await page.addScriptTag({ path: JSPDF_PATH });
 
 const pdfBase64 = await page.evaluate(async () => {
-  const AMBER = [232, 150, 12];
+  const COPPER = [196, 120, 58];
   const PX_PER_MM = 8;
   const base = window.location.origin;
 
@@ -54,7 +54,7 @@ const pdfBase64 = await page.evaluate(async () => {
     ctx.fillStyle = "rgba(16, 18, 22, 0.42)";
     ctx.fillRect(0, 0, w, h);
     const stripeW = Math.round(3.5 * PX_PER_MM);
-    ctx.fillStyle = `rgb(${AMBER[0]}, ${AMBER[1]}, ${AMBER[2]})`;
+    ctx.fillStyle = `rgb(${COPPER[0]}, ${COPPER[1]}, ${COPPER[2]})`;
     ctx.fillRect(0, 0, stripeW, h);
     const textY = h / 2;
     ctx.fillStyle = "#ffffff";
@@ -120,7 +120,7 @@ for (let dy = 0; dy < Math.min(4, bh); dy++) {
 }
 
 const yyMid = y0 + Math.floor(bh / 2);
-if (px(0, yyMid)[0] > 200 && px(0, yyMid)[1] > 120 && px(0, yyMid)[2] < 80) stripeOk = true;
+if (px(0, yyMid)[0] > 160 && px(0, yyMid)[1] > 80 && px(0, yyMid)[1] < 160 && px(0, yyMid)[2] < 100) stripeOk = true;
 const mid = px(Math.floor(imgW / 2), yyMid);
 if (mid[0] + mid[1] + mid[2] < 500 && mid[0] < 240) photoOk = true;
 
