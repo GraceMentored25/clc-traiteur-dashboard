@@ -219,9 +219,6 @@ async function buildHeroDataUrl(
       const logoH = Math.round(18 * PX_PER_MM);
       const logoW = (logo.w / logo.h) * logoH;
       const logoY = (h - logoH) / 2;
-      ctx.fillStyle = "rgba(255,255,255,0.06)";
-      roundRect(ctx, pad - 4, logoY - 4, logoW + 8, logoH + 8, 8);
-      ctx.fill();
       ctx.drawImage(logoImg, pad, logoY, logoW, logoH);
       textX = pad + logoW + Math.round(5 * PX_PER_MM);
     }
