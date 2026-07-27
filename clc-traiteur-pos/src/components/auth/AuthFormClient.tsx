@@ -14,9 +14,6 @@ const schema = z.object({
   password: z.string().min(1, "Mot de passe requis"),
 });
 
-// Politique minimale de complexité côté client (vérification UI uniquement)
-const PASSWORD_MIN_LENGTH = 8;
-
 type FormData = z.infer<typeof schema>;
 
 export default function AuthFormClient() {
@@ -60,7 +57,7 @@ export default function AuthFormClient() {
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
       {/* Username */}
       <div className="space-y-1.5">
-        <label className="block text-sm font-medium" style={{ color: "rgba(26,26,26,0.6)" }}>
+        <label className="block text-sm font-medium text-white/72 md:text-[color:rgba(26,26,26,0.6)]">
           Identifiant
         </label>
         <input
@@ -80,7 +77,7 @@ export default function AuthFormClient() {
 
       {/* Password */}
       <div className="space-y-1.5">
-        <label className="block text-sm font-medium" style={{ color: "rgba(26,26,26,0.6)" }}>
+        <label className="block text-sm font-medium text-white/72 md:text-[color:rgba(26,26,26,0.6)]">
           Mot de passe
         </label>
         <div className="relative">
