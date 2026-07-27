@@ -219,9 +219,6 @@ async function buildHeroDataUrl(
       const logoH = Math.round(18 * PX_PER_MM);
       const logoW = (logo.w / logo.h) * logoH;
       const logoY = (h - logoH) / 2;
-      ctx.fillStyle = "rgba(255,255,255,0.06)";
-      roundRect(ctx, pad - 4, logoY - 4, logoW + 8, logoH + 8, 8);
-      ctx.fill();
       ctx.drawImage(logoImg, pad, logoY, logoW, logoH);
       textX = pad + logoW + Math.round(5 * PX_PER_MM);
     }
@@ -255,19 +252,6 @@ async function buildHeroDataUrl(
   } catch {
     return null;
   }
-}
-
-function roundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number, y: number, w: number, h: number, r: number,
-) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
 }
 
 const CLC = {
