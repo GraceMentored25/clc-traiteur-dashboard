@@ -6,6 +6,7 @@ import { X, Trash, Plus, Minus, ShoppingCart } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
 import { formatCurrency } from "@/lib/utils";
 import type { CartItem } from "@/lib/types";
+import { EVENT_TYPES } from "@/lib/data/event-types";
 
 interface Props {
   onClose: () => void;
@@ -16,8 +17,26 @@ export default function CartPanel({ onClose, onGenerateDevis }: Props) {
   const cart = useStore((s) => s.cart);
   const cartTotal = useStore((s) => s.cartTotal);
   const clearCart = useStore((s) => s.clearCart);
+  const sectionCarts = useStore((s) => s.sectionCarts);
+  const activeEventType = useStore((s) => s.activeEventType);
+  const activeSubMoment = useStore((s) => s.activeSubMoment);
   const total = cartTotal();
-  const itemCount = cart.reduce((n, c) => n + c.quantity, 0);
+  const currentEvent = EVENT_TYPES.find((event) => event.id === activeEventType);
+  const currentEventSectionIds = new Set(currentEvent?.subMoments.map((subMoment) => subMoment.id) ?? []);
+  const sectionEntries = Object.entries(sectionCarts).filter(
+    ([sectionId, items]) => items.length > 0 && currentEventSectionIds.has(sectionId),
+  );
+  const hasSections = sectionEntries.length > 0 && !!activeEventType;
+  const sectionsTotal = sectionEntries.reduce(
+    (sum, [, items]) => sum + items.reduce((subtotal, item) => subtotal + item.dish.price * item.quantity, 0),
+    0,
+  );
+  const sectionsItemCount = sectionEntries.reduce(
+    (sum, [, items]) => sum + items.reduce((subtotal, item) => subtotal + item.quantity, 0),
+    0,
+  );
+  const itemCount = hasSections ? sectionsItemCount : cart.reduce((n, c) => n + c.quantity, 0);
+  const activeSectionLabel = currentEvent?.subMoments.find((subMoment) => subMoment.id === activeSubMoment)?.label;
 
   return (
     <>
@@ -48,7 +67,7 @@ export default function CartPanel({ onClose, onGenerateDevis }: Props) {
             )}
           </div>
           <div className="flex items-center gap-2">
-            {cart.length > 0 && (
+            {(cart.length > 0 || (!activeSubMoment && hasSections)) && (
               <button
                 onClick={clearCart}
                 className="text-xs text-[var(--text-muted)] hover:text-[var(--danger)] transition-colors px-2 py-1 rounded-lg hover:bg-red-500/8"
@@ -67,32 +86,84 @@ export default function CartPanel({ onClose, onGenerateDevis }: Props) {
 
         {/* Items */}
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
-          {cart.length === 0 ? (
+          {cart.length === 0 && !hasSections ? (
             <div className="flex flex-col items-center justify-center h-48 text-center">
               <ShoppingCart size={36} className="text-[var(--text-muted)] mb-3" />
               <p className="text-sm font-medium text-[var(--text-secondary)]">Panier vide</p>
               <p className="text-xs text-[var(--text-muted)] mt-1">Cliquez sur un plat pour l&apos;ajouter</p>
             </div>
           ) : (
-            cart.map((item) => <CartItemRow key={item.dish.id} item={item} />)
+            <>
+              {hasSections && (
+                <div className="space-y-2">
+                  {sectionEntries.map(([sectionId, items]) => {
+                    if (sectionId === activeSubMoment && cart.length > 0) return null;
+                    const subtotal = items.reduce((sum, item) => sum + item.dish.price * item.quantity, 0);
+                    const quantity = items.reduce((sum, item) => sum + item.quantity, 0);
+                    const sectionLabel = currentEvent?.subMoments.find((subMoment) => subMoment.id === sectionId)?.label ?? sectionId;
+                    return (
+                      <div key={sectionId} className="rounded-xl border border-[var(--amber)]/20 overflow-hidden">
+                        <div className="flex items-center justify-between px-3 py-2 bg-[var(--amber)]/7">
+                          <span className="text-xs font-bold text-[var(--amber)] uppercase tracking-wide">{sectionLabel}</span>
+                          <span className="text-xs font-mono font-semibold text-[var(--amber)]">
+                            {quantity} convive{quantity > 1 ? "s" : ""} · {formatCurrency(subtotal)}
+                          </span>
+                        </div>
+                        <div className="px-3 py-2 space-y-1 bg-[var(--surface-2)]">
+                          {items.map((item) => (
+                            <div key={`${sectionId}-${item.dish.id}`} className="flex items-center justify-between gap-3 text-xs">
+                              <span className="min-w-0 truncate text-[var(--text-secondary)]">{item.dish.name}</span>
+                              <span className="shrink-0 font-mono text-[var(--text-primary)]">{item.quantity}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {hasSections && cart.length > 0 && (
+                <div className="pt-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-semibold text-[var(--text-muted)]">
+                      Section active
+                    </p>
+                    {activeSectionLabel && (
+                      <span className="text-xs font-semibold text-[var(--amber)]">{activeSectionLabel}</span>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    {cart.map((item) => <CartItemRow key={item.dish.id} item={item} />)}
+                  </div>
+                </div>
+              )}
+
+              {!hasSections && cart.map((item) => <CartItemRow key={item.dish.id} item={item} />)}
+            </>
           )}
         </div>
 
         {/* Footer */}
-        {cart.length > 0 && (
+        {(cart.length > 0 || hasSections) && (
           <div className="px-4 py-5 border-t border-[var(--border)] space-y-3">
             <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
               <span>Sous-total HT</span>
-              <span className="font-mono">{formatCurrency(total)}</span>
+              <span className="font-mono">{formatCurrency(hasSections ? sectionsTotal : total)}</span>
             </div>
             <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
               <span>TVA (20%)</span>
-              <span className="font-mono">{formatCurrency(total * 0.2)}</span>
+              <span className="font-mono">{formatCurrency((hasSections ? sectionsTotal : total) * 0.2)}</span>
             </div>
             <div className="flex items-center justify-between font-bold text-[var(--text-primary)] pt-2 border-t border-[var(--border)]">
               <span>Total TTC</span>
-              <span className="text-lg text-[var(--amber)] font-mono">{formatCurrency(total * 1.2)}</span>
+              <span className="text-lg text-[var(--amber)] font-mono">{formatCurrency((hasSections ? sectionsTotal : total) * 1.2)}</span>
             </div>
+            {hasSections && (
+              <p className="text-xs text-[var(--text-muted)]">
+                {sectionEntries.length} section{sectionEntries.length > 1 ? "s" : ""} · {sectionsItemCount} convive{sectionsItemCount > 1 ? "s" : ""}
+              </p>
+            )}
             <m.button
               whileTap={{ scale: 0.97 }}
               onClick={onGenerateDevis}

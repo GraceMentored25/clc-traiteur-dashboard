@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, memo, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo, memo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import { m, AnimatePresence } from "framer-motion";
@@ -264,9 +264,9 @@ export default function DashboardClient() {
         >
           <ShoppingCart size={17} weight="fill" />
           <span>Panier</span>
-          {cartCount > 0 && (
-            <span className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-[var(--amber)] text-[var(--surface)] text-[10px] font-bold flex items-center justify-center">
-              {cartCount}
+          {(filledSections > 0 || cartCount > 0) && (
+            <span className="absolute -top-2 -right-2 min-w-5 h-5 px-1 rounded-full bg-[var(--amber)] text-[var(--surface)] text-[10px] font-bold flex items-center justify-center">
+              {filledSections > 0 ? `${filledSections}` : cartCount}
             </span>
           )}
         </m.button>
@@ -287,8 +287,47 @@ export default function DashboardClient() {
         )}
       </header>
 
-      {/* ── MOBILE search + tri + vue ──────────────────────────── */}
-      <div className="lg:hidden px-4 pt-3 pb-2 space-y-2">
+      {/* ── MOBILE context + event selection + search ──────────── */}
+      <div className="lg:hidden px-4 pt-3 pb-2 space-y-3">
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] px-3 py-3">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-[var(--text-primary)]">Création de devis</p>
+              {activeSubMoment ? (
+                <p className="text-xs text-[var(--amber)] font-medium mt-1 break-words">
+                  {currentEventType?.label} — {currentSubMoment?.label}
+                  {filledSections > 0 && (
+                    <span className="text-[var(--text-muted)] ml-1">
+                      · {filledSections} section{filledSections > 1 ? "s" : ""} remplie{filledSections > 1 ? "s" : ""}
+                    </span>
+                  )}
+                </p>
+              ) : (
+                <p className="text-xs text-[var(--text-muted)] mt-1">
+                  Sélectionnez un événement puis un moment pour créer un devis par section.
+                </p>
+              )}
+            </div>
+            {(cartCount > 0 || filledSections > 0) && (
+              <button
+                onClick={() => setDevisModalOpen(true)}
+                className="shrink-0 h-8 px-3 rounded-xl bg-[var(--amber)] text-[var(--surface)] text-xs font-semibold hover:bg-[var(--amber-light)] transition-colors"
+              >
+                Générer
+              </button>
+            )}
+          </div>
+
+          <EventTypeSelector
+            activeEventType={activeEventType}
+            activeSubMoment={activeSubMoment}
+            sectionCarts={sectionCarts}
+            onSelectEventType={setActiveEventType}
+            onSelectSubMoment={setActiveSubMoment}
+            mobile
+          />
+        </div>
+
         {/* Recherche */}
         <div className="relative">
           <MagnifyingGlass size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
@@ -490,17 +529,22 @@ export default function DashboardClient() {
       <div className="lg:hidden fixed bottom-5 left-0 right-0 flex justify-center z-30 px-4">
         <m.button
           whileTap={{ scale: 0.97 }}
-          onClick={() => cartCount > 0 ? setCartOpen(true) : null}
+          onClick={() => (cartCount > 0 || filledSections > 0) ? setCartOpen(true) : null}
           className={cn(
             "flex items-center gap-3 h-14 px-6 rounded-2xl shadow-2xl font-semibold text-sm transition-colors",
-            cartCount > 0
+            (cartCount > 0 || filledSections > 0)
               ? "bg-[var(--amber)] text-[var(--surface)] cursor-pointer"
               : "bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-muted)] cursor-default"
           )}
         >
           <ShoppingCart size={20} weight="fill" />
-          {cartCount > 0 ? (
-            <span>{cartCount} article{cartCount > 1 ? "s" : ""} — {formatCurrency(cartTotal())}</span>
+          {(cartCount > 0 || filledSections > 0) ? (
+            <span>
+              {filledSections > 0
+                ? `${filledSections} section${filledSections > 1 ? "s" : ""} — ${formatCurrency(totalAllSections)}`
+                : `${cartCount} article${cartCount > 1 ? "s" : ""} — ${formatCurrency(cartTotal())}`
+              }
+            </span>
           ) : (
             <span>Panier vide</span>
           )}
@@ -658,12 +702,14 @@ export default function DashboardClient() {
 // ── EventTypeSelector — 2 dropdowns en cascade (portals = hors header backdrop) ──
 function EventTypeSelector({
   activeEventType, activeSubMoment, sectionCarts, onSelectEventType, onSelectSubMoment,
+  mobile = false,
 }: {
   activeEventType: string;
   activeSubMoment: string;
   sectionCarts: Record<string, import("@/lib/types").CartItem[]>;
   onSelectEventType: (id: string) => void;
   onSelectSubMoment: (id: string) => void;
+  mobile?: boolean;
 }) {
   const [open1, setOpen1] = useState(false);
   const [open2, setOpen2] = useState(false);
@@ -671,10 +717,8 @@ function EventTypeSelector({
   const btn2Ref = useRef<HTMLButtonElement>(null);
   const [rect1, setRect1] = useState<DOMRect | null>(null);
   const [rect2, setRect2] = useState<DOMRect | null>(null);
-  const [mounted, setMounted] = useState(false);
+  const [mounted] = useState(typeof window !== "undefined");
   const [themeColors, setThemeColors] = useState({ bg: "", bgHover: "", bgSelected: "", border: "", text: "", textMuted: "", amber: "", success: "", danger: "" });
-
-  useEffect(() => { setMounted(true); }, []);
 
   const readTheme = () => {
     const s = getComputedStyle(document.documentElement);
@@ -720,6 +764,7 @@ function EventTypeSelector({
 
   const currentEvent = EVENT_TYPES.find((e) => e.id === activeEventType);
   const currentSub = currentEvent?.subMoments.find((s) => s.id === activeSubMoment);
+  const filledSections = Object.values(sectionCarts).filter((items) => items.length > 0).length;
 
   // Style commun pour les panels portals — couleurs lues depuis le thème actif
   const panelStyle = (rect: DOMRect | null): React.CSSProperties => ({
@@ -736,13 +781,14 @@ function EventTypeSelector({
   });
 
   return (
-    <div className="flex items-center gap-2">
+    <div className={cn("flex items-center gap-2", mobile && "flex-col items-stretch")}>
       {/* Bouton 1 — Type d'événement */}
       <button
         ref={btn1Ref}
         onClick={openDropdown1}
         className={cn(
           "flex items-center gap-1.5 h-9 px-3 rounded-xl text-sm transition-colors border whitespace-nowrap",
+          mobile && "w-full justify-between",
           activeEventType
             ? "bg-[var(--surface-1)] border-[var(--amber)] text-[var(--amber)] font-semibold"
             : "bg-[var(--surface-1)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
@@ -775,7 +821,14 @@ function EventTypeSelector({
           ))}
           {activeEventType && (
             <button
-              onClick={() => { onSelectEventType(""); setOpen1(false); }}
+              onClick={() => {
+                if (filledSections > 0) {
+                  useStore.getState().clearAllSectionCarts();
+                } else {
+                  useStore.setState({ activeEventType: "", activeSubMoment: "", cart: [] });
+                }
+                setOpen1(false);
+              }}
               style={{
                 width: "100%", textAlign: "left", padding: "10px 16px",
                 fontSize: 12, color: themeColors.danger, background: "transparent",
@@ -784,7 +837,7 @@ function EventTypeSelector({
               onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = themeColors.bgHover; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
             >
-              Réinitialiser
+              {filledSections > 0 ? "Réinitialiser et vider les sections" : "Réinitialiser"}
             </button>
           )}
         </div>,
@@ -798,6 +851,7 @@ function EventTypeSelector({
           onClick={openDropdown2}
           className={cn(
             "flex items-center gap-1.5 h-9 px-3 rounded-xl text-sm transition-colors border whitespace-nowrap",
+            mobile && "w-full justify-between",
             activeSubMoment
               ? "bg-[var(--surface-1)] border-[var(--amber)] text-[var(--amber)] font-semibold"
               : "bg-[var(--surface-1)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"

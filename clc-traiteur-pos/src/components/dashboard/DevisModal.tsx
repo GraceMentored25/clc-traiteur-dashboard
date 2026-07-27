@@ -190,7 +190,7 @@ export default function DevisModal({ onClose }: Props) {
               </div>
             </div>
           ) : (
-            <form onSubmit={handleSubmit(onSubmit)} className="flex-1 overflow-y-auto">
+            <form onSubmit={handleSubmit(onSubmit)} className="flex-1 min-h-0 overflow-y-auto">
               <div className="px-6 py-5 space-y-4">
 
                 {/* ── Récap sections ou panier simple ── */}
@@ -248,7 +248,7 @@ export default function DevisModal({ onClose }: Props) {
                 )}
 
                 {/* Infos client */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium text-[var(--text-secondary)]">Nom du client</label>
                     <input {...register("clientName")} type="text" placeholder="Rosalie Ekindi"
@@ -263,7 +263,7 @@ export default function DevisModal({ onClose }: Props) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium text-[var(--text-secondary)]">Date de l&apos;événement</label>
                     <input {...register("eventDate")} type="date"
