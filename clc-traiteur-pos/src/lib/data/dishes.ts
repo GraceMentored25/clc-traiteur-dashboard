@@ -55,7 +55,7 @@ export const DISHES: Dish[] = [
     name: "Brochettes plantain boulettes",
     category: "Apéritif",
     price: 1.5,
-    image: "/dishes/boulette-plantain.png",
+    image: "/dishes/brochettes-boulette.png",
     description: "Brochette de boulette et plantain grillé, sauce épicée",
     unit: "pièce",
   },
