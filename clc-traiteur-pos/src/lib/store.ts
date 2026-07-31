@@ -48,6 +48,10 @@ export interface AppState {
   customCategories: string[];
   addCustomCategory: (name: string) => void;
   removeCustomCategory: (name: string) => void;
+  categoryOrder: string[];       // ordre des custom cats (vide = ordre d'insertion)
+  hiddenCategories: string[];    // custom cats masquées dans la barre
+  reorderCategories: (order: string[]) => void;
+  toggleHideCategory: (name: string) => void;
 
   // ── Capital ─────────────────────────────────────────────────
   entreesCapital: EntreeCapital[];
@@ -206,9 +210,25 @@ export const useStore = create<AppState>()(
           customCategories: s.customCategories.includes(name)
             ? s.customCategories
             : [...s.customCategories, name],
+          categoryOrder: s.categoryOrder.includes(name)
+            ? s.categoryOrder
+            : [...s.categoryOrder, name],
         })),
       removeCustomCategory: (name) =>
-        set((s) => ({ customCategories: s.customCategories.filter((c) => c !== name) })),
+        set((s) => ({
+          customCategories: s.customCategories.filter((c) => c !== name),
+          categoryOrder: s.categoryOrder.filter((c) => c !== name),
+          hiddenCategories: s.hiddenCategories.filter((c) => c !== name),
+        })),
+      categoryOrder: [],
+      hiddenCategories: [],
+      reorderCategories: (order) => set({ categoryOrder: order }),
+      toggleHideCategory: (name) =>
+        set((s) => ({
+          hiddenCategories: s.hiddenCategories.includes(name)
+            ? s.hiddenCategories.filter((c) => c !== name)
+            : [...s.hiddenCategories, name],
+        })),
 
       entreesCapital: [],
       addEntreeCapital: (e) => { logAudit("CAPITAL_ADDED", { id: e.id, montant: e.montant, source: e.source }); set((s) => ({ entreesCapital: [e, ...s.entreesCapital] })); },
@@ -550,6 +570,8 @@ export const useStore = create<AppState>()(
         customPrices: state.customPrices,
         customDishes: state.customDishes,
         customCategories: state.customCategories,
+        categoryOrder: state.categoryOrder,
+        hiddenCategories: state.hiddenCategories,
         entreesCapital: state.entreesCapital,
         personnel: state.personnel,
         salaires: state.salaires,
