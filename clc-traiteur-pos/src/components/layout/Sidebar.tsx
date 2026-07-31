@@ -82,7 +82,7 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
             <p className="text-sm font-bold text-[var(--text-primary)] tracking-tight leading-none">
               Chez La Camerounaise
             </p>
-            <p className="text-xs text-[var(--text-muted)] mt-0.5">Système POS</p>
+            <p className="text-xs text-[var(--text-muted)] mt-0.5">Devis et Outils</p>
           </div>
           {onClose && (
             <button
