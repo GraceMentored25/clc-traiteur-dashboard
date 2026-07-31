@@ -2,6 +2,7 @@ import { Dish } from "@/lib/types";
 
 export const CATEGORIES = [
   "Tous",
+  "Apéritif",
   "Plats principaux",
   "Grillades",
   "Poissons",
@@ -13,6 +14,54 @@ export const CATEGORIES = [
 ];
 
 export const DISHES: Dish[] = [
+  // ── Apéritif ────────────────────────────────────────────────
+  {
+    id: 31,
+    name: "Nems",
+    category: "Apéritif",
+    price: 5,
+    image: "/dishes/nems.jpg",
+    description: "Rouleaux croustillants garnis, frits à la perfection",
+    unit: "10 pièces",
+  },
+  {
+    id: 32,
+    name: "Pili Pili",
+    category: "Apéritif",
+    price: 5,
+    image: "/dishes/pili-pili.jpg",
+    description: "Bouchées pimentées au pili pili, sauce maison",
+    unit: "10 pièces",
+  },
+  {
+    id: 33,
+    name: "Beignets de maïs",
+    category: "Apéritif",
+    price: 5,
+    image: "/dishes/beignets-mais.jpg",
+    description: "Beignets dorés au maïs doux, croustillants et moelleux",
+    unit: "10 pièces",
+  },
+  {
+    id: 34,
+    name: "Crêpes sucrées",
+    category: "Apéritif",
+    price: 5,
+    image: "/dishes/crepes-sucrees.jpg",
+    description: "Crêpes fines et sucrées, légèrement caramélisées",
+    unit: "10 pièces",
+  },
+  {
+    id: 35,
+    name: "Brochettes plantain boulettes",
+    category: "Apéritif",
+    price: 1.5,
+    image: "/dishes/brochettes-plantain.jpg",
+    description: "Brochette de boulette et plantain grillé, sauce épicée",
+    unit: "pièce",
+  },
+
+  // ── Plats principaux ────────────────────────────────────────
   {
     id: 1,
     name: "Ndolé",

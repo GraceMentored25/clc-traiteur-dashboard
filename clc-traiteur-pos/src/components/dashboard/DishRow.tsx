@@ -11,6 +11,7 @@ const DishRow = memo(function DishRow({ dish }: { dish: Dish }) {
   // Sélecteurs granulaires — re-render uniquement si CES données changent
   const cartItem = useStore(useCallback((s) => s.cart.find((c) => c.dish.id === dish.id), [dish.id]));
   const effectivePrice = useStore(useCallback((s) => s.customPrices[dish.id] ?? dish.price, [dish.id, dish.price]));
+  const effectiveUnit = useStore(useCallback((s) => s.customUnits[dish.id] ?? dish.unit, [dish.id, dish.unit]));
   const addToCart = useStore((s) => s.addToCart);
   const updateQuantity = useStore((s) => s.updateQuantity);
   const removeFromCart = useStore((s) => s.removeFromCart);
@@ -59,7 +60,7 @@ const DishRow = memo(function DishRow({ dish }: { dish: Dish }) {
         <p className="text-xs text-[var(--text-secondary)] truncate">{dish.category}</p>
         <div>
           <span className="text-sm font-bold font-mono text-[var(--amber)]">{formatCurrency(effectivePrice)}</span>
-          <span className="text-[10px] text-[var(--text-muted)] ml-1">/{dish.unit}</span>
+          <span className="text-[10px] text-[var(--text-muted)] ml-1">/{effectiveUnit}</span>
         </div>
         <div className="grid grid-cols-[26px_1fr_26px] items-center gap-1">
           <button onClick={decrement} disabled={displayQty === 0}
@@ -88,7 +89,7 @@ const DishRow = memo(function DishRow({ dish }: { dish: Dish }) {
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{dish.name}</p>
           <p className="text-xs text-[var(--amber)] font-mono font-bold">
-            {formatCurrency(effectivePrice)}<span className="text-[var(--text-muted)] font-normal text-[10px]"> /{dish.unit}</span>
+            {formatCurrency(effectivePrice)}<span className="text-[var(--text-muted)] font-normal text-[10px]"> /{effectiveUnit}</span>
           </p>
         </div>
 

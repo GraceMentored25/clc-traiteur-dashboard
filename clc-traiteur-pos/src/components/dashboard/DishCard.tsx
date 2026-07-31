@@ -28,11 +28,13 @@ const DishCard = memo(function DishCard({ dish }: Props) {
   // Sélecteurs granulaires — chaque carte ne re-rende que si SES données changent
   const cartItem = useStore(useCallback((s) => s.cart.find((c) => c.dish.id === dish.id), [dish.id]));
   const effectivePrice = useStore(useCallback((s) => s.customPrices[dish.id] ?? dish.price, [dish.id, dish.price]));
+  const effectiveUnit = useStore(useCallback((s) => s.customUnits[dish.id] ?? dish.unit, [dish.id, dish.unit]));
   const isCustomDish = useStore(useCallback((s) => s.customDishes.some((d) => d.id === dish.id), [dish.id]));
   const addToCart = useStore((s) => s.addToCart);
   const updateQuantity = useStore((s) => s.updateQuantity);
   const removeFromCart = useStore((s) => s.removeFromCart);
   const setCustomPrice = useStore((s) => s.setCustomPrice);
+  const setCustomUnit = useStore((s) => s.setCustomUnit);
   const removeCustomDish = useStore((s) => s.removeCustomDish);
   const updateCustomDish = useStore((s) => s.updateCustomDish);
 
@@ -45,22 +47,25 @@ const DishCard = memo(function DishCard({ dish }: Props) {
 
   const openEdit = useCallback((e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setEditForm({ price: String(effectivePrice), unit: dish.unit, name: dish.name, image: dish.image });
+    setEditForm({ price: String(effectivePrice), unit: effectiveUnit, name: dish.name, image: dish.image });
     setEditingName(false);
     setEditOpen(true);
-  }, [effectivePrice, dish.unit, dish.name, dish.image]);
+  }, [effectivePrice, effectiveUnit, dish.name, dish.image]);
 
   const confirmEdit = useCallback(() => {
     const val = parseFloat(editForm.price.replace(",", "."));
     if (!isNaN(val) && val > 0) setCustomPrice(dish.id, val);
+    // Unité : persiste pour tous les plats (custom via updateCustomDish, statiques via customUnits)
     if (isCustomDish) {
       const patch: Partial<Omit<Dish, "id">> = { unit: editForm.unit };
       if (editForm.name.trim()) patch.name = editForm.name.trim();
       if (editForm.image) patch.image = editForm.image;
       updateCustomDish(dish.id, patch);
+    } else {
+      setCustomUnit(dish.id, editForm.unit);
     }
     setEditOpen(false);
-  }, [editForm, dish.id, setCustomPrice, isCustomDish, updateCustomDish]);
+  }, [editForm, dish.id, setCustomPrice, setCustomUnit, isCustomDish, updateCustomDish]);
 
   const handlePhotoChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -190,7 +195,7 @@ const DishCard = memo(function DishCard({ dish }: Props) {
                   className="flex items-center gap-1 text-xs font-bold text-white px-2 py-0.5 rounded-lg transition-colors bg-black/50 hover:bg-black/70"
                 >
                   {formatCurrency(effectivePrice)}
-                  <span className="text-white/60 font-normal text-[10px]"> / {dish.unit}</span>
+                  <span className="text-white/60 font-normal text-[10px]"> / {effectiveUnit}</span>
                 </m.button>
               )}
             </AnimatePresence>

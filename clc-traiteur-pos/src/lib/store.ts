@@ -39,6 +39,8 @@ export interface AppState {
 
   customPrices: Record<number, number>;
   setCustomPrice: (dishId: number, price: number) => void;
+  customUnits: Record<number, string>;
+  setCustomUnit: (dishId: number, unit: string) => void;
 
   customDishes: Dish[];
   addCustomDish: (dish: Omit<Dish, "id">) => void;
@@ -185,6 +187,9 @@ export const useStore = create<AppState>()(
       customPrices: {},
       setCustomPrice: (dishId, price) =>
         set((s) => ({ customPrices: { ...s.customPrices, [dishId]: price } })),
+      customUnits: {},
+      setCustomUnit: (dishId, unit) =>
+        set((s) => ({ customUnits: { ...s.customUnits, [dishId]: unit } })),
 
       customDishes: [],
       addCustomDish: (dish) =>
@@ -586,6 +591,7 @@ export const useStore = create<AppState>()(
         accentColor: state.accentColor,
         appMode: state.appMode,
         customPrices: state.customPrices,
+        customUnits: state.customUnits,
         customDishes: state.customDishes,
         customCategories: state.customCategories,
         categoryOrder: state.categoryOrder,
