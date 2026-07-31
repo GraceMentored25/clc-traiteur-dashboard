@@ -252,6 +252,15 @@ export const DISHES: Dish[] = [
     unit: "100g",
   },
   {
+    id: 40,
+    name: "Gâteau Caramel Beurre Salé",
+    category: "Desserts",
+    price: 5,
+    image: "/dishes/gateau-caramel.jpg",
+    description: "Gâteau moelleux nappé d'un caramel beurre salé maison",
+    unit: "part",
+  },
+  {
     id: 18,
     name: "Jus Gingembre-Citron",
     category: "Cocktails & Boissons",
