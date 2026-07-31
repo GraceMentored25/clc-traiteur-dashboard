@@ -219,7 +219,7 @@ export const DISHES: Dish[] = [
     name: "Riz cantonais",
     category: "Accompagnements",
     price: 2,
-    image: "/dishes/riz-cantonais.jpg",
+    image: "/dishes/riz-cantonais.png",
     description: "Riz sauté aux légumes, œufs et petits pois",
     unit: "portion",
   },
