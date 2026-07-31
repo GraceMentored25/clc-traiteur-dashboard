@@ -66,7 +66,7 @@ export default function AuthFormClient() {
           autoComplete="username"
           placeholder="Votre identifiant"
           style={{ background: "rgba(255,255,255,0.75)", borderColor: "rgba(180,140,80,0.3)", color: "#2A1F08" }}
-          className="w-full h-11 px-4 rounded-xl border text-sm outline-none transition-all focus:ring-2 placeholder:text-[#B09050]/60"
+          className="w-full h-11 px-4 rounded-xl border text-sm outline-none transition-all placeholder:text-[#B09050]/60"
         />
         {errors.username && (
           <p className="text-xs text-[var(--danger)] flex items-center gap-1 mt-1">
@@ -87,7 +87,7 @@ export default function AuthFormClient() {
             autoComplete="current-password"
             placeholder="Votre mot de passe"
             style={{ background: "rgba(255,255,255,0.75)", borderColor: "rgba(180,140,80,0.3)", color: "#2A1F08" }}
-            className="w-full h-11 px-4 pr-11 rounded-xl border text-sm outline-none transition-all focus:ring-2 placeholder:text-[#B09050]/60"
+            className="w-full h-11 px-4 pr-11 rounded-xl border text-sm outline-none transition-all placeholder:text-[#B09050]/60"
           />
           <button
             type="button"
