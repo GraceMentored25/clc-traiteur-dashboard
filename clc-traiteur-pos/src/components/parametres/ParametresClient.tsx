@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { m, AnimatePresence } from "framer-motion";
 import { PaintBrush, FileText, Truck, Plus, Trash, PencilSimple, Check, X, CurrencyEur, ForkKnife, ArrowUp, ArrowDown, Eye, EyeSlash } from "@phosphor-icons/react";
 import PersonnalisationClient from "@/components/personnalisation/PersonnalisationClient";
@@ -586,7 +587,16 @@ function TabFacturation() {
 
 // ── Main ──────────────────────────────────────────────────────────────────
 export default function ParametresClient() {
-  const [tab, setTab] = useState<Tab>("personnalisation");
+  const searchParams = useSearchParams();
+  const [tab, setTab] = useState<Tab>(() => {
+    const t = searchParams?.get("tab");
+    return (TABS.some((x) => x.id === t) ? t : "personnalisation") as Tab;
+  });
+
+  useEffect(() => {
+    const t = searchParams?.get("tab");
+    if (t && TABS.some((x) => x.id === t)) setTab(t as Tab);
+  }, [searchParams]);
 
   return (
     <div className="px-4 lg:px-8 py-6 lg:py-8 min-h-[100dvh]">

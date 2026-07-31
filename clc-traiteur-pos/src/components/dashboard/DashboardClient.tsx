@@ -6,12 +6,13 @@ import Image from "next/image";
 import { m, AnimatePresence } from "framer-motion";
 import {
   MagnifyingGlass, ShoppingCart, SquaresFour, Rows,
-  SortAscending, Plus, X, Camera, Trash, CalendarBlank,
+  SortAscending, Plus, X, Camera, Trash, CalendarBlank, GearSix,
 } from "@phosphor-icons/react";
 import type { RecipeIngredient } from "@/lib/types";
 import { CATEGORIES, DISHES } from "@/lib/data/dishes";
 import { EVENT_TYPES } from "@/lib/data/event-types";
 import { useStore } from "@/lib/store";
+import { useRouter } from "next/navigation";
 import { cn, formatCurrency } from "@/lib/utils";
 import DishCard from "./DishCard";
 import DishRow from "./DishRow";
@@ -31,6 +32,7 @@ const SORT_OPTIONS: { value: SortMode; label: string }[] = [
 ];
 
 export default function DashboardClient() {
+  const router = useRouter();
   const [activeCategory, setActiveCategory] = useState("Tous");
   const [search, setSearch] = useState("");
   const [cartOpen, setCartOpen] = useState(false);
@@ -477,6 +479,15 @@ export default function DashboardClient() {
             </button>
           </div>
         )}
+
+        {/* Bouton paramètres catalogue */}
+        <button
+          onClick={() => router.push("/parametres?tab=catalogue")}
+          title="Gérer les catégories"
+          className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--amber)] hover:border-[var(--amber)]/40 transition-colors"
+        >
+          <GearSix size={13} weight="bold" />
+        </button>
       </div>
 
       {/* ── Dishes grid ────────────────────────────────────────── */}
