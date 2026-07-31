@@ -25,7 +25,7 @@ export const DISHES: Dish[] = [
   },
   {
     id: 32,
-    name: "Pili Pili",
+    name: "Pastel",
     category: "Apéritif",
     price: 5,
     image: "/dishes/pili.png",
