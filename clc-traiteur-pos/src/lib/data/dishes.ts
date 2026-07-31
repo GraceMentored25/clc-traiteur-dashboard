@@ -162,6 +162,15 @@ export const DISHES: Dish[] = [
     unit: "portion",
   },
   {
+    id: 41,
+    name: "Plateau de crudités",
+    category: "Entrées",
+    price: 2,
+    image: "/dishes/plateau-crudites.jpg",
+    description: "Assortiment de légumes frais de saison, sauce maison",
+    unit: "portion",
+  },
+  {
     id: 12,
     name: "Beignets Haricots",
     category: "Entrées",
