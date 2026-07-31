@@ -15,7 +15,6 @@ const MONTH_LABELS = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", 
 const CATEGORY_COLORS: Record<string, string> = {
   "Plats principaux": "#E8960C",
   "Grillades":        "#EF4444",
-  "Poissons":         "#3FB950",
   "Entrées":          "#58A6FF",
   "Accompagnements":  "#A855F7",
   "Desserts":         "#EC4899",

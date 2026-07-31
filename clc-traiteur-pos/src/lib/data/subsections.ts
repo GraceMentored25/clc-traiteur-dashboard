@@ -15,11 +15,10 @@ export const SUBSECTION_MAP: readonly SubSection[] = [
   { label: "Entrées", categories: ["Entrées"] },
   {
     label: "Plats",
-    categories: ["Plats principaux", "Grillades", "Poissons", "Accompagnements"],
+    categories: ["Plats principaux", "Grillades", "Accompagnements"],
     subGroups: [
       { label: "Plats principaux (accompagnements inclus)", categories: ["Plats principaux"] },
       { label: "Grillades", categories: ["Grillades"] },
-      { label: "Poissons", categories: ["Poissons"] },
       { label: "Accompagnements", categories: ["Accompagnements"] },
     ],
   },
