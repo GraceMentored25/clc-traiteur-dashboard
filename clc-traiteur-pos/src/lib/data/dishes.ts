@@ -3,7 +3,7 @@ import { Dish } from "@/lib/types";
 export const CATEGORIES = [
   "Tous",
   "Apéritif",
-  "Plats principaux",
+  "Repas",
   "Grillades",
   "Entrées",
   "Accompagnements",
@@ -60,11 +60,11 @@ export const DISHES: Dish[] = [
     unit: "pièce",
   },
 
-  // ── Plats principaux ────────────────────────────────────────
+  // ── Repas ────────────────────────────────────────
   {
     id: 1,
     name: "Ndolé",
-    category: "Plats principaux",
+    category: "Repas",
     price: 15,
     image: "/dishes/ndole.jpg",
     description: "Feuilles de ndolé aux arachides et crevettes fumées",
@@ -73,7 +73,7 @@ export const DISHES: Dish[] = [
   {
     id: 2,
     name: "Eru",
-    category: "Plats principaux",
+    category: "Repas",
     price: 14,
     image: "/dishes/eru.png",
     description: "Légumes eru au waterleaf, huile de palme et crevettes",
@@ -82,7 +82,7 @@ export const DISHES: Dish[] = [
   {
     id: 3,
     name: "Mbongo Tchobi",
-    category: "Plats principaux",
+    category: "Repas",
     price: 16,
     image: "/dishes/mbongo.jpg",
     description: "Poisson en sauce noire épicée aux épices camerounaises",
@@ -91,7 +91,7 @@ export const DISHES: Dish[] = [
   {
     id: 4,
     name: "Poulet DG",
-    category: "Plats principaux",
+    category: "Repas",
     price: 16,
     image: "/dishes/poulet-dg.jpg",
     description: "Poulet sauté au directeur général, plantains et légumes",
@@ -100,7 +100,7 @@ export const DISHES: Dish[] = [
   {
     id: 5,
     name: "Okok",
-    category: "Plats principaux",
+    category: "Repas",
     price: 13,
     image: "/dishes/okok.png",
     description: "Feuilles d'okok aux graines de melon et huile de palme",
@@ -145,7 +145,7 @@ export const DISHES: Dish[] = [
   {
     id: 11,
     name: "Koki",
-    category: "Plats principaux",
+    category: "Repas",
     price: 8,
     image: "/dishes/koki.jpg",
     description: "Gâteau de haricots blancs vapeur aux feuilles de bananier",
@@ -172,7 +172,7 @@ export const DISHES: Dish[] = [
   {
     id: 13,
     name: "Sanga",
-    category: "Plats principaux",
+    category: "Repas",
     price: 9,
     image: "/dishes/sanga.jpg",
     description: "Maïs et haricots cuits ensemble, saison de sel et poivre",

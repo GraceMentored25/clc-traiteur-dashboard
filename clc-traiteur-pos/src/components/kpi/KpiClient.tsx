@@ -13,7 +13,7 @@ import { Select } from "@/components/ui/SelectV2";
 const MONTH_LABELS = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
 
 const CATEGORY_COLORS: Record<string, string> = {
-  "Plats principaux": "#E8960C",
+  "Repas": "#E8960C",
   "Grillades":        "#EF4444",
   "Entrées":          "#58A6FF",
   "Accompagnements":  "#A855F7",
