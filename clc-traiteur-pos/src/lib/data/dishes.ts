@@ -80,15 +80,6 @@ export const DISHES: Dish[] = [
     unit: "assiette",
   },
   {
-    id: 3,
-    name: "Mbongo Tchobi",
-    category: "Repas",
-    price: 16,
-    image: "/dishes/mbongo.jpg",
-    description: "Poisson en sauce noire épicée aux épices camerounaises",
-    unit: "assiette",
-  },
-  {
     id: 4,
     name: "Poulet DG",
     category: "Repas",
@@ -168,15 +159,6 @@ export const DISHES: Dish[] = [
     image: "/dishes/beignets.jpg",
     description: "Beignets croustillants de haricots à la poudre de piment",
     unit: "5 pièces",
-  },
-  {
-    id: 13,
-    name: "Sanga",
-    category: "Repas",
-    price: 9,
-    image: "/dishes/sanga.jpg",
-    description: "Maïs et haricots cuits ensemble, saison de sel et poivre",
-    unit: "portion",
   },
   {
     id: 14,
