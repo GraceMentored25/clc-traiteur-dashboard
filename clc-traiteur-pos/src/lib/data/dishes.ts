@@ -47,7 +47,7 @@ export const DISHES: Dish[] = [
     name: "Crêpes sucrées",
     category: "Apéritif",
     price: 5,
-    image: "/dishes/crêpes-sucrées.png",
+    image: "/dishes/crepes-sucrees.png",
     description: "Crêpes fines et sucrées, légèrement caramélisées",
     unit: "10 pièces",
   },
