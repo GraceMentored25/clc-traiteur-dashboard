@@ -161,15 +161,6 @@ export const DISHES: Dish[] = [
     unit: "portion",
   },
   {
-    id: 12,
-    name: "Beignets Haricots",
-    category: "Entrées",
-    price: 6,
-    image: "/dishes/beignets.jpg",
-    description: "Beignets croustillants de haricots à la poudre de piment",
-    unit: "5 pièces",
-  },
-  {
     id: 14,
     name: "Riz Sauté",
     category: "Accompagnements",
