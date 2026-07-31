@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { m, AnimatePresence } from "framer-motion";
-import { PaintBrush, FileText, Truck, Plus, Trash, PencilSimple, Check, X, CurrencyEur, ForkKnife, ArrowUp, ArrowDown, Eye, EyeSlash } from "@phosphor-icons/react";
+import { PaintBrush, FileText, Truck, Plus, Trash, PencilSimple, Check, X, CurrencyEur, ForkKnife, Eye, EyeSlash, DotsSixVertical } from "@phosphor-icons/react";
 import PersonnalisationClient from "@/components/personnalisation/PersonnalisationClient";
 import { useStore } from "@/lib/store";
 import { CATEGORIES } from "@/lib/data/dishes";
@@ -28,9 +28,9 @@ function TabCatalogue() {
     categoryOrder, reorderCategories,
     hiddenCategories, toggleHideCategory,
     categoryRenames, renameCategory,
+    unitOptions, addUnitOption, removeUnitOption,
   } = useStore();
 
-  // Ordre global : statiques + custom selon categoryOrder
   const allCatKeys = useMemo(() => {
     const all = [...STATIC_CATS, ...customCategories];
     if (categoryOrder.length === 0) return all;
@@ -43,27 +43,45 @@ function TabCatalogue() {
   const [editKey, setEditKey] = useState<string | null>(null);
   const [editVal, setEditVal] = useState("");
   const [confirmDel, setConfirmDel] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState<number | null>(null);
+  const dragIdxRef = useRef<number | null>(null);
+
+  // ── Unités ──
+  const [newUnit, setNewUnit] = useState("");
+  const [confirmDelUnit, setConfirmDelUnit] = useState<string | null>(null);
 
   const isCustom = (key: string) => customCategories.includes(key);
 
-  const move = (idx: number, dir: -1 | 1) => {
-    const target = idx + dir;
-    if (target < 0 || target >= allCatKeys.length) return;
-    const next = [...allCatKeys];
-    [next[idx], next[target]] = [next[target], next[idx]];
-    reorderCategories(next);
-  };
-
-  const commitRename = (key: string) => {
-    renameCategory(key, editVal);
-    setEditKey(null);
-  };
+  const commitRename = (key: string) => { renameCategory(key, editVal); setEditKey(null); };
 
   const addCat = () => {
     const name = newCat.trim();
     if (!name || allCatKeys.some((k) => (categoryRenames[k] ?? k).toLowerCase() === name.toLowerCase())) return;
     addCustomCategory(name);
     setNewCat("");
+  };
+
+  const handleDragStart = (e: React.DragEvent, idx: number) => {
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(idx));
+    dragIdxRef.current = idx;
+  };
+
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOver(idx);
+  };
+
+  const handleDrop = (e: React.DragEvent, toIdx: number) => {
+    e.preventDefault();
+    const fromIdx = parseInt(e.dataTransfer.getData("text/plain"), 10);
+    if (isNaN(fromIdx) || fromIdx === toIdx) { setDragOver(null); return; }
+    const next = [...allCatKeys];
+    const [moved] = next.splice(fromIdx, 1);
+    next.splice(toIdx, 0, moved);
+    reorderCategories(next);
+    setDragOver(null);
   };
 
   return (
@@ -83,11 +101,11 @@ function TabCatalogue() {
         </div>
       </div>
 
-      {/* Liste complète */}
+      {/* Liste complète avec drag */}
       <div className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] p-5 space-y-3">
         <div>
           <h3 className="text-sm font-bold text-[var(--text-primary)]">Toutes les catégories</h3>
-          <p className="text-xs text-[var(--text-muted)] mt-0.5">Déplacez, renommez, masquez ou supprimez. L'ordre ici est l'ordre visible dans le dashboard.</p>
+          <p className="text-xs text-[var(--text-muted)] mt-0.5">Glissez ≡ pour réordonner, renommez, masquez ou supprimez.</p>
         </div>
 
         <div className="space-y-1.5">
@@ -95,21 +113,28 @@ function TabCatalogue() {
             const label = categoryRenames[key] ?? key;
             const isHidden = hiddenCategories.includes(key);
             const custom = isCustom(key);
+            const isDropTarget = dragOver === idx;
             return (
-              <div key={key} className={cn(
-                "flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-all group",
-                isHidden ? "opacity-50 bg-[var(--surface-2)]/40 border-[var(--border)]" : "bg-[var(--surface-2)] border-[var(--border)]"
-              )}>
-                {/* Flèches */}
-                <div className="flex flex-col gap-0.5 shrink-0">
-                  <button onClick={() => move(idx, -1)} disabled={idx === 0}
-                    className="w-5 h-4 rounded flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-3)] transition-colors disabled:opacity-20 disabled:cursor-not-allowed">
-                    <ArrowUp size={9} weight="bold" />
-                  </button>
-                  <button onClick={() => move(idx, 1)} disabled={idx === allCatKeys.length - 1}
-                    className="w-5 h-4 rounded flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-3)] transition-colors disabled:opacity-20 disabled:cursor-not-allowed">
-                    <ArrowDown size={9} weight="bold" />
-                  </button>
+              <div
+                key={key}
+                draggable
+                onDragStart={(e) => handleDragStart(e, idx)}
+                onDragOver={(e) => handleDragOver(e, idx)}
+                onDragLeave={() => setDragOver(null)}
+                onDrop={(e) => handleDrop(e, idx)}
+                onDragEnd={() => setDragOver(null)}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-all group",
+                  isHidden ? "opacity-50" : "",
+                  isDropTarget ? "border-[var(--amber)] bg-[var(--amber)]/5" : "bg-[var(--surface-2)] border-[var(--border)]"
+                )}
+              >
+                {/* Poignée drag 3 traits */}
+                <div
+                  className="flex flex-col justify-center shrink-0 cursor-grab active:cursor-grabbing text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
+                  title="Glisser pour déplacer"
+                >
+                  <DotsSixVertical size={16} weight="bold" />
                 </div>
 
                 {/* Nom / édition */}
@@ -134,13 +159,11 @@ function TabCatalogue() {
                     {!custom && (
                       <span className="text-[9px] font-semibold uppercase tracking-wider text-[var(--text-muted)] bg-[var(--surface-3)] px-1.5 py-0.5 rounded shrink-0">système</span>
                     )}
-                    {/* Modifier le nom */}
                     <button onClick={() => { setEditKey(key); setEditVal(label); }}
                       title="Renommer"
                       className="w-6 h-6 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 transition-colors opacity-0 group-hover:opacity-100">
                       <PencilSimple size={11} />
                     </button>
-                    {/* Masquer */}
                     <button onClick={() => toggleHideCategory(key)}
                       title={isHidden ? "Afficher" : "Masquer"}
                       className={cn(
@@ -149,7 +172,6 @@ function TabCatalogue() {
                       )}>
                       {isHidden ? <EyeSlash size={11} /> : <Eye size={11} />}
                     </button>
-                    {/* Supprimer (custom uniquement) */}
                     {custom && (
                       confirmDel === key ? (
                         <div className="flex items-center gap-1">
@@ -173,7 +195,6 @@ function TabCatalogue() {
           })}
         </div>
 
-        {/* Ajouter une catégorie */}
         <div className="flex gap-2 pt-1 border-t border-[var(--border)]">
           <input value={newCat} onChange={(e) => setNewCat(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") addCat(); }}
@@ -185,8 +206,47 @@ function TabCatalogue() {
           </button>
         </div>
         <p className="text-[11px] text-[var(--text-muted)]">
-          Les catégories système peuvent être renommées et masquées mais pas supprimées. Seules les catégories personnalisées sont supprimables.
+          Les catégories système peuvent être renommées et masquées mais pas supprimées.
         </p>
+      </div>
+
+      {/* Gestion des unités */}
+      <div className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] p-5 space-y-3">
+        <div>
+          <h3 className="text-sm font-bold text-[var(--text-primary)]">Unités disponibles</h3>
+          <p className="text-xs text-[var(--text-muted)] mt-0.5">Unités proposées dans le select de chaque plat (prix badge + modal d'édition).</p>
+        </div>
+        <div className="space-y-1.5">
+          {unitOptions.map((u) => (
+            <div key={u} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] group">
+              <span className="flex-1 text-sm text-[var(--text-primary)]">{u}</span>
+              {confirmDelUnit === u ? (
+                <div className="flex items-center gap-1">
+                  <button onClick={() => { removeUnitOption(u); setConfirmDelUnit(null); }}
+                    className="h-5 px-1.5 rounded bg-red-500/15 text-[var(--danger)] text-[10px] font-semibold hover:bg-red-500/25 transition-colors">Oui</button>
+                  <button onClick={() => setConfirmDelUnit(null)}
+                    className="h-5 px-1.5 rounded bg-[var(--surface-3)] text-[var(--text-muted)] text-[10px] font-semibold transition-colors">Non</button>
+                </div>
+              ) : (
+                <button onClick={() => setConfirmDelUnit(u)}
+                  title="Supprimer"
+                  className="w-6 h-6 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100">
+                  <Trash size={11} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-2 pt-1 border-t border-[var(--border)]">
+          <input value={newUnit} onChange={(e) => setNewUnit(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && newUnit.trim()) { addUnitOption(newUnit.trim()); setNewUnit(""); } }}
+            placeholder="Nouvelle unité…"
+            className="flex-1 h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-colors" />
+          <button onClick={() => { if (newUnit.trim()) { addUnitOption(newUnit.trim()); setNewUnit(""); } }} disabled={!newUnit.trim()}
+            className="w-9 h-9 rounded-xl bg-[var(--amber)]/10 text-[var(--amber)] hover:bg-[var(--amber)]/20 flex items-center justify-center disabled:opacity-40 transition-colors">
+            <Plus size={14} weight="bold" />
+          </button>
+        </div>
       </div>
     </div>
   );

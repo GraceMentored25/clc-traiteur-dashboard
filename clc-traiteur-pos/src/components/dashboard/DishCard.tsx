@@ -13,7 +13,7 @@ interface Props {
   dish: Dish;
 }
 
-const UNITS = ["portion", "pièce", "assiette", "verre", "100g", "litre", "demi-poulet"];
+// UNITS est maintenant géré dans le store (unitOptions)
 
 const DishCard = memo(function DishCard({ dish }: Props) {
   const [editingPrice, setEditingPrice] = useState(false);
@@ -33,6 +33,7 @@ const DishCard = memo(function DishCard({ dish }: Props) {
   const addToCart = useStore((s) => s.addToCart);
   const updateQuantity = useStore((s) => s.updateQuantity);
   const removeFromCart = useStore((s) => s.removeFromCart);
+  const unitOptions = useStore((s) => s.unitOptions);
   const setCustomPrice = useStore((s) => s.setCustomPrice);
   const setCustomUnit = useStore((s) => s.setCustomUnit);
   const removeCustomDish = useStore((s) => s.removeCustomDish);
@@ -344,7 +345,7 @@ const DishCard = memo(function DishCard({ dish }: Props) {
                     <Select
                       value={editForm.unit}
                       onChange={(v) => setEditForm(f => ({ ...f, unit: v }))}
-                      options={UNITS.map(u => ({ value: u, label: u }))}
+                      options={[...new Set([...unitOptions, effectiveUnit])].map(u => ({ value: u, label: u }))}
                       className="w-full"
                     />
                   </div>

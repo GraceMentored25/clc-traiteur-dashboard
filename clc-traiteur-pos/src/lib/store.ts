@@ -41,6 +41,9 @@ export interface AppState {
   setCustomPrice: (dishId: number, price: number) => void;
   customUnits: Record<number, string>;
   setCustomUnit: (dishId: number, unit: string) => void;
+  unitOptions: string[];          // liste des unités disponibles dans les selects
+  addUnitOption: (u: string) => void;
+  removeUnitOption: (u: string) => void;
 
   customDishes: Dish[];
   addCustomDish: (dish: Omit<Dish, "id">) => void;
@@ -190,6 +193,11 @@ export const useStore = create<AppState>()(
       customUnits: {},
       setCustomUnit: (dishId, unit) =>
         set((s) => ({ customUnits: { ...s.customUnits, [dishId]: unit } })),
+      unitOptions: ["portion", "pièce", "assiette", "verre", "100g", "litre", "demi-poulet", "unité", "part", "10 pièces", "5 pièces"],
+      addUnitOption: (u) =>
+        set((s) => ({ unitOptions: s.unitOptions.includes(u) ? s.unitOptions : [...s.unitOptions, u] })),
+      removeUnitOption: (u) =>
+        set((s) => ({ unitOptions: s.unitOptions.filter((x) => x !== u) })),
 
       customDishes: [],
       addCustomDish: (dish) =>
@@ -592,6 +600,7 @@ export const useStore = create<AppState>()(
         appMode: state.appMode,
         customPrices: state.customPrices,
         customUnits: state.customUnits,
+        unitOptions: state.unitOptions,
         customDishes: state.customDishes,
         customCategories: state.customCategories,
         categoryOrder: state.categoryOrder,
