@@ -156,7 +156,7 @@ export const DISHES: Dish[] = [
     name: "Plateau de crudités",
     category: "Entrées",
     price: 2,
-    image: "/dishes/plateau-crudites.jpg",
+    image: "/dishes/crudites.png",
     description: "Assortiment de légumes frais de saison, sauce maison",
     unit: "portion",
   },
