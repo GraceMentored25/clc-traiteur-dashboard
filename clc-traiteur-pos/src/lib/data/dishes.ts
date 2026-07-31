@@ -255,7 +255,7 @@ export const DISHES: Dish[] = [
     name: "Gâteau Caramel Beurre Salé",
     category: "Desserts",
     price: 5,
-    image: "/dishes/gateau-caramel.jpg",
+    image: "/dishes/gateau-caramel.png",
     description: "Gâteau moelleux nappé d'un caramel beurre salé maison",
     unit: "part",
   },
