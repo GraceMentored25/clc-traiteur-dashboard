@@ -243,8 +243,8 @@ export const DISHES: Dish[] = [
   },
   {
     id: 17,
-    name: "Chin Chin",
-    category: "Desserts",
+    name: "Croquettes",
+    category: "Apéritif",
     price: 5,
     image: "/dishes/chinchin.png",
     description: "Biscuits frits sucrés à la noix de muscade",
