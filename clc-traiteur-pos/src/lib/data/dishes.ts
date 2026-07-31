@@ -271,11 +271,11 @@ export const DISHES: Dish[] = [
   },
   {
     id: 18,
-    name: "Jus Gingembre-Citron",
+    name: "Jus Gingembre Ananas",
     category: "Cocktails & Boissons",
     price: 5,
     image: "/dishes/jus-gingembre.jpg",
-    description: "Jus artisanal gingembre frais, citron et miel",
+    description: "Jus artisanal gingembre frais et ananas",
     unit: "verre 25cl",
   },
   {
