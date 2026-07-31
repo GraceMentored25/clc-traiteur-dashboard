@@ -57,7 +57,7 @@ export default function Home() {
 
       {/* Right panel — transparent */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 relative">
-        <div className="w-full md:bg-transparent md:border-0 md:backdrop-blur-0 rounded-3xl md:rounded-none border border-white/12 bg-black/28 backdrop-blur-md shadow-2xl px-5 py-6 md:p-0" style={{ maxWidth: "400px" }}>
+        <div className="w-full md:bg-transparent md:border-0 md:shadow-none md:backdrop-blur-0 rounded-3xl md:rounded-none border border-white/12 bg-black/28 backdrop-blur-md shadow-2xl px-5 py-6 md:p-0" style={{ maxWidth: "400px" }}>
           {/* Mobile logo */}
           <div className="md:hidden flex items-center gap-3 mb-5">
             <div className="w-10 h-10 rounded-full overflow-hidden shrink-0">

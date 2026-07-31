@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useMemo, memo, useEffect, useRef } from "react";
+import { useState, useMemo, memo, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import { m, AnimatePresence } from "framer-motion";
 import {
   MagnifyingGlass, ShoppingCart, SquaresFour, Rows,
   SortAscending, Plus, X, Camera, Trash, CalendarBlank,
-  SlidersHorizontal, ArrowUp, ArrowDown, Eye, EyeSlash,
 } from "@phosphor-icons/react";
 import type { RecipeIngredient } from "@/lib/types";
 import { CATEGORIES, DISHES } from "@/lib/data/dishes";
@@ -40,7 +39,6 @@ export default function DashboardClient() {
   const [sortMode, setSortMode] = useState<SortMode>("default");
   const [sortOpen, setSortOpen] = useState(false);
   const [addCatOpen, setAddCatOpen] = useState(false);
-  const [manageCatOpen, setManageCatOpen] = useState(false);
   const [addDishOpen, setAddDishOpen] = useState(false);
   const [newCatName, setNewCatName] = useState("");
   const [newDish, setNewDish] = useState({ name: "", price: "", unit: "portion", description: "", category: "", image: "" });
@@ -64,8 +62,7 @@ export default function DashboardClient() {
   const customCategories = useStore((s) => s.customCategories);
   const categoryOrder = useStore((s) => s.categoryOrder);
   const hiddenCategories = useStore((s) => s.hiddenCategories);
-  const reorderCategories = useStore((s) => s.reorderCategories);
-  const toggleHideCategory = useStore((s) => s.toggleHideCategory);
+  const categoryRenames = useStore((s) => s.categoryRenames);
   const removeCustomCategory = useStore((s) => s.removeCustomCategory);
   const ingredients = useStore((s) => s.ingredients);
   const addCustomDish = useStore((s) => s.addCustomDish);
@@ -95,20 +92,28 @@ export default function DashboardClient() {
     }, 0);
   }, [sectionCarts]);
 
-  // Catégories custom triées selon categoryOrder, masquées exclues de la barre
-  const orderedCustom = useMemo(() => {
-    const ordered = categoryOrder.filter((c) => customCategories.includes(c));
-    const rest = customCategories.filter((c) => !categoryOrder.includes(c));
-    return [...ordered, ...rest];
-  }, [customCategories, categoryOrder]);
+  // Toutes les catégories (statiques hors "Tous" + custom), triées selon categoryOrder
+  const STATIC_CATS = useMemo(() => CATEGORIES.filter((c) => c !== "Tous"), []);
+  const allCatKeys = useMemo(() => {
+    const all = [...STATIC_CATS, ...customCategories];
+    if (categoryOrder.length === 0) return all;
+    const inOrder = categoryOrder.filter((c) => all.includes(c));
+    const rest = all.filter((c) => !categoryOrder.includes(c));
+    return [...inOrder, ...rest];
+  }, [STATIC_CATS, customCategories, categoryOrder]);
 
+  // Label affiché (renommage possible)
+  const catLabel = useCallback((key: string) => categoryRenames[key] ?? key, [categoryRenames]);
+
+  // Catégories visibles dans la barre (hors masquées) + "Tous" en tête
   const allCategories = useMemo(
-    () => [...CATEGORIES, ...orderedCustom.filter((c) => !hiddenCategories.includes(c))],
-    [orderedCustom, hiddenCategories]
+    () => ["Tous", ...allCatKeys.filter((c) => !hiddenCategories.includes(c))],
+    [allCatKeys, hiddenCategories]
   );
+  // Pour les selects d'ajout de plat : toutes les clés (avec label affiché)
   const allCategoriesForSelect = useMemo(
-    () => [...CATEGORIES, ...orderedCustom],
-    [orderedCustom]
+    () => allCatKeys,
+    [allCatKeys]
   );
   const allDishes = useMemo(() => [...DISHES, ...customDishes], [customDishes]);
 
@@ -443,7 +448,7 @@ export default function DashboardClient() {
                 : "bg-[var(--surface-2)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)]"
             )}
           >
-            {cat}
+            {catLabel(cat)}
           </button>
         ))}
 
@@ -472,35 +477,7 @@ export default function DashboardClient() {
             </button>
           </div>
         )}
-
-        {/* Bouton gérer les catégories */}
-        {orderedCustom.length > 0 && (
-          <button
-            onClick={() => setManageCatOpen(true)}
-            title="Gérer les catégories"
-            className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--amber)] hover:border-[var(--amber)]/40 transition-colors"
-          >
-            <SlidersHorizontal size={13} weight="bold" />
-          </button>
-        )}
       </div>
-
-      {/* ── Modal gestion catégories ────────────────────────────── */}
-      <AnimatePresence>
-        {manageCatOpen && (
-          <ManageCategoriesModal
-            categories={orderedCustom}
-            hidden={hiddenCategories}
-            onReorder={reorderCategories}
-            onToggleHide={toggleHideCategory}
-            onDelete={(name) => {
-              removeCustomCategory(name);
-              if (activeCategory === name) setActiveCategory("Tous");
-            }}
-            onClose={() => setManageCatOpen(false)}
-          />
-        )}
-      </AnimatePresence>
 
       {/* ── Dishes grid ────────────────────────────────────────── */}
       <div className="flex-1 px-3 lg:px-5 py-4 pb-24 lg:pb-5">
@@ -962,151 +939,6 @@ function EventTypeSelector({
       )}
 
     </div>
-  );
-}
-
-// ── Modal gestion catégories (ordre + visibilité + suppression) ──
-function ManageCategoriesModal({
-  categories, hidden, onReorder, onToggleHide, onDelete, onClose,
-}: {
-  categories: string[];
-  hidden: string[];
-  onReorder: (order: string[]) => void;
-  onToggleHide: (name: string) => void;
-  onDelete: (name: string) => void;
-  onClose: () => void;
-}) {
-  const [local, setLocal] = useState(categories);
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-
-  const move = (idx: number, dir: -1 | 1) => {
-    const next = [...local];
-    const target = idx + dir;
-    if (target < 0 || target >= next.length) return;
-    [next[idx], next[target]] = [next[target], next[idx]];
-    setLocal(next);
-    onReorder(next);
-  };
-
-  return (
-    <>
-      <m.div
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        onClick={onClose}
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
-      />
-      <m.div
-        initial={{ scale: 0.93, opacity: 0, y: 20 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.95, opacity: 0 }}
-        transition={{ type: "spring", stiffness: 300, damping: 28 }}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="w-full max-w-sm bg-[var(--surface-1)] rounded-2xl border border-[var(--border)] shadow-2xl flex flex-col max-h-[80vh]">
-          {/* Header */}
-          <div className="flex items-center justify-between p-5 pb-4 border-b border-[var(--border)] shrink-0">
-            <div>
-              <h3 className="font-bold text-[var(--text-primary)]">Gérer les catégories</h3>
-              <p className="text-xs text-[var(--text-muted)] mt-0.5">Déplacer, masquer ou supprimer</p>
-            </div>
-            <button onClick={onClose} className="w-8 h-8 rounded-xl bg-[var(--surface-2)] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
-              <X size={15} />
-            </button>
-          </div>
-
-          {/* Liste */}
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1.5">
-            {local.length === 0 && (
-              <p className="text-sm text-[var(--text-muted)] text-center py-6">Aucune catégorie personnalisée</p>
-            )}
-            {local.map((cat, idx) => {
-              const isHidden = hidden.includes(cat);
-              return (
-                <div key={cat} className={cn(
-                  "flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-colors",
-                  isHidden
-                    ? "bg-[var(--surface-2)]/40 border-[var(--border)] opacity-50"
-                    : "bg-[var(--surface-2)] border-[var(--border)]"
-                )}>
-                  {/* Nom */}
-                  <span className={cn("flex-1 text-sm font-medium truncate", isHidden ? "text-[var(--text-muted)] line-through" : "text-[var(--text-primary)]")}>
-                    {cat}
-                  </span>
-
-                  {/* Déplacer */}
-                  <button
-                    onClick={() => move(idx, -1)}
-                    disabled={idx === 0}
-                    title="Remonter"
-                    className="w-6 h-6 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-3)] transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
-                  >
-                    <ArrowUp size={12} weight="bold" />
-                  </button>
-                  <button
-                    onClick={() => move(idx, 1)}
-                    disabled={idx === local.length - 1}
-                    title="Descendre"
-                    className="w-6 h-6 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-3)] transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
-                  >
-                    <ArrowDown size={12} weight="bold" />
-                  </button>
-
-                  {/* Masquer / afficher */}
-                  <button
-                    onClick={() => onToggleHide(cat)}
-                    title={isHidden ? "Afficher" : "Masquer"}
-                    className={cn(
-                      "w-6 h-6 rounded-lg flex items-center justify-center transition-colors",
-                      isHidden
-                        ? "text-[var(--amber)] hover:bg-[var(--amber)]/10"
-                        : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-3)]"
-                    )}
-                  >
-                    {isHidden ? <EyeSlash size={12} weight="bold" /> : <Eye size={12} weight="bold" />}
-                  </button>
-
-                  {/* Supprimer */}
-                  {confirmDelete === cat ? (
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => { onDelete(cat); setLocal((l) => l.filter((c) => c !== cat)); setConfirmDelete(null); }}
-                        className="h-6 px-2 rounded-lg bg-red-500/15 text-[var(--danger)] text-[10px] font-semibold hover:bg-red-500/25 transition-colors"
-                      >
-                        Oui
-                      </button>
-                      <button
-                        onClick={() => setConfirmDelete(null)}
-                        className="h-6 px-2 rounded-lg bg-[var(--surface-3)] text-[var(--text-muted)] text-[10px] font-semibold hover:text-[var(--text-primary)] transition-colors"
-                      >
-                        Non
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setConfirmDelete(cat)}
-                      title="Supprimer"
-                      className="w-6 h-6 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-red-500/10 transition-colors"
-                    >
-                      <Trash size={12} weight="bold" />
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="px-5 py-4 border-t border-[var(--border)] shrink-0">
-            <button
-              onClick={onClose}
-              className="w-full h-9 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-            >
-              Fermer
-            </button>
-          </div>
-        </div>
-      </m.div>
-    </>
   );
 }
 

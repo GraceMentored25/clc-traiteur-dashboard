@@ -48,10 +48,12 @@ export interface AppState {
   customCategories: string[];
   addCustomCategory: (name: string) => void;
   removeCustomCategory: (name: string) => void;
-  categoryOrder: string[];       // ordre des custom cats (vide = ordre d'insertion)
-  hiddenCategories: string[];    // custom cats masquées dans la barre
+  categoryOrder: string[];          // ordre de toutes les cats (statiques + custom), hors "Tous"
+  hiddenCategories: string[];       // cats masquées dans la barre (statiques ou custom)
+  categoryRenames: Record<string, string>; // label original → label affiché personnalisé
   reorderCategories: (order: string[]) => void;
   toggleHideCategory: (name: string) => void;
+  renameCategory: (original: string, newName: string) => void;
 
   // ── Capital ─────────────────────────────────────────────────
   entreesCapital: EntreeCapital[];
@@ -215,13 +217,19 @@ export const useStore = create<AppState>()(
             : [...s.categoryOrder, name],
         })),
       removeCustomCategory: (name) =>
-        set((s) => ({
-          customCategories: s.customCategories.filter((c) => c !== name),
-          categoryOrder: s.categoryOrder.filter((c) => c !== name),
-          hiddenCategories: s.hiddenCategories.filter((c) => c !== name),
-        })),
+        set((s) => {
+          const renames = { ...s.categoryRenames };
+          delete renames[name];
+          return {
+            customCategories: s.customCategories.filter((c) => c !== name),
+            categoryOrder: s.categoryOrder.filter((c) => c !== name),
+            hiddenCategories: s.hiddenCategories.filter((c) => c !== name),
+            categoryRenames: renames,
+          };
+        }),
       categoryOrder: [],
       hiddenCategories: [],
+      categoryRenames: {},
       reorderCategories: (order) => set({ categoryOrder: order }),
       toggleHideCategory: (name) =>
         set((s) => ({
@@ -229,6 +237,16 @@ export const useStore = create<AppState>()(
             ? s.hiddenCategories.filter((c) => c !== name)
             : [...s.hiddenCategories, name],
         })),
+      renameCategory: (original, newName) =>
+        set((s) => {
+          const renames = { ...s.categoryRenames };
+          if (newName.trim() && newName.trim() !== original) {
+            renames[original] = newName.trim();
+          } else {
+            delete renames[original];
+          }
+          return { categoryRenames: renames };
+        }),
 
       entreesCapital: [],
       addEntreeCapital: (e) => { logAudit("CAPITAL_ADDED", { id: e.id, montant: e.montant, source: e.source }); set((s) => ({ entreesCapital: [e, ...s.entreesCapital] })); },
@@ -572,6 +590,7 @@ export const useStore = create<AppState>()(
         customCategories: state.customCategories,
         categoryOrder: state.categoryOrder,
         hiddenCategories: state.hiddenCategories,
+        categoryRenames: state.categoryRenames,
         entreesCapital: state.entreesCapital,
         personnel: state.personnel,
         salaires: state.salaires,
