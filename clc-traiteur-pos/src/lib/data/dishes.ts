@@ -51,6 +51,15 @@ export const DISHES: Dish[] = [
     unit: "10 pièces",
   },
   {
+    id: 42,
+    name: "Crêpes salées",
+    category: "Apéritif",
+    price: 1,
+    image: "/dishes/crepes-salees.png",
+    description: "Crêpes fines salées garnies, servies chaudes",
+    unit: "portion",
+  },
+  {
     id: 35,
     name: "Brochettes plantain boulettes",
     category: "Apéritif",
