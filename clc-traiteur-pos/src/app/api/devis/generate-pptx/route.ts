@@ -453,11 +453,13 @@ function fillPrestations(xml: string, serviceItems: DevisItem[]): string {
     }
   }
 
-  xml = setShapeText(xml, "Rectangle 56", fmtMoney(subtotal));
-  // Si aucune prestation sélectionnée, l'indiquer dans le sous-titre
-  if (subtotal === 0) {
-    xml = setShapeText(xml, "Rectangle 5", "Aucune prestation additionnelle sélectionnée pour cet événement.");
-  }
+  // Mettre à jour le sous-titre selon les prestations retenues
+  xml = setShapeText(xml, "Rectangle 5",
+    subtotal > 0
+      ? "Prestations retenues pour cet événement"
+      : "Aucune prestation additionnelle retenue pour cet événement."
+  );
+  xml = setShapeText(xml, "Rectangle 56", subtotal > 0 ? fmtMoney(subtotal) : "0 €");
   return xml;
 }
 
