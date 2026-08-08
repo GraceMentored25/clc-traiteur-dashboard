@@ -46,6 +46,24 @@ function setShapeText(xml: string, shapeName: string, value: string): string {
   return parts.join("<p:sp>");
 }
 
+// Même que setShapeText mais force le texte non gras (b="0")
+function setShapeTextPlain(xml: string, shapeName: string, value: string): string {
+  xml = setShapeText(xml, shapeName, value);
+  const parts = xml.split("<p:sp>");
+  for (let i = 1; i < parts.length; i++) {
+    const end = parts[i].indexOf("</p:sp>");
+    if (end < 0) continue;
+    if (!hasName(parts[i].slice(0, end), shapeName)) continue;
+    // Supprimer tout attribut b="1" et ajouter b="0" sur chaque <a:rPr>
+    parts[i] = parts[i].replace(/<a:rPr([^>]*?)>/g, (m: string, attrs: string) => {
+      const cleaned = attrs.replace(/\s*b="[^"]*"/, "");
+      return `<a:rPr${cleaned} b="0">`;
+    });
+    break;
+  }
+  return parts.join("<p:sp>");
+}
+
 function removeShape(xml: string, shapeName: string): string {
   const parts = xml.split("<p:sp>");
   const kept = [parts[0]];
@@ -335,9 +353,9 @@ function fillCover(xml: string, d: Devis & {lieu?:string}): string {
 // ── Remplissage récapitulatif ─────────────────────────────────────────────
 // Lignes de prestations additionnelles disponibles dans le template recap
 const RECAP_PRESTA_ROWS = [
-  { n:"Rectangle 36", l:"Rectangle 36", d:"Rectangle 37", p:"Rectangle 38", sep:"Connecteur droit 39" },
-  { n:"Rectangle 41", l:"Rectangle 41", d:"Rectangle 42", p:"Rectangle 43", sep:"Connecteur droit 44" },
-  { n:"Rectangle 46", l:"Rectangle 46", d:"Rectangle 47", p:"Rectangle 48", sep:null },
+  { l:"Rectangle 36", d:"Rectangle 37", p:"Rectangle 38", sep:"Connecteur droit 39", pic:"Graphique 92" },
+  { l:"Rectangle 41", d:"Rectangle 42", p:"Rectangle 43", sep:"Connecteur droit 44", pic:"Graphique 97" },
+  { l:"Rectangle 46", d:"Rectangle 47", p:"Rectangle 48", sep:null,                    pic:null },
 ];
 
 function removeConnector(xml: string, name: string): string {
@@ -399,10 +417,13 @@ function fillRecap(xml: string, d: Devis & {lieu?:string}, secs: Section[], serv
 
   if (retenues.length === 0) {
     // Aucune prestation : 1ère ligne = mention, supprimer lignes 2 et 3
-    xml = setShapeText(xml,"Rectangle 36","Aucune prestation additionnelle n’a été sélectionnée");
+    xml = setShapeTextPlain(xml,"Rectangle 36","Aucune prestation additionnelle n’a été sélectionnée");
     xml = setShapeText(xml,"Rectangle 37","");
     xml = setShapeText(xml,"Rectangle 38","");
     xml = removeConnector(xml,"Connecteur droit 39");
+    xml = removePic(xml,"Graphique 92");
+    xml = removePic(xml,"Graphique 97");
+    xml = removePic(xml,"Graphique 35");
     for (let ri = 1; ri < RECAP_PRESTA_ROWS.length; ri++) {
       const row = RECAP_PRESTA_ROWS[ri];
       xml = removeShape(xml, row.l);
@@ -426,6 +447,7 @@ function fillRecap(xml: string, d: Devis & {lieu?:string}, secs: Section[], serv
         xml = removeShape(xml, row.d);
         xml = removeShape(xml, row.p);
         if (row.sep) xml = removeConnector(xml, row.sep);
+        if (row.pic) xml = removePic(xml, row.pic);
       }
     }
     xml = setShapeText(xml,"Rectangle 50","SOUS-TOTAL PRESTATIONS ADDITIONNELLES");
@@ -537,17 +559,11 @@ function fillPrestations(xml: string, serviceItems: DevisItem[]): string {
         );
       }
     } else {
-      // Service non sélectionné : conserver le bloc, décocher la checkbox
+      // Service non sélectionné : conserver le bloc, supprimer la checkbox
       xml = setShapeText(xml, slot.titleShape, def.title);
       xml = setShapeText(xml, slot.descShape, def.desc);
-      xml = setShapeText(xml, slot.priceShape, "—");
-      if (slot.checkedPic) {
-        const picEscape = slot.checkedPic.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
-        xml = xml.replace(
-          new RegExp(`(<p:pic>[^]*?name="${picEscape}"[^]*?<a:blip r:embed=")${RID_CHECKED}("[^]*?asvg:svgBlip[^>]+r:embed=")${RID_SVG_CHECKED}(")`),
-          `$1${RID_UNCHECKED}$2${RID_SVG_UNCHECKED}$3`
-        );
-      }
+      xml = setShapeText(xml, slot.priceShape, "");
+      if (slot.checkedPic) xml = removePic(xml, slot.checkedPic);
     }
   }
 
