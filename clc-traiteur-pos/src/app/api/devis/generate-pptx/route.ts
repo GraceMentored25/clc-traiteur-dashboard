@@ -333,12 +333,32 @@ function fillCover(xml: string, d: Devis & {lieu?:string}): string {
 }
 
 // ── Remplissage récapitulatif ─────────────────────────────────────────────
-function fillRecap(xml: string, d: Devis & {lieu?:string}, secs: Section[]): string {
+// Lignes de prestations additionnelles disponibles dans le template recap
+const RECAP_PRESTA_ROWS = [
+  { n:"Rectangle 36", l:"Rectangle 36", d:"Rectangle 37", p:"Rectangle 38", sep:"Connecteur droit 39" },
+  { n:"Rectangle 41", l:"Rectangle 41", d:"Rectangle 42", p:"Rectangle 43", sep:"Connecteur droit 44" },
+  { n:"Rectangle 46", l:"Rectangle 46", d:"Rectangle 47", p:"Rectangle 48", sep:null },
+];
+
+function removeConnector(xml: string, name: string): string {
+  const parts = xml.split("<p:cxnSp>");
+  const kept = [parts[0]];
+  for (let i = 1; i < parts.length; i++) {
+    const end = parts[i].indexOf("</p:cxnSp>");
+    if (end >= 0 && hasName(parts[i].slice(0, end), name)) continue;
+    kept.push(parts[i]);
+  }
+  return kept.join("<p:cxnSp>");
+}
+
+function fillRecap(xml: string, d: Devis & {lieu?:string}, secs: Section[], serviceItems: DevisItem[]): string {
   const totalEv = secs.reduce((s,x)=>s+x.subtotal,0);
   xml = setShapeText(xml,"Rectangle 5",d.eventType.toUpperCase());
   xml = setShapeText(xml,"Rectangle 7",`${d.guestCount} convives`);
   xml = setShapeText(xml,"Rectangle 9",fmtDate(d.eventDate));
   xml = setShapeText(xml,"Rectangle 11",d.lieu??"France");
+
+  // Lignes sections traiteur (max 3 dans le template)
   const rows=[
     ["Rectangle 15","Rectangle 16","Rectangle 17","Rectangle 18"],
     ["Rectangle 21","Rectangle 22","Rectangle 23","Rectangle 24"],
@@ -353,13 +373,65 @@ function fillRecap(xml: string, d: Devis & {lieu?:string}, secs: Section[]): str
     } else { for (const n of [rn,rl,rd,rp]) xml=setShapeText(xml,n,""); }
   }
   xml = setShapeText(xml,"Rectangle 33",fmtMoney(totalEv));
-  // Prestations additionnelles dans le recap
-  xml = setShapeText(xml,"Rectangle 34","PRESTATIONS ADDITIONNELLES RETENUES");
-  xml = setShapeText(xml,"Rectangle 36","Aucune prestation additionnelle");
-  xml = setShapeText(xml,"Rectangle 37","—");
-  xml = setShapeText(xml,"Rectangle 38","0 €");
-  xml = setShapeText(xml,"Rectangle 50","0 €");
-  xml = setShapeText(xml,"Rectangle 51","0 €");
+
+  // Prestations additionnelles : grouper par catégorie de service
+  const prestaCats = [
+    { keywords:["serveur","personnel","service & personnel"], label:"Service & personnel" },
+    { keywords:["matériel","couvert","table","chaise","marmite"], label:"Location de matériel" },
+    { keywords:["livraison","transport"], label:"Livraison" },
+    { keywords:["décoration","déco","floral"], label:"Décoration" },
+    { keywords:["tente","chapiteau"], label:"Location de tente" },
+    { keywords:["animation","sono","musique","dj"], label:"Animation musicale" },
+    { keywords:["gâteau","photographe","photo"], label:"Gâteau & photo" },
+  ];
+  const retenues: { label: string; desc: string; total: number }[] = [];
+  for (const cat of prestaCats) {
+    const items = serviceItems.filter(i => cat.keywords.some(k => i.dishName.toLowerCase().includes(k)));
+    if (!items.length) continue;
+    const total = items.reduce((s,i)=>s+i.quantity*i.unitPrice,0);
+    const desc = items.map(i=>`${i.quantity} × ${i.dishName}`).join(", ");
+    retenues.push({ label: cat.label, desc, total });
+  }
+
+  const subPresta = retenues.reduce((s,r)=>s+r.total,0);
+
+  if (retenues.length === 0) {
+    // Aucune prestation retenue : supprimer toutes les lignes + séparateurs + blocs sous-total/total presta
+    for (const row of RECAP_PRESTA_ROWS) {
+      xml = removeShape(xml, row.l);
+      xml = removeShape(xml, row.d);
+      xml = removeShape(xml, row.p);
+      if (row.sep) xml = removeConnector(xml, row.sep);
+    }
+    xml = removeShape(xml, "Rectangle 34"); // titre "PRESTATIONS ADDITIONNELLES RETENUES"
+    xml = removeShape(xml, "Rectangle : coins arrondis 49");
+    xml = removeShape(xml, "Rectangle 50");
+    xml = removeShape(xml, "Rectangle 51");
+    // Bloc total : recalculer sans presta
+    xml = setShapeText(xml,"Rectangle 54","Prestation traiteur uniquement");
+  } else {
+    xml = setShapeText(xml,"Rectangle 34","PRESTATIONS ADDITIONNELLES RETENUES");
+    // Remplir les lignes retenues
+    for (let ri = 0; ri < RECAP_PRESTA_ROWS.length; ri++) {
+      const row = RECAP_PRESTA_ROWS[ri];
+      if (ri < retenues.length) {
+        const r = retenues[ri];
+        xml = setShapeText(xml, row.l, r.label);
+        xml = setShapeText(xml, row.d, r.desc);
+        xml = setShapeText(xml, row.p, fmtMoney(r.total));
+      } else {
+        // Supprimer la ligne vide
+        xml = removeShape(xml, row.l);
+        xml = removeShape(xml, row.d);
+        xml = removeShape(xml, row.p);
+        if (row.sep) xml = removeConnector(xml, row.sep);
+      }
+    }
+    xml = setShapeText(xml,"Rectangle 50","SOUS-TOTAL PRESTATIONS ADDITIONNELLES");
+    xml = setShapeText(xml,"Rectangle 51",fmtMoney(subPresta));
+    xml = setShapeText(xml,"Rectangle 54","Événement + prestations additionnelles");
+  }
+
   xml = setShapeText(xml,"Rectangle 55",fmtMoney(d.totalTTC));
   return xml;
 }
@@ -417,8 +489,18 @@ const RID_UNCHECKED = "rId12"; // image67.png
 const RID_SVG_CHECKED   = "rId5";  // image60.svg
 const RID_SVG_UNCHECKED = "rId13"; // image68.svg
 
+// Noms de service par défaut pour chaque slot (affiché si non sélectionné)
+const PRESTA_SLOT_DEFAULTS = [
+  { title: "Service & personnel",     desc: "Serveurs, maîtres d'hôtel" },
+  { title: "Location de matériel",    desc: "Couverts, tables, chaises, marmites" },
+  { title: "Livraison",               desc: "Transport & livraison des plats" },
+  { title: "Décoration de table",     desc: "Fleurs, bougies, centres de table" },
+  { title: "Location de tente",       desc: "Tentes & chapiteaux" },
+  { title: "Animation musicale",      desc: "DJ, sonorisation, animation" },
+  { title: "Gâteau & photo",          desc: "Pièce montée, reportage photo" },
+];
+
 function fillPrestations(xml: string, serviceItems: DevisItem[]): string {
-  // Pour chaque slot, chercher si un service correspond
   const findService = (keywords: string[]): DevisItem|null => {
     for (const item of serviceItems) {
       const n = item.dishName.toLowerCase();
@@ -429,8 +511,10 @@ function fillPrestations(xml: string, serviceItems: DevisItem[]): string {
 
   let subtotal = 0;
 
-  for (const slot of PRESTA_SLOTS) {
+  for (let si = 0; si < PRESTA_SLOTS.length; si++) {
+    const slot = PRESTA_SLOTS[si];
     const matched = findService(slot.keywords);
+    const def = PRESTA_SLOT_DEFAULTS[si];
 
     if (matched) {
       // Service sélectionné : cocher + renseigner
@@ -446,24 +530,20 @@ function fillPrestations(xml: string, serviceItems: DevisItem[]): string {
       // Mettre checkmark coché
       if (slot.checkedPic) {
         const picEscape = slot.checkedPic.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
-        // Remplacer rId non coché → coché
         xml = xml.replace(
           new RegExp(`(<p:pic>[^]*?name="${picEscape}"[^]*?<a:blip r:embed=")${RID_UNCHECKED}("[^]*?asvg:svgBlip[^>]+r:embed=")${RID_SVG_UNCHECKED}(")`),
           `$1${RID_CHECKED}$2${RID_SVG_CHECKED}$3`
         );
       }
     } else {
-      // Service non sélectionné : supprimer tout le bloc
-      if (slot.checkedPic) xml = removePic(xml, slot.checkedPic);
-      xml = removePic(xml, slot.bgPic);
-      for (const s of slot.extraShapes) xml = removeShape(xml, s);
-      xml = removeShape(xml, slot.titleShape);
-      xml = removeShape(xml, slot.descShape);
-      xml = removeShape(xml, slot.priceShape);
+      // Service non sélectionné : conserver le bloc avec texte générique, checkmark non coché
+      xml = setShapeText(xml, slot.titleShape, def.title);
+      xml = setShapeText(xml, slot.descShape, def.desc);
+      xml = setShapeText(xml, slot.priceShape, "—");
     }
   }
 
-  // Mettre à jour le sous-titre selon les prestations retenues
+  // Sous-titre et sous-total
   xml = setShapeText(xml, "Rectangle 5",
     subtotal > 0
       ? "Prestations retenues pour cet événement"
@@ -577,7 +657,7 @@ export async function POST(req: NextRequest) {
 
     // Récapitulatif
     const rcXml = await zip.file(allSlides[rcIdx])?.async("string")??"";
-    zip.file(allSlides[rcIdx],fillRecap(rcXml,devis,secs));
+    zip.file(allSlides[rcIdx],fillRecap(rcXml,devis,secs,serviceItems));
 
     // Acompte
     const acXml = await zip.file(allSlides[acIdx])?.async("string")??"";

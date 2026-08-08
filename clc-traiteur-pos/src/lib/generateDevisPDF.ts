@@ -494,17 +494,24 @@ export async function generateDevisPDF(devis: Devis) {
       }
     };
 
-    for (const sec of sectionList) {
+    // Précharger toutes les bandes en parallèle pour éviter les échecs de chargement séquentiel
+    const bandUrls = await Promise.all(
+      sectionList.map((sec) =>
+        buildSectionBandDataUrl(
+          `/sections/${sectionImageKey(sec.label)}.png`,
+          W,
+          bandH,
+          sec.label,
+          `Sous-total HT · ${sec.subtotal.toFixed(2)} €`,
+        )
+      )
+    );
+
+    for (let si = 0; si < sectionList.length; si++) {
+      const sec = sectionList[si];
       ensureSpace(bandH + 28);
       const y = currentY;
-      const key = sectionImageKey(sec.label);
-      const bandUrl = await buildSectionBandDataUrl(
-        `/sections/${key}.png`,
-        W,
-        bandH,
-        sec.label,
-        `Sous-total HT · ${sec.subtotal.toFixed(2)} €`,
-      );
+      const bandUrl = bandUrls[si];
       if (bandUrl) {
         doc.addImage(bandUrl, "PNG", 0, y, W, bandH);
       } else {
