@@ -14,7 +14,7 @@ export function middleware(req: NextRequest) {
     pathname.startsWith("/images/") ||
     pathname.startsWith("/dishes/") ||
     pathname.startsWith("/sections/") ||
-    pathname === "/logo.png" ||
+    pathname === "/newlogo.png" ||
     pathname === "/auth.jpeg" ||
     pathname === "/auth4x.png" ||
     pathname === "/favicon.ico"

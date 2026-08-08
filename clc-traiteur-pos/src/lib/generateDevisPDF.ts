@@ -278,7 +278,7 @@ function getAcompteInfo(totalTTC: number, eventDate: string) {
 
 async function loadLogo(): Promise<{ data: string; w: number; h: number } | null> {
   try {
-    const res = await fetch("/logo.png");
+    const res = await fetch("/newlogo.png");
     const blob = await res.blob();
     const data = await new Promise<string>((resolve) => {
       const reader = new FileReader();

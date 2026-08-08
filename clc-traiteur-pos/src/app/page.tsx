@@ -22,7 +22,7 @@ export default function Home() {
         <div className="relative z-10 flex flex-col justify-end p-12">
           <div className="flex items-center gap-3 mb-6">
             <Image
-              src="/logo.png"
+              src="/newlogo.png"
               alt="Chez La Camerounaise"
               width={56}
               height={56}
@@ -61,7 +61,7 @@ export default function Home() {
           {/* Mobile logo */}
           <div className="md:hidden flex items-center gap-3 mb-5">
             <div className="w-10 h-10 rounded-full overflow-hidden shrink-0">
-              <Image src="/logo.png" alt="Chez La Camerounaise" width={40} height={40}
+              <Image src="/newlogo.png" alt="Chez La Camerounaise" width={40} height={40}
                 className="w-full h-full object-cover" priority />
             </div>
             <span className="font-semibold text-white drop-shadow">Chez La Camerounaise</span>

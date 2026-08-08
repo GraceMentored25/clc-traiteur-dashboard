@@ -20,8 +20,8 @@ export const metadata: Metadata = {
   title: "C.LC. Traiteur — Devis et Outils",
   description: "Système de gestion des devis et événements traiteur",
   icons: {
-    icon: "/logo.png",
-    apple: "/logo.png",
+    icon: "/newlogo.png",
+    apple: "/newlogo.png",
   },
 };
 

@@ -71,7 +71,7 @@ export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: (
       <div className="px-4 pt-4 pb-4 border-b border-[var(--border)]">
         <div className="flex items-center gap-3">
           <Image
-            src="/logo.png"
+            src="/newlogo.png"
             alt="Chez La Camerounaise"
             width={52}
             height={52}

@@ -76,7 +76,7 @@ export default function AuthForm() {
             transition={{ delay: 0.4, duration: 0.6 }}
           >
             <div className="flex items-center gap-3 mb-6">
-              <Image src="/logo.png" alt="Chez La Camerounaise" width={56} height={56} className="shrink-0 rounded-full" priority />
+              <Image src="/newlogo.png" alt="Chez La Camerounaise" width={56} height={56} className="shrink-0 rounded-full" priority />
               <span className="text-white font-semibold text-lg tracking-tight">Chez La Camerounaise</span>
             </div>
             <h2 className="text-4xl font-bold text-white tracking-tight leading-tight mb-3">
@@ -121,7 +121,7 @@ export default function AuthForm() {
           {/* Mobile logo */}
           <div className="md:hidden flex items-center gap-3 mb-10">
             <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 bg-[var(--surface-3)]">
-              <Image src="/logo.png" alt="Chez La Camerounaise" width={40} height={40} className="w-full h-full object-cover" priority />
+              <Image src="/newlogo.png" alt="Chez La Camerounaise" width={40} height={40} className="w-full h-full object-cover" priority />
             </div>
             <span className="font-semibold text-[var(--text-primary)]">Chez La Camerounaise</span>
           </div>
