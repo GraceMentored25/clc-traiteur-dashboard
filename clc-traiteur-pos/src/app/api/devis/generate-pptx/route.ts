@@ -247,11 +247,11 @@ async function fillEventSlide(zip: JSZip, slideName: string, devis: Devis & {lie
     const sec = chunk[si];
     xml = setShapeText(xml,slot.titleShape,`${chunkOffset+si+1}. ${sec.label}`);
     xml = setShapeText(xml,slot.descShape,"");
-    xml = setShapeText(xml,slot.subShape,fmtMoney(sec.subtotal));
+    xml = setShapeText(xml,slot.subShape,fmtMoney(sec.subtotal * 1.2));
 
     // Calculer le nombre de lignes réelles et redimensionner le fond
     const nLines = sec.items.length;
-    const newCy  = BANNER_CY + SECTION_TOP_PADDING + nLines * LINE_H + 50000;
+    const newCy  = nLines * LINE_H + 990600;
     xml = resizeShapeCy(xml, slot.fondShape, newCy);
 
     // Remplir les lignes du template
@@ -303,8 +303,8 @@ async function fillEventSlide(zip: JSZip, slideName: string, devis: Devis & {lie
   }
 
   // Sous-total slide global
-  xml = setShapeText(xml,"Rectangle 72",fmtMoney(totalChunk));
-  xml = setShapeText(xml,"Rectangle 75",fmtMoney(totalChunk));
+  xml = setShapeText(xml,"Rectangle 72",fmtMoney(totalChunk * 1.2));
+  xml = setShapeText(xml,"Rectangle 75",fmtMoney(totalChunk * 1.2));
 
   zip.file(slideName, xml);
 }
@@ -372,7 +372,7 @@ function fillRecap(xml: string, d: Devis & {lieu?:string}, secs: Section[], serv
       xml=setShapeText(xml,rd,""); xml=setShapeText(xml,rp,fmtMoney(s.subtotal));
     } else { for (const n of [rn,rl,rd,rp]) xml=setShapeText(xml,n,""); }
   }
-  xml = setShapeText(xml,"Rectangle 33",fmtMoney(totalEv));
+  xml = setShapeText(xml,"Rectangle 33",fmtMoney(totalEv * 1.2));
 
   // Prestations additionnelles : grouper par catégorie de service
   const prestaCats = [
@@ -395,23 +395,25 @@ function fillRecap(xml: string, d: Devis & {lieu?:string}, secs: Section[], serv
 
   const subPresta = retenues.reduce((s,r)=>s+r.total,0);
 
+  xml = setShapeText(xml,"Rectangle 34","PRESTATIONS ADDITIONNELLES RETENUES");
+
   if (retenues.length === 0) {
-    // Aucune prestation retenue : supprimer toutes les lignes + séparateurs + blocs sous-total/total presta
-    for (const row of RECAP_PRESTA_ROWS) {
+    // Aucune prestation : 1ère ligne = mention, supprimer lignes 2 et 3
+    xml = setShapeText(xml,"Rectangle 36","Aucune prestation additionnelle n’a été sélectionnée");
+    xml = setShapeText(xml,"Rectangle 37","");
+    xml = setShapeText(xml,"Rectangle 38","");
+    xml = removeConnector(xml,"Connecteur droit 39");
+    for (let ri = 1; ri < RECAP_PRESTA_ROWS.length; ri++) {
+      const row = RECAP_PRESTA_ROWS[ri];
       xml = removeShape(xml, row.l);
       xml = removeShape(xml, row.d);
       xml = removeShape(xml, row.p);
       if (row.sep) xml = removeConnector(xml, row.sep);
     }
-    xml = removeShape(xml, "Rectangle 34"); // titre "PRESTATIONS ADDITIONNELLES RETENUES"
-    xml = removeShape(xml, "Rectangle : coins arrondis 49");
-    xml = removeShape(xml, "Rectangle 50");
-    xml = removeShape(xml, "Rectangle 51");
-    // Bloc total : recalculer sans presta
+    xml = setShapeText(xml,"Rectangle 50","SOUS-TOTAL PRESTATIONS ADDITIONNELLES");
+    xml = setShapeText(xml,"Rectangle 51","0 €");
     xml = setShapeText(xml,"Rectangle 54","Prestation traiteur uniquement");
   } else {
-    xml = setShapeText(xml,"Rectangle 34","PRESTATIONS ADDITIONNELLES RETENUES");
-    // Remplir les lignes retenues
     for (let ri = 0; ri < RECAP_PRESTA_ROWS.length; ri++) {
       const row = RECAP_PRESTA_ROWS[ri];
       if (ri < retenues.length) {
@@ -420,7 +422,6 @@ function fillRecap(xml: string, d: Devis & {lieu?:string}, secs: Section[], serv
         xml = setShapeText(xml, row.d, r.desc);
         xml = setShapeText(xml, row.p, fmtMoney(r.total));
       } else {
-        // Supprimer la ligne vide
         xml = removeShape(xml, row.l);
         xml = removeShape(xml, row.d);
         xml = removeShape(xml, row.p);
@@ -428,7 +429,7 @@ function fillRecap(xml: string, d: Devis & {lieu?:string}, secs: Section[], serv
       }
     }
     xml = setShapeText(xml,"Rectangle 50","SOUS-TOTAL PRESTATIONS ADDITIONNELLES");
-    xml = setShapeText(xml,"Rectangle 51",fmtMoney(subPresta));
+    xml = setShapeText(xml,"Rectangle 51",fmtMoney(subPresta * 1.2));
     xml = setShapeText(xml,"Rectangle 54","Événement + prestations additionnelles");
   }
 
@@ -536,10 +537,17 @@ function fillPrestations(xml: string, serviceItems: DevisItem[]): string {
         );
       }
     } else {
-      // Service non sélectionné : conserver le bloc avec texte générique, checkmark non coché
+      // Service non sélectionné : conserver le bloc, décocher la checkbox
       xml = setShapeText(xml, slot.titleShape, def.title);
       xml = setShapeText(xml, slot.descShape, def.desc);
       xml = setShapeText(xml, slot.priceShape, "—");
+      if (slot.checkedPic) {
+        const picEscape = slot.checkedPic.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+        xml = xml.replace(
+          new RegExp(`(<p:pic>[^]*?name="${picEscape}"[^]*?<a:blip r:embed=")${RID_CHECKED}("[^]*?asvg:svgBlip[^>]+r:embed=")${RID_SVG_CHECKED}(")`),
+          `$1${RID_UNCHECKED}$2${RID_SVG_UNCHECKED}$3`
+        );
+      }
     }
   }
 
