@@ -2,8 +2,26 @@
 
 import { useState, useMemo } from "react";
 import { m, AnimatePresence } from "framer-motion";
-import { MagnifyingGlass, Plus, Calendar, Receipt, PencilSimple, Trash, Warning, FilePdf } from "@phosphor-icons/react";
+import { MagnifyingGlass, Plus, Calendar, Receipt, PencilSimple, Trash, Warning, FilePdf, PresentationChart } from "@phosphor-icons/react";
 import { generateDevisPDF } from "@/lib/generateDevisPDF";
+
+async function downloadDevisPptx(devis: Devis) {
+  try {
+    const res = await fetch("/api/devis/generate-pptx", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(devis),
+    });
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    a.download = `${devis.id}.pptx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch {}
+}
 import { useStore } from "@/lib/store";
 import { Devis, DevisStatus } from "@/lib/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -180,8 +198,11 @@ export default function DevisClient() {
                       />
                     </div>
                     <div className="self-center flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                      <button onClick={() => generateDevisPDF(devis)} title="Générer PDF" className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 transition-all">
+                      <button onClick={() => generateDevisPDF(devis)} title="Télécharger PDF" className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 transition-all">
                         <FilePdf size={14} weight="fill" />
+                      </button>
+                      <button onClick={() => downloadDevisPptx(devis)} title="Télécharger PPTX" className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--info)] hover:bg-[var(--info)]/10 transition-all">
+                        <PresentationChart size={14} weight="fill" />
                       </button>
                       <button onClick={() => setEditing(devis)} className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 transition-all">
                         <PencilSimple size={14} />
@@ -210,6 +231,9 @@ export default function DevisClient() {
                       <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                         <button onClick={() => generateDevisPDF(devis)} title="PDF" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 transition-all">
                           <FilePdf size={15} weight="fill" />
+                        </button>
+                        <button onClick={() => downloadDevisPptx(devis)} title="PPTX" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--info)] hover:bg-[var(--info)]/10 transition-all">
+                          <PresentationChart size={15} weight="fill" />
                         </button>
                         <button onClick={() => setEditing(devis)} className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 transition-all">
                           <PencilSimple size={15} />

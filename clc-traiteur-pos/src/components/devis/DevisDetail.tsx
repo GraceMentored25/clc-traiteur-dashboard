@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { m } from "framer-motion";
-import { X, Phone, Calendar, Users, FileText, Check, FilePdf, Trash, Plus } from "@phosphor-icons/react";
+import { X, Phone, Calendar, Users, FileText, Check, FilePdf, Trash, Plus, PresentationChart } from "@phosphor-icons/react";
 import { generateDevisPDF } from "@/lib/generateDevisPDF";
 import { Devis, DevisItem, DevisStatus } from "@/lib/types";
 import { formatCurrency, formatDate, STATUS_COLORS } from "@/lib/utils";
@@ -28,6 +28,35 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
   const [items, setItems] = useState<DevisItem[]>(devis.items.map(i => ({ ...i })));
   const [saved, setSaved] = useState(false);
   const [addSelections, setAddSelections] = useState<Record<string, number>>({});
+  const [pptxLoading, setPptxLoading] = useState(false);
+
+  const downloadPptx = async () => {
+    setPptxLoading(true);
+    try {
+      const payload = { ...devis, items, totalHT, totalTTC };
+      const res = await fetch("/api/devis/generate-pptx", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(`Erreur génération PPTX : ${err.error ?? res.statusText}`);
+        return;
+      }
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href     = url;
+      a.download = `${devis.id}.pptx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert(`Erreur : ${e}`);
+    } finally {
+      setPptxLoading(false);
+    }
+  };
 
   const totalHT = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
   const totalTTC = totalHT * 1.2;
@@ -255,11 +284,24 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
           <div className="flex items-center gap-2">
             <button
               onClick={() => generateDevisPDF({ ...devis, items, totalHT, totalTTC })}
-              title="Générer PDF"
+              title="Télécharger PDF"
               className="flex items-center gap-1.5 h-8 px-3 rounded-xl bg-[var(--amber)]/10 text-[var(--amber)] text-xs font-semibold hover:bg-[var(--amber)]/20 transition-colors"
             >
               <FilePdf size={14} weight="fill" />
               PDF
+            </button>
+            <button
+              onClick={downloadPptx}
+              disabled={pptxLoading}
+              title="Télécharger PPTX"
+              className="flex items-center gap-1.5 h-8 px-3 rounded-xl bg-[var(--info)]/10 text-[var(--info)] text-xs font-semibold hover:bg-[var(--info)]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {pptxLoading ? (
+                <span className="w-3.5 h-3.5 rounded-full border-2 border-[var(--info)]/30 border-t-[var(--info)] animate-spin" />
+              ) : (
+                <PresentationChart size={14} weight="fill" />
+              )}
+              PPTX
             </button>
             <button onClick={onClose} className="w-8 h-8 rounded-xl bg-[var(--surface-2)] hover:bg-[var(--surface-3)] flex items-center justify-center text-[var(--text-secondary)] transition-colors">
               <X size={16} />
