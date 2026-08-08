@@ -20,12 +20,22 @@ function esc(s: string): string {
 }
 
 // ── Helpers XML ───────────────────────────────────────────────────────────
+// Normalise le nom de shape : remplace l'espace insécable (\xa0) par espace normal
+function normName(n: string): string { return n.replace(/ /g, " "); }
+
+function hasName(sp: string, shapeName: string): boolean {
+  // Cherche name="..." en acceptant espace normal OU insécable (\xa0)
+  const n1 = `name="${shapeName}"`;
+  const n2 = `name="${shapeName.replace(/ /g, "\xa0")}"`;
+  return sp.includes(n1) || sp.includes(n2);
+}
+
 function setShapeText(xml: string, shapeName: string, value: string): string {
   const parts = xml.split("<p:sp>");
   for (let i=1;i<parts.length;i++) {
     const end = parts[i].indexOf("</p:sp>");
     if (end<0) continue;
-    if (!parts[i].slice(0,end).includes(`name="${shapeName}"`)) continue;
+    if (!hasName(parts[i].slice(0,end), shapeName)) continue;
     let replaced = false;
     parts[i] = parts[i].replace(/<a:t>[^<]*<\/a:t>/, () => {
       if (replaced) return "<a:t></a:t>";
@@ -41,7 +51,7 @@ function removeShape(xml: string, shapeName: string): string {
   const kept = [parts[0]];
   for (let i=1;i<parts.length;i++) {
     const end = parts[i].indexOf("</p:sp>");
-    if (end>=0 && parts[i].slice(0,end).includes(`name="${shapeName}"`)) continue;
+    if (end>=0 && hasName(parts[i].slice(0,end), shapeName)) continue;
     kept.push(parts[i]);
   }
   return kept.join("<p:sp>");
@@ -64,7 +74,7 @@ function resizeShapeCy(xml: string, shapeName: string, newCy: number): string {
   for (let i=1;i<parts.length;i++) {
     const end = parts[i].indexOf("</p:sp>");
     if (end<0) continue;
-    if (!parts[i].slice(0,end).includes(`name="${shapeName}"`)) continue;
+    if (!hasName(parts[i].slice(0,end), shapeName)) continue;
     parts[i] = parts[i].replace(/(<a:ext cx="\d+" cy=")(\d+)(")/,`$1${newCy}$3`);
     break;
   }
