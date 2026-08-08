@@ -58,6 +58,19 @@ function removePic(xml: string, picName: string): string {
   return kept.join("<p:pic>");
 }
 
+// Redimensionner le cy d'une shape (fond de section)
+function resizeShapeCy(xml: string, shapeName: string, newCy: number): string {
+  const parts = xml.split("<p:sp>");
+  for (let i=1;i<parts.length;i++) {
+    const end = parts[i].indexOf("</p:sp>");
+    if (end<0) continue;
+    if (!parts[i].slice(0,end).includes(`name="${shapeName}"`)) continue;
+    parts[i] = parts[i].replace(/(<a:ext cx="\d+" cy=")(\d+)(")/,`$1${newCy}$3`);
+    break;
+  }
+  return parts.join("<p:sp>");
+}
+
 // ── Groupement sections ───────────────────────────────────────────────────
 interface Section { label: string; items: DevisItem[]; subtotal: number; }
 function groupSections(items: DevisItem[]): Section[] {
@@ -145,34 +158,42 @@ function buildPicXml(id:number, name:string, rIdPng:string, rIdSvg:string, x:num
 // et si plus de lignes que prévu, créer de nouvelles lignes
 
 // Positions de référence des 3 slots (Y de la 1ère ligne plat, espacement inter-ligne)
+// cy de la hauteur de bannière titre (fixe) + une ligne = 314325 EMU
+const BANNER_CY   = 742950;  // fond bannière titre (coins arrondis 14/34/54)
+const LINE_H      = 314325;  // hauteur d'une ligne plat
+const SECTION_TOP_PADDING = 857250; // espace entre début fond et 1ère ligne (bannière + gap)
+
 const SLOT_CONFIG = [
-  { // Slot 1: section 1
+  { // Slot 1
     titleShape:"Rectangle 16", descShape:"Rectangle 17", subShape:"Rectangle 20",
-    bannerPic:"Image 89",
+    bannerPic:"Image 89", fondShape:"Rectangle : coins arrondis 13",
+    fondBannerShape:"Rectangle : coins arrondis 14", fondY:2238375,
     lines: [
-      { platShape:"Rectangle 22", convShape:"Rectangle 23", picName:"Graphique 95", yBase:3095625 },
-      { platShape:"Rectangle 25", convShape:"Rectangle 26", picName:"Graphique 98", yBase:3409950 },
+      { platShape:"Rectangle 22", convShape:"Rectangle 23", picName:"Graphique 95",  yBase:3095625 },
+      { platShape:"Rectangle 25", convShape:"Rectangle 26", picName:"Graphique 98",  yBase:3409950 },
       { platShape:"Rectangle 28", convShape:"Rectangle 29", picName:"Graphique 101", yBase:3724275 },
       { platShape:"Rectangle 31", convShape:"Rectangle 32", picName:"Graphique 104", yBase:4038600 },
     ],
   },
-  { // Slot 2: section 2
+  { // Slot 2
     titleShape:"Rectangle 36", descShape:"Rectangle 37", subShape:"Rectangle 40",
-    bannerPic:"Image 109",
+    bannerPic:"Image 109", fondShape:"Rectangle : coins arrondis 33",
+    fondBannerShape:"Rectangle : coins arrondis 34", fondY:4629150,
     lines: [
-      { platShape:"Rectangle 42", convShape:"Rectangle 43", picName:"Graphique 115", yBase:5533950 },
-      { platShape:"Rectangle 45", convShape:"Rectangle 46", picName:"Graphique 118", yBase:5848350 },
-      { platShape:"Rectangle 48", convShape:"Rectangle 49", picName:"Graphique 121", yBase:6162675 },
-      { platShape:"Rectangle 51", convShape:"Rectangle 52", picName:"Graphique 124", yBase:6477000 },
+      { platShape:"Rectangle 42", convShape:"Rectangle 43", picName:"Graphique 115", yBase:5486400 },
+      { platShape:"Rectangle 45", convShape:"Rectangle 46", picName:"Graphique 118", yBase:5800725 },
+      { platShape:"Rectangle 48", convShape:"Rectangle 49", picName:"Graphique 121", yBase:6115050 },
+      { platShape:"Rectangle 51", convShape:"Rectangle 52", picName:"Graphique 124", yBase:6429375 },
     ],
   },
-  { // Slot 3: section 3
+  { // Slot 3
     titleShape:"Rectangle 56", descShape:"Rectangle 57", subShape:"Rectangle 60",
-    bannerPic:"Image 129",
+    bannerPic:"Image 129", fondShape:"Rectangle : coins arrondis 53",
+    fondBannerShape:"Rectangle : coins arrondis 54", fondY:7019925,
     lines: [
-      { platShape:"Rectangle 62", convShape:"Rectangle 63", picName:"Graphique 135", yBase:7924800 },
-      { platShape:"Rectangle 65", convShape:"Rectangle 66", picName:"Graphique 138", yBase:8239125 },
-      { platShape:"Rectangle 68", convShape:"Rectangle 69", picName:"Graphique 141", yBase:8553450 },
+      { platShape:"Rectangle 62", convShape:"Rectangle 63", picName:"Graphique 135", yBase:7877175 },
+      { platShape:"Rectangle 65", convShape:"Rectangle 66", picName:"Graphique 138", yBase:8191500 },
+      { platShape:"Rectangle 68", convShape:"Rectangle 69", picName:"Graphique 141", yBase:8505825 },
     ],
   },
 ];
@@ -198,10 +219,13 @@ async function fillEventSlide(zip: JSZip, slideName: string, devis: Devis & {lie
   for (let si=0; si<SLOT_CONFIG.length; si++) {
     const slot = SLOT_CONFIG[si];
     if (si >= chunk.length) {
-      // Vider le slot
+      // Vider tout le slot (fond + textes + pictos)
       xml = setShapeText(xml,slot.titleShape,"");
       xml = setShapeText(xml,slot.descShape,"");
       xml = setShapeText(xml,slot.subShape,"");
+      xml = removeShape(xml,slot.fondShape);
+      xml = removeShape(xml,slot.fondBannerShape);
+      xml = removePic(xml,slot.bannerPic);
       for (const line of slot.lines) {
         xml = setShapeText(xml,line.platShape,"");
         xml = setShapeText(xml,line.convShape,"");
@@ -209,67 +233,60 @@ async function fillEventSlide(zip: JSZip, slideName: string, devis: Devis & {lie
       }
       continue;
     }
+
     const sec = chunk[si];
     xml = setShapeText(xml,slot.titleShape,`${chunkOffset+si+1}. ${sec.label}`);
     xml = setShapeText(xml,slot.descShape,"");
     xml = setShapeText(xml,slot.subShape,fmtMoney(sec.subtotal));
 
-    // Remplir les lignes fixes
+    // Calculer le nombre de lignes réelles et redimensionner le fond
+    const nLines = sec.items.length;
+    const newCy  = BANNER_CY + SECTION_TOP_PADDING + nLines * LINE_H + 50000;
+    xml = resizeShapeCy(xml, slot.fondShape, newCy);
+
+    // Remplir les lignes du template
     for (let pi=0; pi<slot.lines.length; pi++) {
       const line = slot.lines[pi];
-      if (pi < sec.items.length) {
+      if (pi < nLines) {
         const item = sec.items[pi];
         const cat  = inferCategory(item.dishName);
         const media= CAT_TO_MEDIA[cat] ?? CAT_TO_MEDIA["Repas"];
-
-        // Mettre à jour le picto (changer rId si nécessaire)
         const rIdPng = getRidForMedia(rels, media.png) ?? "";
         const rIdSvg = getRidForMedia(rels, media.svg) ?? "";
-
         if (rIdPng) {
-          // Remplacer le r:embed du picto existant
           const picEscape = line.picName.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
           xml = xml.replace(
-            new RegExp(`(<p:pic>[^]*?name="${picEscape}"[^]*?<a:blip r:embed=")([^"]+)("[^]*?asvg:svgBlip[^>]+r:embed=")([^"]+)(")`),
-            (_,pre,_rid1,mid,_rid2,post) => `${pre}${rIdPng}${mid}${rIdSvg}${post}`
+            new RegExp(`(<p:pic>[\\s\\S]*?name="${picEscape}"[\\s\\S]*?<a:blip r:embed=")([^"]+)("[\\s\\S]*?asvg:svgBlip[^>]+r:embed=")([^"]+)(")`),
+            (_,pre,_r1,mid,_r2,post) => `${pre}${rIdPng}${mid}${rIdSvg}${post}`
           );
         }
-
         xml = setShapeText(xml,line.platShape,item.dishName);
         xml = setShapeText(xml,line.convShape,`${item.quantity} convives`);
       } else {
-        // Supprimer picto + textes de la ligne excédentaire
+        // Ligne vide : supprimer picto + shapes
         xml = removePic(xml,line.picName);
         xml = removeShape(xml,line.platShape);
         xml = removeShape(xml,line.convShape);
       }
     }
 
-    // Si plus de 4 plats dans la section → ajouter des lignes supplémentaires
-    if (sec.items.length > slot.lines.length) {
+    // Lignes supplémentaires si > nb lignes template
+    if (nLines > slot.lines.length) {
       const lastLine = slot.lines[slot.lines.length-1];
       let insertY = lastLine.yBase + ROW_HEIGHT;
       let extraId = 200 + si * 50;
-
-      for (let pi=slot.lines.length; pi<sec.items.length; pi++) {
+      for (let pi=slot.lines.length; pi<nLines; pi++) {
         const item = sec.items[pi];
         const cat  = inferCategory(item.dishName);
         const media= CAT_TO_MEDIA[cat] ?? CAT_TO_MEDIA["Repas"];
         const rIdPng = getRidForMedia(rels, media.png) ?? "";
         const rIdSvg = getRidForMedia(rels, media.svg) ?? "";
-
-        // Insérer picto
-        if (rIdPng) {
-          const picXml = buildPicXml(extraId++, `Graphique Extra${pi}`, rIdPng, rIdSvg,
-            PICTO_X, insertY - PICTO_OFFSET_Y);
-          xml = xml.replace("</p:spTree>", `${picXml}</p:spTree>`);
-        }
-        // Insérer shape texte plat (copier style de Rectangle 22)
-        const platXml = buildTextShape(extraId++,`Plat Extra${pi}`, esc(item.dishName),
-          885825, insertY, 4267050, 266700, false);
-        const convXml = buildTextShape(extraId++,`Conv Extra${pi}`, `${item.quantity} convives`,
-          5267325, insertY, 1524000, 266700, true);
-        xml = xml.replace("</p:spTree>", `${platXml}${convXml}</p:spTree>`);
+        if (rIdPng)
+          xml = xml.replace("</p:spTree>", buildPicXml(extraId++,`Graphique Extra${si}_${pi}`,rIdPng,rIdSvg,PICTO_X,insertY-PICTO_OFFSET_Y)+"</p:spTree>");
+        xml = xml.replace("</p:spTree>",
+          buildTextShape(extraId++,`Plat Extra${si}_${pi}`,esc(item.dishName),885825,insertY,4267050,LINE_H,false)+
+          buildTextShape(extraId++,`Conv Extra${si}_${pi}`,`${item.quantity} convives`,5267325,insertY,1524000,LINE_H,true)+
+          "</p:spTree>");
         insertY += ROW_HEIGHT;
       }
     }
@@ -326,6 +343,13 @@ function fillRecap(xml: string, d: Devis & {lieu?:string}, secs: Section[]): str
     } else { for (const n of [rn,rl,rd,rp]) xml=setShapeText(xml,n,""); }
   }
   xml = setShapeText(xml,"Rectangle 33",fmtMoney(totalEv));
+  // Prestations additionnelles dans le recap
+  xml = setShapeText(xml,"Rectangle 34","PRESTATIONS ADDITIONNELLES RETENUES");
+  xml = setShapeText(xml,"Rectangle 36","Aucune prestation additionnelle");
+  xml = setShapeText(xml,"Rectangle 37","—");
+  xml = setShapeText(xml,"Rectangle 38","0 €");
+  xml = setShapeText(xml,"Rectangle 50","0 €");
+  xml = setShapeText(xml,"Rectangle 51","0 €");
   xml = setShapeText(xml,"Rectangle 55",fmtMoney(d.totalTTC));
   return xml;
 }
@@ -421,6 +445,10 @@ function fillPrestations(xml: string, serviceItems: DevisItem[]): string {
   }
 
   xml = setShapeText(xml, "Rectangle 56", fmtMoney(subtotal));
+  // Si aucune prestation sélectionnée, l'indiquer dans le sous-titre
+  if (subtotal === 0) {
+    xml = setShapeText(xml, "Rectangle 5", "Aucune prestation additionnelle sélectionnée pour cet événement.");
+  }
   return xml;
 }
 
@@ -471,12 +499,11 @@ export async function POST(req: NextRequest) {
       .filter(n=>/^ppt\/slides\/slide\d+\.xml$/.test(n))
       .sort((a,b)=>parseInt(a.match(/\d+/)![0])-parseInt(b.match(/\d+/)![0]));
 
-    // Slides à garder : cover(0), event(evIdx), recap(rcIdx), acompte(acIdx),
-    // prestations(6) si services, mentions(17), signature(18)
+    // Slides à garder : cover(0), event(evIdx), prestations(6) TOUJOURS,
+    // recap(rcIdx), acompte(acIdx), mentions(17), signature(18)
     // Légende(19) = SUPPRIMÉE du fichier final
     const hasServices = serviceItems.length>0;
-    const KEEP = new Set([0,evIdx,rcIdx,acIdx,17,18]);
-    if (hasServices) KEEP.add(6);
+    const KEEP = new Set([0,evIdx,6,rcIdx,acIdx,17,18]); // slide prestations toujours incluse
 
     const toDelete = allSlides.filter((_,i)=>!KEEP.has(i));
     for (const name of toDelete) {
@@ -535,11 +562,9 @@ export async function POST(req: NextRequest) {
     const acXml = await zip.file(allSlides[acIdx])?.async("string")??"";
     zip.file(allSlides[acIdx],fillAcompte(acXml,devis,secs));
 
-    // Prestations
-    if (hasServices) {
-      const prXml = await zip.file(allSlides[6])?.async("string")??"";
-      zip.file(allSlides[6],fillPrestations(prXml,serviceItems));
-    }
+    // Prestations (toujours présente — vide si aucun service)
+    const prXml = await zip.file(allSlides[6])?.async("string")??"";
+    zip.file(allSlides[6],fillPrestations(prXml,serviceItems));
 
     // Renumérotation
     const finalSlides = Object.keys(zip.files)
