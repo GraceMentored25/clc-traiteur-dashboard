@@ -372,19 +372,33 @@ function fillAcompte(xml: string, d: Devis, secs: Section[]): string {
 // Mapping slots template → services
 const PRESTA_SLOTS = [
   { titleShape:"Rectangle 10", descShape:"Rectangle 11", priceShape:"Rectangle 12",
-    checkedPic:"Graphique 67", keywords:["serveur","personnel","service & personnel"] },
+    checkedPic:"Graphique 67", bgPic:"Image 64",
+    extraShapes:["Rectangle : coins arrondis 7","Rectangle : coins arrondis 8"],
+    keywords:["serveur","personnel","service & personnel"] },
   { titleShape:"Rectangle 17", descShape:"Rectangle 18", priceShape:"Rectangle 19",
-    checkedPic:"Graphique 74", keywords:["matériel","couvert","table","chaise"] },
+    checkedPic:"Graphique 74", bgPic:"Image 71",
+    extraShapes:["Rectangle : coins arrondis 14","Rectangle : coins arrondis 15"],
+    keywords:["matériel","couvert","table","chaise","marmite"] },
   { titleShape:"Rectangle 23", descShape:"Rectangle 24", priceShape:"Rectangle 25",
-    checkedPic:"", keywords:["livraison","transport"] },
+    checkedPic:"", bgPic:"Image 78",
+    extraShapes:["Rectangle : coins arrondis 21","Rectangle : coins arrondis 22"],
+    keywords:["livraison","transport"] },
   { titleShape:"Rectangle 30", descShape:"Rectangle 31", priceShape:"Rectangle 32",
-    checkedPic:"Graphique 87", keywords:["décoration","déco","floral"] },
+    checkedPic:"Graphique 87", bgPic:"Image 84",
+    extraShapes:["Rectangle : coins arrondis 27","Rectangle : coins arrondis 28"],
+    keywords:["décoration","déco","floral"] },
   { titleShape:"Rectangle 36", descShape:"Rectangle 37", priceShape:"Rectangle 38",
-    checkedPic:"", keywords:["tente","chapiteau"] },
+    checkedPic:"", bgPic:"Image 91",
+    extraShapes:["Rectangle : coins arrondis 34","Rectangle : coins arrondis 35"],
+    keywords:["tente","chapiteau"] },
   { titleShape:"Rectangle 42", descShape:"Rectangle 43", priceShape:"Rectangle 44",
-    checkedPic:"Graphique 110", keywords:["animation","sono","musique","dj"] },
+    checkedPic:"Graphique 110", bgPic:"Image 97",
+    extraShapes:["Rectangle : coins arrondis 40","Rectangle : coins arrondis 41"],
+    keywords:["animation","sono","musique","dj"] },
   { titleShape:"Rectangle 48", descShape:"Rectangle 49", priceShape:"Rectangle 50",
-    checkedPic:"", keywords:["gâteau","photographe","photo"] },
+    checkedPic:"", bgPic:"Image 103",
+    extraShapes:["Rectangle : coins arrondis 46","Rectangle : coins arrondis 47"],
+    keywords:["gâteau","photographe","photo"] },
 ];
 
 // rId de l'image cochée et décochée dans slide7
@@ -429,18 +443,13 @@ function fillPrestations(xml: string, serviceItems: DevisItem[]): string {
         );
       }
     } else {
-      // Service non sélectionné : décocher (s'assurer que le checkmark est décoché)
-      if (slot.checkedPic) {
-        const picEscape = slot.checkedPic.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
-        xml = xml.replace(
-          new RegExp(`(<p:pic>[^]*?name="${picEscape}"[^]*?<a:blip r:embed=")${RID_CHECKED}("[^]*?asvg:svgBlip[^>]+r:embed=")${RID_SVG_CHECKED}(")`),
-          `$1${RID_UNCHECKED}$2${RID_SVG_UNCHECKED}$3`
-        );
-      }
-      // Vider les textes
-      xml = setShapeText(xml, slot.titleShape, "");
-      xml = setShapeText(xml, slot.descShape, "");
-      xml = setShapeText(xml, slot.priceShape, "");
+      // Service non sélectionné : supprimer tout le bloc
+      if (slot.checkedPic) xml = removePic(xml, slot.checkedPic);
+      xml = removePic(xml, slot.bgPic);
+      for (const s of slot.extraShapes) xml = removeShape(xml, s);
+      xml = removeShape(xml, slot.titleShape);
+      xml = removeShape(xml, slot.descShape);
+      xml = removeShape(xml, slot.priceShape);
     }
   }
 
