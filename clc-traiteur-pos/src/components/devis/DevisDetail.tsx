@@ -2,8 +2,7 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { m } from "framer-motion";
-import { X, Phone, Calendar, Users, FileText, Check, FilePdf, Trash, Plus, PresentationChart } from "@phosphor-icons/react";
-import { generateDevisPDF } from "@/lib/generateDevisPDF";
+import { X, Phone, Calendar, Users, FileText, Check, FilePdf, Trash, Plus, FileDoc } from "@phosphor-icons/react";
 import { Devis, DevisItem, DevisStatus } from "@/lib/types";
 import { formatCurrency, formatDate, STATUS_COLORS } from "@/lib/utils";
 import { useStore } from "@/lib/store";
@@ -28,33 +27,62 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
   const [items, setItems] = useState<DevisItem[]>(devis.items.map(i => ({ ...i })));
   const [saved, setSaved] = useState(false);
   const [addSelections, setAddSelections] = useState<Record<string, number>>({});
-  const [pptxLoading, setPptxLoading] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [docxLoading, setDocxLoading] = useState(false);
 
-  const downloadPptx = async () => {
-    setPptxLoading(true);
+  const downloadPdf = async () => {
+    setPdfLoading(true);
     try {
       const payload = { ...devis, items, totalHT, totalTTC };
-      const res = await fetch("/api/devis/generate-pptx", {
+      const res = await fetch("/api/devis/generate-pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        alert(`Erreur génération PPTX : ${err.error ?? res.statusText}`);
+        alert(`Erreur génération PDF : ${err.error ?? res.statusText}`);
+        return;
+      }
+      const html = await res.text();
+      const win  = window.open("", "_blank");
+      if (win) {
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
+      }
+    } catch (e) {
+      alert(`Erreur : ${e}`);
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
+  const downloadDocx = async () => {
+    setDocxLoading(true);
+    try {
+      const payload = { ...devis, items, totalHT, totalTTC };
+      const res = await fetch("/api/devis/generate-docx", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(`Erreur génération Word : ${err.error ?? res.statusText}`);
         return;
       }
       const blob = await res.blob();
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement("a");
       a.href     = url;
-      a.download = `${devis.id}.pptx`;
+      a.download = `${devis.id} - ${devis.clientName}.docx`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
       alert(`Erreur : ${e}`);
     } finally {
-      setPptxLoading(false);
+      setDocxLoading(false);
     }
   };
 
@@ -283,25 +311,30 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => generateDevisPDF({ ...devis, items, totalHT, totalTTC })}
+              onClick={downloadPdf}
+              disabled={pdfLoading}
               title="Télécharger PDF"
-              className="flex items-center gap-1.5 h-8 px-3 rounded-xl bg-[var(--amber)]/10 text-[var(--amber)] text-xs font-semibold hover:bg-[var(--amber)]/20 transition-colors"
+              className="flex items-center gap-1.5 h-8 px-3 rounded-xl bg-[var(--amber)]/10 text-[var(--amber)] text-xs font-semibold hover:bg-[var(--amber)]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <FilePdf size={14} weight="fill" />
+              {pdfLoading ? (
+                <span className="w-3.5 h-3.5 rounded-full border-2 border-[var(--amber)]/30 border-t-[var(--amber)] animate-spin" />
+              ) : (
+                <FilePdf size={14} weight="fill" />
+              )}
               PDF
             </button>
             <button
-              onClick={downloadPptx}
-              disabled={pptxLoading}
-              title="Télécharger PPTX"
+              onClick={downloadDocx}
+              disabled={docxLoading}
+              title="Télécharger Word"
               className="flex items-center gap-1.5 h-8 px-3 rounded-xl bg-[var(--info)]/10 text-[var(--info)] text-xs font-semibold hover:bg-[var(--info)]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {pptxLoading ? (
+              {docxLoading ? (
                 <span className="w-3.5 h-3.5 rounded-full border-2 border-[var(--info)]/30 border-t-[var(--info)] animate-spin" />
               ) : (
-                <PresentationChart size={14} weight="fill" />
+                <FileDoc size={14} weight="fill" />
               )}
-              PPTX
+              Word
             </button>
             <button onClick={onClose} className="w-8 h-8 rounded-xl bg-[var(--surface-2)] hover:bg-[var(--surface-3)] flex items-center justify-center text-[var(--text-secondary)] transition-colors">
               <X size={16} />
