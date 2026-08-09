@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_COMMIT_HASH: commitHash,
   },
+  serverExternalPackages: ["docx", "jszip"],
   turbopack: {
     root: __dirname,
   },
