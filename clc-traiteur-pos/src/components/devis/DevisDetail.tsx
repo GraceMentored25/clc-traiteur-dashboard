@@ -31,6 +31,10 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
   const [docxLoading, setDocxLoading] = useState(false);
 
   const downloadPdf = async () => {
+    // window.open doit être appelé AVANT tout await pour ne pas être bloqué
+    const win = window.open("", "_blank");
+    if (!win) { alert("Veuillez autoriser les popups pour générer le PDF."); return; }
+    win.document.write("<html><body style='font-family:sans-serif;padding:40px;color:#555'>Génération du PDF en cours…</body></html>");
     setPdfLoading(true);
     try {
       const payload = { ...devis, items, totalHT, totalTTC };
@@ -41,17 +45,16 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
+        win.close();
         alert(`Erreur génération PDF : ${err.error ?? res.statusText}`);
         return;
       }
       const html = await res.text();
-      const win  = window.open("", "_blank");
-      if (win) {
-        win.document.open();
-        win.document.write(html);
-        win.document.close();
-      }
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
     } catch (e) {
+      win.close();
       alert(`Erreur : ${e}`);
     } finally {
       setPdfLoading(false);
