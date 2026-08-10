@@ -16,341 +16,454 @@ function fmtDate(iso: string): string {
 function fmtMoney(n: number): string {
   return n.toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + " €";
 }
-function escHtml(s: string): string {
+function esc(s: string): string {
   return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
-
-// ── Icône SVG générique (plat) identique au template ────────────────────────
-const FOOD_ICON_SVG = `<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path fill="currentColor" d="M3 10v2h2v7c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2v-7h2v-2zm4 2h10v7H7z"/></svg>`;
 
 // ── Groupement sections ──────────────────────────────────────────────────────
 interface Section { label: string; items: DevisItem[]; subtotal: number; }
 function groupSections(items: DevisItem[]): Section[] {
   const map = new Map<string, DevisItem[]>();
-  for (const item of items) {
-    const key = item.section ?? "Prestation";
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(item);
+  for (const it of items) {
+    const k = it.section ?? "Prestation";
+    if (!map.has(k)) map.set(k, []);
+    map.get(k)!.push(it);
   }
-  return Array.from(map.entries()).map(([label, its]) => ({
+  return [...map.entries()].map(([label, its]) => ({
     label, items: its, subtotal: its.reduce((s,i) => s + i.quantity * i.unitPrice, 0),
   }));
 }
 
-function isService(dishName: string): boolean {
-  const services = ["serveur","marmite","service de table","tente","chapiteau","chaise","déco","décoration","transport","livraison","sono","animation","photographe"];
-  const n = dishName.toLowerCase();
-  return services.some(s => n.includes(s));
+function isService(name: string): boolean {
+  const n = name.toLowerCase();
+  return ["serveur","marmite","service de table","tente","chapiteau","chaise",
+          "déco","décoration","transport","livraison","sono","animation","photographe"]
+    .some(k => n.includes(k));
 }
 
-// ── Extraction d'une section <section data-page="N"> du template ─────────────
-function extractPageSection(html: string, pageNum: number): string {
-  const startTag = `<section class="page-host" data-page="${pageNum}"`;
-  const nextTag  = `<section class="page-host" data-page="${pageNum + 1}"`;
-  const start = html.indexOf(startTag);
+// ── Mapping événement → pages template ──────────────────────────────────────
+// event pages 2-6 (one per event type), prestations=7, recap/acompte pairs 8-17
+const EVENT_PAGES: Record<string, { ev: number; recap: number; acompte: number }> = {
+  "mariage":    { ev:2,  recap:8,  acompte:9  },
+  "anniversaire":{ ev:3, recap:10, acompte:11 },
+  "bapteme":    { ev:4,  recap:12, acompte:13 },
+  "baby shower":{ ev:4,  recap:12, acompte:13 },
+  "baptême":    { ev:4,  recap:12, acompte:13 },
+  "séminaire":  { ev:5,  recap:14, acompte:15 },
+  "seminaire":  { ev:5,  recap:14, acompte:15 },
+  "entreprise": { ev:5,  recap:14, acompte:15 },
+  "réception":  { ev:6,  recap:16, acompte:17 },
+  "reception":  { ev:6,  recap:16, acompte:17 },
+};
+function getEventPages(eventType: string) {
+  const e = eventType.toLowerCase().trim();
+  for (const [k,v] of Object.entries(EVENT_PAGES))
+    if (e.includes(k) || k.includes(e)) return v;
+  return { ev:2, recap:8, acompte:9 };
+}
+
+// ── Extraction d'une page du template ───────────────────────────────────────
+function getPage(html: string, n: number): string {
+  const start = html.indexOf(`<section class="page-host" data-page="${n}"`);
   if (start < 0) return "";
-  const end = html.indexOf(nextTag);
+  const end = html.indexOf(`<section class="page-host" data-page="${n+1}"`);
   return end > start ? html.slice(start, end) : html.slice(start);
 }
 
-// ── Remplacement d'une valeur editable par sa classe ────────────────────────
-// Remplace le contenu (entre les balises) d'un élément portant la classe CSS donnée
-function replaceClass(html: string, cls: string, newValue: string, nth = 0): string {
-  // Matches <div class="...CLS..."...>ANYTHING</div>  (non-greedy, single element)
-  const re = new RegExp(`(<(?:div|span)[^>]*class="[^"]*\\b${cls.replace(/[-]/g,"\\-")}\\b[^"]*"[^>]*>)([^<]*)(<\\/(?:div|span)>)`, "g");
+// ── Remplacement ciblé d'un contenteditable par classe ──────────────────────
+// Remplace la Nème occurrence d'un élément avec cette classe CSS
+function setField(html: string, cls: string, value: string, nth = 0): string {
+  // Matches any tag that has the class (including compound classes like "editable recap-event")
+  const re = new RegExp(
+    `(<(?:div|span)[^>]*class="[^"]*(?:^|\\s)${cls.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}(?:\\s|")[^>]*>)[^<]*(</(?:div|span)>)`,
+    "g"
+  );
   let count = 0;
-  return html.replace(re, (_full, open, _old, close) => {
-    if (count++ === nth) return `${open}${newValue}${close}`;
-    return _full;
+  return html.replace(re, (_, open, close) => {
+    if (count++ === nth) return `${open}${value}${close}`;
+    return _;
   });
 }
 
-// ── Remplacement de TOUS les contenteditable d'une classe ───────────────────
-function replaceAllOfClass(html: string, cls: string, newValue: string): string {
-  const re = new RegExp(`(<(?:div|span)[^>]*class="[^"]*\\b${cls.replace(/[-]/g,"\\-")}\\b[^"]*"[^>]*>)([^<]*)(<\\/(?:div|span)>)`, "g");
-  return html.replace(re, (_full, open, _old, close) => `${open}${newValue}${close}`);
+// Remplace toutes les occurrences
+function setAllFields(html: string, cls: string, value: string): string {
+  const re = new RegExp(
+    `(<(?:div|span)[^>]*class="[^"]*(?:^|\\s)${cls.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}(?:\\s|")[^>]*>)[^<]*(</(?:div|span)>)`,
+    "g"
+  );
+  return html.replace(re, (_, open, close) => `${open}${value}${close}`);
 }
 
-// ── Construction d'un food-row identique au template ────────────────────────
-function buildFoodRow(name: string, qty: number): string {
-  return `<div class="food-row"><span class="icon menu-ico">${FOOD_ICON_SVG}</span><div class="editable food-name" contenteditable="true" spellcheck="false">${escHtml(name)}</div><div class="editable food-qty" contenteditable="true" spellcheck="false">${qty} convives</div></div>`;
+// ── Icône SVG générique du template ─────────────────────────────────────────
+const FOOD_ICON = `<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path fill="currentColor" d="M3 10v2h2v7c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2v-7h2v-2zm4 2h10v7H7z"/></svg>`;
+
+// ── Construction d'un food-row avec la structure exacte du template ──────────
+function foodRow(name: string, qty: number): string {
+  return `<div class="food-row"><span class="icon menu-ico">${FOOD_ICON}</span>`
+    + `<div class="editable food-name" contenteditable="true" spellcheck="false">${esc(name)}</div>`
+    + `<div class="editable food-qty" contenteditable="true" spellcheck="false">${qty} convives</div></div>`;
 }
 
-// ── Construction d'une menu-card complète ────────────────────────────────────
-// Hauteur : card-head=78px + food-list.top=88px + items*33px + 10px padding
-function buildMenuCard(
-  index: number,
-  section: Section,
-  topPx: number,
-  templateCardHtml: string, // une vraie card du template (pour garder la photo)
-): string {
-  const itemCount = section.items.length;
-  const heightPx  = 78 + 10 + itemCount * 33 + 14; // card-head + gap + rows + padding
-  const rows = section.items.map(i => buildFoodRow(i.dishName, i.quantity)).join("");
+// ── Reconstruction de la page event ─────────────────────────────────────────
+// Stratégie : garder la page template telle quelle (images, css, header),
+// remplacer event-title, meta-text, puis supprimer/réécrire les menu-cards
+function buildEventPage(templatePage: string, devis: Devis & {lieu?:string}, sections: Section[], totalTTC: number, outPageNum: number): string {
+  let h = templatePage;
 
-  // Prendre l'image de la vraie card-head du template (on remplace titre/sous-titre/prix)
-  // Extraire le bloc card-head du template pour réutiliser la photo
-  const chStart = templateCardHtml.indexOf('<div class="card-head">');
-  const chEnd   = templateCardHtml.indexOf('<div class="food-list">');
-  let cardHead  = chStart >= 0 && chEnd > chStart
-    ? templateCardHtml.slice(chStart, chEnd)
-    : `<div class="card-head"><div class="card-head-gradient"></div><div class="editable card-title" contenteditable="true" spellcheck="false">${index}. ${escHtml(section.label)}</div><div class="editable card-sub" contenteditable="true" spellcheck="false"></div><div class="price-box"><div class="editable price-label" contenteditable="true" spellcheck="false">Sous-total</div><div class="editable price-value" contenteditable="true" spellcheck="false">${fmtMoney(section.subtotal)}</div></div></div>`;
+  // Numéro de page affiché
+  h = h.replace(/(<span[^>]*class="[^"]*\bpn\b[^"]*"[^>]*>)\d*(<\/span>)/, `$1${outPageNum}$2`);
 
-  // Remplacer le titre, sous-titre et prix dans le card-head
-  cardHead = replaceClass(cardHead, "card-title",  `${index}. ${escHtml(section.label)}`);
-  cardHead = replaceClass(cardHead, "card-sub",    "");
-  cardHead = replaceClass(cardHead, "price-value", fmtMoney(section.subtotal));
+  // Titre événement
+  h = setField(h, "event-title", esc(devis.eventType.toUpperCase()));
 
-  return `<div class="menu-card" style="top:${topPx}px;height:${heightPx}px">${cardHead}<div class="food-list">${rows}</div></div>`;
-}
+  // Meta-bar (3 valeurs dans l'ordre: convives, date, lieu)
+  const metaVals = [`${devis.guestCount} convives`, fmtDate(devis.eventDate), esc(devis.lieu ?? "Rouen, France")];
+  let mi = 0;
+  h = h.replace(
+    /(<(?:div|span)[^>]*class="[^"]*\bmeta-text\b[^"]*"[^>]*>)[^<]*(<\/(?:div|span)>)/g,
+    (_, open, close) => `${open}${metaVals[mi++] ?? ""}${close}`
+  );
 
-// ── Reconstruction de la page de détail événement ────────────────────────────
-function rebuildEventPage(
-  templatePageHtml: string,
-  pageNum: number,
-  devis: Devis & { lieu?: string },
-  sections: Section[],
-  totalTTC: number,
-): string {
-  let html = templatePageHtml;
+  // Supprimer les menu-cards et event-total existants, les réécrire
+  // On localise la fin de la meta-bar et la fin de l'article
+  const metaEnd = (() => {
+    const metaStart = h.indexOf('class="meta"');
+    if (metaStart < 0) return -1;
+    // Trouver la fermeture du div.meta
+    let depth = 0, i = metaStart;
+    while (i < h.length) {
+      if (h[i] === '<') {
+        if (h.slice(i,i+2) === '</') { if (--depth < 0) return i + h.slice(i).indexOf('>') + 1; }
+        else { depth++; i = h.indexOf('>', i) + 1; continue; }
+      }
+      i++;
+    }
+    return -1;
+  })();
 
-  // 1. Mettre à jour le numéro de page
-  html = html.replace(/(<span[^>]*class="[^"]*\bpn\b[^"]*"[^>]*>)\d*(<\/span>)/, `$1${pageNum}$2`);
-  html = html.replace(/data-page="\d+"/, `data-page="${pageNum}"`);
+  const articleEnd = h.lastIndexOf('</article>');
+  if (metaEnd > 0 && articleEnd > metaEnd) {
+    const before = h.slice(0, metaEnd);
+    const after  = h.slice(articleEnd);
 
-  // 2. Meta-bar (convives, date, lieu)
-  const metaTexts = [`${devis.guestCount} convives`, fmtDate(devis.eventDate), devis.lieu ?? "Rouen, France"];
-  let metaCount = 0;
-  html = html.replace(/(<div[^>]*class="[^"]*\bmeta-text\b[^"]*"[^>]*>)[^<]*(<\/div>)/g, (_full, open, close) => {
-    const val = metaTexts[metaCount++] ?? "";
-    return `${open}${val}${close}`;
-  });
-
-  // 3. Supprimer toutes les menu-cards existantes et l'event-total existant
-  // On supprime tout entre la meta-bar et la fin de l'article
-  const metaEndIdx = html.indexOf('</div></div>', html.indexOf('class="meta"'));
-  const articleEndIdx = html.lastIndexOf('</article>');
-  if (metaEndIdx > 0 && articleEndIdx > metaEndIdx) {
-    const beforeCards = html.slice(0, metaEndIdx + 12); // garde la meta-bar
-    const afterArticle = html.slice(articleEndIdx);
-
-    // Extraire les card-heads du template (pour les photos) avant de les supprimer
-    const templateCards: string[] = [];
-    let cardSearchPos = metaEndIdx;
+    // Extraire les card-heads du template (pour réutiliser photos)
+    const origCards: string[] = [];
+    let pos = metaEnd;
     while (true) {
-      const cardStart = html.indexOf('<div class="menu-card"', cardSearchPos);
-      if (cardStart < 0 || cardStart >= articleEndIdx) break;
-      const cardEnd = html.indexOf('<div class="menu-card"', cardStart + 50);
-      const end = (cardEnd > 0 && cardEnd < articleEndIdx) ? cardEnd : articleEndIdx;
-      templateCards.push(html.slice(cardStart, end));
-      cardSearchPos = cardStart + 50;
+      const cs = h.indexOf('<div class="menu-card"', pos);
+      if (cs < 0 || cs >= articleEnd) break;
+      const ce = h.indexOf('<div class="menu-card"', cs + 100);
+      origCards.push(h.slice(cs, ce > cs && ce < articleEnd ? ce : articleEnd));
+      pos = cs + 100;
     }
 
-    // Reconstruire les cartes
-    let currentTop = 235; // position de la première card dans le template
-    const CARD_GAP = 14;
+    // Reconstruire les cards
+    // Hauteur: card-head=78px + food-list starts at 88px + rows*33px + 10px bottom
+    const CARD_TOP_FIRST = 235;
+    const CARD_GAP = 15;
+    let currentTop = CARD_TOP_FIRST;
+
     const cardsHtml = sections.map((sec, i) => {
-      const templateCard = templateCards[i] ?? templateCards[0] ?? "";
-      const card = buildMenuCard(i + 1, sec, currentTop, templateCard);
-      const heightPx = 78 + 10 + sec.items.length * 33 + 14;
-      currentTop += heightPx + CARD_GAP;
+      const nRows   = sec.items.length;
+      const height  = 78 + 10 + nRows * 33 + 12;
+
+      // Card-head : réutiliser l'image de la card template si disponible
+      const tmplCard = origCards[i] ?? origCards[0] ?? "";
+      const chStart  = tmplCard.indexOf('<div class="card-head">');
+      const chEnd    = tmplCard.indexOf('<div class="food-list">');
+      let cardHead: string;
+      if (chStart >= 0 && chEnd > chStart) {
+        cardHead = tmplCard.slice(chStart, chEnd);
+        // Remplacer titre, sous-titre, prix
+        cardHead = cardHead.replace(
+          /(<div[^>]*class="[^"]*\bcard-title\b[^"]*"[^>]*>)[^<]*(<\/div>)/,
+          `$1${i+1}. ${esc(sec.label)}$2`
+        );
+        cardHead = cardHead.replace(
+          /(<div[^>]*class="[^"]*\bcard-sub\b[^"]*"[^>]*>)[^<]*(<\/div>)/, `$1$2`
+        );
+        cardHead = cardHead.replace(
+          /(<div[^>]*class="[^"]*\bprice-value\b[^"]*"[^>]*>)[^<]*(<\/div>)/,
+          `$1${fmtMoney(sec.subtotal)}$2`
+        );
+      } else {
+        cardHead = `<div class="card-head"><div class="card-head-gradient"></div>`
+          + `<div class="editable card-title">${i+1}. ${esc(sec.label)}</div>`
+          + `<div class="price-box"><div class="editable price-label">Sous-total</div>`
+          + `<div class="editable price-value">${fmtMoney(sec.subtotal)}</div></div></div>`;
+      }
+
+      const rows = sec.items.map(it => foodRow(it.dishName, it.quantity)).join("");
+      const card = `<div class="menu-card" style="top:${currentTop}px;height:${height}px">`
+        + cardHead
+        + `<div class="food-list">${rows}</div></div>`;
+
+      currentTop += height + CARD_GAP;
       return card;
     }).join("");
 
-    // Reconstruire le event-total
     const totalTop = currentTop + 8;
-    const eventTotal = `<div class="event-total" style="top:${totalTop}px"><div class="editable event-total-label" contenteditable="true" spellcheck="false">TOTAL TTC</div><div class="editable event-total-value" contenteditable="true" spellcheck="false">${fmtMoney(totalTTC)}</div></div>`;
+    const evTotal  = `<div class="event-total" style="top:${totalTop}px">`
+      + `<div class="editable event-total-label">TOTAL TTC</div>`
+      + `<div class="editable event-total-value">${fmtMoney(totalTTC)}</div></div>`;
 
-    html = beforeCards + cardsHtml + eventTotal + afterArticle;
+    h = before + cardsHtml + evTotal + after;
   }
 
-  return html;
+  return h;
 }
 
-// ── Reconstruction page récapitulatif ─────────────────────────────────────────
-function rebuildRecapPage(
-  templatePageHtml: string,
-  pageNum: number,
-  devis: Devis & { lieu?: string },
-  sections: Section[],
-  serviceItems: DevisItem[],
-): string {
-  let html = templatePageHtml;
+// ── Reconstruction page prestations (page 7) ─────────────────────────────────
+// Le template a 7 service-row avec service-name / service-detail / service-price
+// + note-text + additional-total-value
+function buildPrestationsPage(templatePage: string, serviceItems: DevisItem[], outPageNum: number): string {
+  let h = templatePage;
+  h = h.replace(/(<span[^>]*class="[^"]*\bpn\b[^"]*"[^>]*>)\d*(<\/span>)/, `$1${outPageNum}$2`);
 
-  // Numéro de page
-  html = html.replace(/(<span[^>]*class="[^"]*\bpn\b[^"]*"[^>]*>)\d*(<\/span>)/, `$1${pageNum}$2`);
-  html = html.replace(/data-page="\d+"/, `data-page="${pageNum}"`);
-
-  // Event type dans le bandeau
-  html = replaceClass(html, "recap-event", escHtml(devis.eventType.toUpperCase()));
-
-  // Meta (convives + date)
-  html = replaceClass(html, "recap-meta-text", `${devis.guestCount} convives`);
-  html = replaceClass(html, "recap-meta-date", fmtDate(devis.eventDate));
-
-  // Sections traiteur (lignes fixes du template)
-  const rowSelectors = [
-    ["recap-num-1","recap-label-1","recap-desc-1","recap-price-1"],
-    ["recap-num-2","recap-label-2","recap-desc-2","recap-price-2"],
-    ["recap-num-3","recap-label-3","recap-desc-3","recap-price-3"],
+  const SLOTS = [
+    { keys: ["serveur","personnel"],          label: "Service & personnel",  desc: "Serveurs, maîtres d'hôtel" },
+    { keys: ["matériel","couvert","table","chaise","marmite"], label: "Location de matériel", desc: "Couverts, tables, chaises, marmites" },
+    { keys: ["livraison","transport"],         label: "Livraison",             desc: "Transport & livraison des plats" },
+    { keys: ["décoration","déco","floral"],    label: "Décoration de table",   desc: "Fleurs, bougies, centres de table" },
+    { keys: ["tente","chapiteau"],             label: "Location de tente",     desc: "Tentes & chapiteaux" },
+    { keys: ["animation","sono","musique","dj"], label: "Animation musicale", desc: "DJ, sonorisation, animation" },
+    { keys: ["gâteau","photographe","photo"],  label: "Gâteau & photo",        desc: "Pièce montée, reportage photo" },
   ];
-  // Le template a des classes génériques — on utilise position
-  // Chercher les recap-section divs et les remplacer
-  const totalTraiteur = sections.reduce((s,x) => s + x.subtotal, 0);
-
-  // Sous-total traiteur
-  html = replaceClass(html, "recap-subtotal", fmtMoney(totalTraiteur * 1.2));
-
-  // Prestations additionnelles
-  const totalServices = serviceItems.reduce((s,i) => s + i.quantity * i.unitPrice, 0);
-  const hasServices = serviceItems.length > 0;
-
-  if (!hasServices) {
-    // Aucune prestation : remplacer le premier extra-name par le message
-    html = replaceClass(html, "extra-name", "Aucune prestation n'a été sélectionnée.");
-    html = replaceClass(html, "extra-detail", "");
-    html = replaceClass(html, "extra-price", "");
-  }
-
-  // Sous-total prestations additionnelles
-  html = replaceClass(html, "extras-subtotal", hasServices ? fmtMoney(totalServices * 1.2) : "0 €");
-
-  // Total TTC global
-  html = replaceClass(html, "grand-value", fmtMoney(devis.totalTTC));
-  html = replaceClass(html, "grand-sub", hasServices ? "Événement + prestations additionnelles" : "Prestation traiteur uniquement");
-
-  void rowSelectors; // unused but kept for reference
-  return html;
-}
-
-// ── Reconstruction page acompte ───────────────────────────────────────────────
-function rebuildAcomptePage(
-  templatePageHtml: string,
-  pageNum: number,
-  devis: Devis,
-): string {
-  let html = templatePageHtml;
-  html = html.replace(/(<span[^>]*class="[^"]*\bpn\b[^"]*"[^>]*>)\d*(<\/span>)/, `$1${pageNum}$2`);
-  html = html.replace(/data-page="\d+"/, `data-page="${pageNum}"`);
-
-  const ttc = devis.totalTTC;
-  const a30 = Math.round(ttc * 0.30);
-  const a40 = Math.round(ttc * 0.40);
-
-  html = replaceClass(html, "grand-value", fmtMoney(ttc));
-  // Montants acompte dans les schedule-amount (positions 0,1,2)
-  const amounts = [fmtMoney(a30), fmtMoney(a40), fmtMoney(a30)];
-  let ai = 0;
-  html = html.replace(/(<div[^>]*class="[^"]*\bschedule-amount\b[^"]*"[^>]*>)[^<]*(<\/div>)/g,
-    (_full, open, close) => `${open}${amounts[ai++] ?? ""}${close}`);
-
-  html = replaceClass(html, "payment-total-value", fmtMoney(ttc));
-
-  return html;
-}
-
-// ── Reconstruction cover ──────────────────────────────────────────────────────
-function rebuildCover(templatePageHtml: string, devis: Devis & { lieu?: string }, now: string): string {
-  let html = templatePageHtml;
-  // Remplacer les cover-value dans l'ordre : Client, Date, Événement, Lieu, Contact, N° Devis
-  const coverValues = [
-    devis.clientName,
-    fmtDate(devis.eventDate),
-    devis.eventType,
-    devis.lieu ?? "Rouen, France",
-    devis.clientPhone ?? "",
-    devis.id,
-  ];
-  let cvIdx = 0;
-  html = html.replace(/(<div[^>]*class="[^"]*\bcover-value\b[^"]*"[^>]*>)[^<]*(<\/div>)/g,
-    (_full, open, close) => `${open}${escHtml(coverValues[cvIdx++] ?? "")}${close}`);
-  // Numéro de page
-  html = html.replace(/(<span[^>]*class="[^"]*\bpn\b[^"]*"[^>]*>)\d*(<\/span>)/, "$11$2");
-  void now;
-  return html;
-}
-
-// ── Reconstruction dernière page (signature) ──────────────────────────────────
-function rebuildSignaturePage(templatePageHtml: string, devis: Devis, pageNum: number, now: string): string {
-  let html = templatePageHtml;
-  html = html.replace(/(<span[^>]*class="[^"]*\bpn\b[^"]*"[^>]*>)\d*(<\/span>)/, `$1${pageNum}$2`);
-  html = html.replace(/data-page="\d+"/, `data-page="${pageNum}"`);
-
-  // Remplir client name et date "Fait à"
-  html = replaceClass(html, "sig-client", escHtml(devis.clientName));
-  html = replaceClass(html, "fait-a-date", `Fait à Rouen, le ${now}`);
-
-  // Remplacer aussi le contenu de la div "editable " (classe vide = lieu)
-  // La dernière page a "Rouen, France" dans un div.editable vide
-  html = html.replace(
-    /(<div[^>]*class="editable\s*"[^>]*contenteditable="true"[^>]*>)([^<]*)(<\/div>)/,
-    `$1Rouen, France$3`,
-  );
-
-  return html;
-}
-
-// ── Mapping événement → pages event du template (1-indexed) ──────────────────
-// Pages 2-7 : chaque page correspond à un type d'événement
-// Page 8+ : récap/acompte par paires selon l'événement
-const EVENT_CONFIG: Record<string, { eventPages: number[]; recapPage: number; acomptePage: number }> = {
-  "mariage":           { eventPages: [2, 3], recapPage: 9,  acomptePage: 10 },
-  "anniversaire":      { eventPages: [3, 4], recapPage: 11, acomptePage: 12 },
-  "bapteme":           { eventPages: [4, 5], recapPage: 13, acomptePage: 14 },
-  "baby shower":       { eventPages: [4, 5], recapPage: 13, acomptePage: 14 },
-  "baptême":           { eventPages: [4, 5], recapPage: 13, acomptePage: 14 },
-  "séminaire":         { eventPages: [5, 6], recapPage: 15, acomptePage: 16 },
-  "seminaire":         { eventPages: [5, 6], recapPage: 15, acomptePage: 16 },
-  "entreprise":        { eventPages: [5, 6], recapPage: 15, acomptePage: 16 },
-  "réception":         { eventPages: [6, 7], recapPage: 17, acomptePage: 18 },
-  "reception":         { eventPages: [6, 7], recapPage: 17, acomptePage: 18 },
-};
-
-function matchEventConfig(eventType: string) {
-  const e = eventType.toLowerCase().trim();
-  for (const [k, v] of Object.entries(EVENT_CONFIG)) {
-    if (e.includes(k) || k.includes(e)) return v;
-  }
-  return { eventPages: [2, 3], recapPage: 9, acomptePage: 10 };
-}
-
-// ── Reconstruction page prestations additionnelles (page 8) ──────────────────
-function rebuildPrestationsPage(
-  templatePageHtml: string,
-  pageNum: number,
-  serviceItems: DevisItem[],
-): string {
-  let html = templatePageHtml;
-  html = html.replace(/(<span[^>]*class="[^"]*\bpn\b[^"]*"[^>]*>)\d*(<\/span>)/, `$1${pageNum}$2`);
-  html = html.replace(/data-page="\d+"/, `data-page="${pageNum}"`);
 
   const hasServices = serviceItems.length > 0;
-
-  // Service slots dans le template
-  const serviceSlots = [
-    { keywords: ["serveur","personnel"], label: "Service & personnel", desc: "Serveurs, maîtres d'hôtel" },
-    { keywords: ["matériel","couvert","table","chaise","marmite"], label: "Location de matériel", desc: "Couverts, tables, chaises" },
-    { keywords: ["livraison","transport"], label: "Livraison", desc: "Transport & livraison des plats" },
-    { keywords: ["décoration","déco","floral"], label: "Décoration de table", desc: "Fleurs, bougies, centres de table" },
-    { keywords: ["tente","chapiteau"], label: "Location de tente", desc: "Tentes & chapiteaux" },
-    { keywords: ["animation","sono","musique","dj"], label: "Animation musicale", desc: "DJ, sonorisation, animation" },
-    { keywords: ["gâteau","photographe","photo"], label: "Gâteau & photo", desc: "Pièce montée, reportage photo" },
-  ];
-
-  // Sous-total prestations
   const subtotal = serviceItems.reduce((s,i) => s + i.quantity * i.unitPrice, 0);
-  html = replaceClass(html, "additional-total-value", hasServices ? fmtMoney(subtotal) : "0 €");
 
-  // Note selon sélection
-  html = replaceClass(html, "note-text",
+  // Remplacer la note
+  h = setField(h, "additional-sub",
+    hasServices
+      ? "Prestations retenues pour cet événement"
+      : "Aucune prestation additionnelle n'a été sélectionnée."
+  );
+  h = setField(h, "note-text",
     hasServices
       ? "Les prestations cochées sont incluses au présent devis et seront réalisées. Toute modification devra être validée avant exécution."
       : "Aucune prestation additionnelle n'a été sélectionnée pour cet événement."
   );
+  h = setField(h, "additional-total-value", hasServices ? fmtMoney(subtotal) : "0 €");
 
-  void serviceSlots;
-  return html;
+  // Pour chaque slot : remplacer name / detail / price par les vraies données ou vider
+  let nameIdx = 0, detailIdx = 0, priceIdx = 0;
+  const slotData = SLOTS.map(slot => {
+    const matched = serviceItems.find(i => slot.keys.some(k => i.dishName.toLowerCase().includes(k)));
+    return matched
+      ? { name: esc(matched.dishName), detail: `${matched.quantity} unité${matched.quantity>1?"s":""}`, price: fmtMoney(matched.quantity * matched.unitPrice), checked: true }
+      : { name: esc(slot.label), detail: esc(slot.desc), price: "", checked: false };
+  });
+
+  h = h.replace(
+    /(<(?:div|span)[^>]*class="[^"]*\bservice-name\b[^"]*"[^>]*>)[^<]*(<\/(?:div|span)>)/g,
+    (_, open, close) => `${open}${slotData[nameIdx++]?.name ?? ""}${close}`
+  );
+  h = h.replace(
+    /(<(?:div|span)[^>]*class="[^"]*\bservice-detail\b[^"]*"[^>]*>)[^<]*(<\/(?:div|span)>)/g,
+    (_, open, close) => `${open}${slotData[detailIdx++]?.detail ?? ""}${close}`
+  );
+  h = h.replace(
+    /(<(?:div|span)[^>]*class="[^"]*\bservice-price\b[^"]*"[^>]*>)[^<]*(<\/(?:div|span)>)/g,
+    (_, open, close) => `${open}${slotData[priceIdx++]?.price ?? ""}${close}`
+  );
+
+  return h;
 }
+
+// ── Reconstruction page récap (pages 8,10,12,14,16) ─────────────────────────
+// Champs: recap-event, recap-meta-text, recap-meta-date, recap-meta-place,
+//   recap-name(×3), recap-sub(×3), recap-price(×3),
+//   recap-event-total-value,
+//   extra-name(×3), extra-detail(×3), extra-price(×3),
+//   recap-extra-total-value, grand-value, grand-sub
+function buildRecapPage(templatePage: string, devis: Devis & {lieu?:string}, sections: Section[], serviceItems: DevisItem[], outPageNum: number): string {
+  let h = templatePage;
+  h = h.replace(/(<span[^>]*class="[^"]*\bpn\b[^"]*"[^>]*>)\d*(<\/span>)/, `$1${outPageNum}$2`);
+
+  const totalTraiteur  = sections.reduce((s,x) => s + x.subtotal, 0);
+  const totalServices  = serviceItems.reduce((s,i) => s + i.quantity * i.unitPrice, 0);
+  const hasServices    = serviceItems.length > 0;
+  const totalTTC       = devis.totalTTC;
+
+  // En-tête
+  h = setField(h, "recap-event",      esc(devis.eventType.toUpperCase()));
+  h = setField(h, "recap-meta-text",  `${devis.guestCount} convives`);
+  h = setField(h, "recap-meta-date",  fmtDate(devis.eventDate));
+  h = setField(h, "recap-meta-place", esc(devis.lieu ?? "Rouen, France"));
+
+  // Lignes sections (max 3 dans le template)
+  let nameI = 0, subI = 0, priceI = 0;
+  const recapRows = Array.from({length: 3}, (_, i) => sections[i] ?? null);
+
+  h = h.replace(
+    /(<(?:div|span)[^>]*class="[^"]*\brecap-name\b[^"]*"[^>]*>)[^<]*(<\/(?:div|span)>)/g,
+    (_, open, close) => `${open}${recapRows[nameI++]?.label ? esc(recapRows[nameI-1]!.label) : ""}${close}`
+  );
+  h = h.replace(
+    /(<(?:div|span)[^>]*class="[^"]*\brecap-sub\b[^"]*"[^>]*>)[^<]*(<\/(?:div|span)>)/g,
+    (_, open, close) => `${open}${recapRows[subI++] ? "" : ""}${close}`
+  );
+  h = h.replace(
+    /(<(?:div|span)[^>]*class="[^"]*\brecap-price\b[^"]*"[^>]*>)[^<]*(<\/(?:div|span)>)/g,
+    (_, open, close) => `${open}${recapRows[priceI] ? fmtMoney(recapRows[priceI++]!.subtotal) : (priceI++ && "")}${close}`
+  );
+
+  h = setField(h, "recap-event-total-value", fmtMoney(totalTraiteur));
+
+  // Prestations additionnelles
+  const SERV_CATS = [
+    { keys: ["serveur","personnel"],          label: "Service & personnel" },
+    { keys: ["matériel","couvert","table","chaise","marmite"], label: "Location de matériel" },
+    { keys: ["livraison","transport"],         label: "Livraison" },
+    { keys: ["décoration","déco","floral"],    label: "Décoration" },
+    { keys: ["tente","chapiteau"],             label: "Location de tente" },
+    { keys: ["animation","sono","musique","dj"], label: "Animation musicale" },
+    { keys: ["gâteau","photographe","photo"],  label: "Gâteau & photo" },
+  ];
+
+  if (!hasServices) {
+    // Remplacer la première extra-name par le message, vider les autres
+    let en = 0;
+    h = h.replace(
+      /(<(?:div|span)[^>]*class="[^"]*\bextra-name\b[^"]*"[^>]*>)[^<]*(<\/(?:div|span)>)/g,
+      (_, open, close) => en++ === 0
+        ? `${open}Aucune prestation n'a été sélectionnée.${close}`
+        : `${open}${close}`
+    );
+    h = setAllFields(h, "extra-detail", "");
+    h = setAllFields(h, "extra-price",  "");
+  } else {
+    const matched: {label:string; detail:string; total:number}[] = [];
+    for (const cat of SERV_CATS) {
+      const its = serviceItems.filter(i => cat.keys.some(k => i.dishName.toLowerCase().includes(k)));
+      if (its.length) matched.push({
+        label: cat.label,
+        detail: its.map(i => `${i.quantity} × ${i.dishName}`).join(", "),
+        total: its.reduce((s,i) => s + i.quantity * i.unitPrice, 0),
+      });
+    }
+    // Autres non catégorisés
+    const others = serviceItems.filter(i => !SERV_CATS.some(c => c.keys.some(k => i.dishName.toLowerCase().includes(k))));
+    if (others.length) matched.push({ label: "Autres prestations", detail: others.map(i=>i.dishName).join(", "), total: others.reduce((s,i)=>s+i.quantity*i.unitPrice,0) });
+
+    let ni=0, di=0, pi2=0;
+    h = h.replace(
+      /(<(?:div|span)[^>]*class="[^"]*\bextra-name\b[^"]*"[^>]*>)[^<]*(<\/(?:div|span)>)/g,
+      (_, open, close) => `${open}${matched[ni++]?.label ? esc(matched[ni-1].label) : ""}${close}`
+    );
+    h = h.replace(
+      /(<(?:div|span)[^>]*class="[^"]*\bextra-detail\b[^"]*"[^>]*>)[^<]*(<\/(?:div|span)>)/g,
+      (_, open, close) => `${open}${matched[di++]?.detail ? esc(matched[di-1].detail) : ""}${close}`
+    );
+    h = h.replace(
+      /(<(?:div|span)[^>]*class="[^"]*\bextra-price\b[^"]*"[^>]*>)[^<]*(<\/(?:div|span)>)/g,
+      (_, open, close) => `${open}${matched[pi2] ? fmtMoney(matched[pi2++].total) : (pi2++ && "")}${close}`
+    );
+  }
+
+  h = setField(h, "recap-extra-total-value", hasServices ? fmtMoney(totalServices) : "0 €");
+  h = setField(h, "grand-value", fmtMoney(totalTTC));
+  h = setField(h, "grand-sub",   hasServices ? "Événement + prestations additionnelles" : "Prestation traiteur uniquement");
+
+  return h;
+}
+
+// ── Reconstruction page acompte (pages 9,11,13,15,17) ───────────────────────
+// Champs: payment-event, summary-total, summary-breakdown(×2),
+//   deposit-amount, payment-amount(×3)
+function buildAcomptePage(templatePage: string, devis: Devis, sections: Section[], outPageNum: number): string {
+  let h = templatePage;
+  h = h.replace(/(<span[^>]*class="[^"]*\bpn\b[^"]*"[^>]*>)\d*(<\/span>)/, `$1${outPageNum}$2`);
+
+  const ttc         = devis.totalTTC;
+  const totalEv     = sections.reduce((s,x) => s + x.subtotal, 0);
+  const totalSvc    = ttc - totalEv;
+  const hasSvc      = totalSvc > 0;
+  const a30 = Math.round(ttc * 0.30);
+  const a40 = Math.round(ttc * 0.40);
+
+  h = setField(h, "payment-event",   esc(devis.eventType.toUpperCase()));
+  h = setField(h, "summary-total",   fmtMoney(ttc));
+  h = setField(h, "summary-breakdown", fmtMoney(totalEv) + "  événement", 0);
+  h = setField(h, "summary-breakdown", hasSvc ? `+ ${fmtMoney(totalSvc)}  prestations additionnelles` : "", 1);
+  h = setField(h, "deposit-amount",  fmtMoney(a30));
+
+  // 3 lignes de paiement : 30%, 40%, 30%
+  let pai = 0;
+  h = h.replace(
+    /(<(?:div|span)[^>]*class="[^"]*\bpayment-amount\b[^"]*"[^>]*>)[^<]*(<\/(?:div|span)>)/g,
+    (_, open, close) => {
+      const v = pai === 0 ? fmtMoney(a30) : pai === 1 ? fmtMoney(a40) : fmtMoney(a30);
+      pai++;
+      return `${open}${v}${close}`;
+    }
+  );
+
+  return h;
+}
+
+// ── Reconstruction cover ──────────────────────────────────────────────────────
+function buildCover(templatePage: string, devis: Devis & {lieu?:string}, now: string): string {
+  let h = templatePage;
+  h = h.replace(/(<span[^>]*class="[^"]*\bpn\b[^"]*"[^>]*>)\d*(<\/span>)/, `$11$2`);
+  // cover-value dans l'ordre du template: Client, Date, Événement, Lieu, Contact, N° Devis
+  const vals = [
+    esc(devis.clientName),
+    fmtDate(devis.eventDate),
+    esc(devis.eventType),
+    esc(devis.lieu ?? "Rouen, France"),
+    esc(devis.clientPhone ?? ""),
+    esc(devis.id),
+  ];
+  let vi = 0;
+  h = h.replace(
+    /(<(?:div|span)[^>]*class="[^"]*\bcover-value\b[^"]*"[^>]*>)[^<]*(<\/(?:div|span)>)/g,
+    (_, open, close) => `${open}${vals[vi++] ?? ""}${close}`
+  );
+  void now;
+  return h;
+}
+
+// ── Reconstruction dernière page (signature / mentions) ──────────────────────
+function buildSignaturePage(templatePage: string, devis: Devis, now: string, outPageNum: number): string {
+  let h = templatePage;
+  h = h.replace(/(<span[^>]*class="[^"]*\bpn\b[^"]*"[^>]*>)\d*(<\/span>)/, `$1${outPageNum}$2`);
+  h = setField(h, "sig-client", esc(devis.clientName));
+  h = setField(h, "fait-a-date", `Fait à Rouen, le ${now}`);
+  // Remplacer le div.editable (sans classe supplémentaire) qui contient le lieu en bas de page
+  h = h.replace(
+    /(<div[^>]*class="editable\s*"[^>]*contenteditable="true"[^>]*>)[^<]*(<\/div>)/,
+    `$1Rouen, France$2`
+  );
+  return h;
+}
+
+// ── CSS d'impression ─────────────────────────────────────────────────────────
+const PRINT_CSS = `<style id="print-overrides">
+  .toolbar,.page-number { display:none !important; }
+  @media screen {
+    body { padding:24px; background:#1a1a1a; }
+    .page-host {
+      display:block !important;
+      margin:0 auto 24px;
+      box-shadow:0 4px 32px rgba(0,0,0,.6);
+      border-radius:2px;
+    }
+  }
+  @media print {
+    @page { size:A4; margin:0; }
+    body { padding:0; background:white; }
+    .page-host {
+      display:block !important;
+      width:210mm; height:297mm;
+      margin:0; page-break-after:always;
+      box-shadow:none;
+    }
+    .page-host:last-child { page-break-after:avoid; }
+    .page { transform:none !important; width:210mm; height:297mm; }
+  }
+</style>`;
 
 // ── API Route ─────────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
@@ -360,102 +473,74 @@ export async function POST(req: NextRequest) {
     const serviceItems = devis.items.filter(i => isService(i.dishName));
     const dishItems    = devis.items.filter(i => !isService(i.dishName));
     const sections     = groupSections(dishItems);
-    const cfg          = matchEventConfig(devis.eventType);
+    const cfg          = getEventPages(devis.eventType);
 
-    const now = new Date().toLocaleDateString("fr-FR", {
-      day: "numeric", month: "long", year: "numeric",
-    });
+    const now = new Date().toLocaleDateString("fr-FR", { day:"numeric", month:"long", year:"numeric" });
 
-    const templateHtml = fs.readFileSync(TEMPLATE_PATH, "utf-8");
+    const raw = fs.readFileSync(TEMPLATE_PATH);
+    // Latin1 pour préserver les bytes des images base64 (elles contiennent des bytes > 127)
+    const html = raw.toString("latin1");
 
-    // ── Extraire head + styles ───────────────────────────────────────────────
-    const bodyIdx   = templateHtml.indexOf("<body");
-    const headBlock = templateHtml.slice(0, bodyIdx);
+    // ── Head (CSS, fonts, etc.) ──────────────────────────────────────────────
+    const bodyIdx = html.indexOf("<body");
+    let head = html.slice(0, bodyIdx);
+    // Injecter le CSS d'impression juste avant </head>
+    head = head.replace("</head>", PRINT_CSS + "</head>");
 
-    // ── Assembler les pages ──────────────────────────────────────────────────
-    const pageBlocks: string[] = [];
+    // ── Pages ────────────────────────────────────────────────────────────────
+    const pages: string[] = [];
+    let pageNum = 1;
 
-    // Page 1 : Cover
-    const cover = extractPageSection(templateHtml, 1);
-    pageBlocks.push(rebuildCover(cover, devis, now));
+    // Cover
+    pages.push(buildCover(getPage(html, 1), devis, now));
+    pageNum++;
 
-    // Pages event : on prend la première page event du type d'événement
-    // On en génère autant que nécessaire (chunks de 3 sections max)
-    const eventTemplatePage = extractPageSection(templateHtml, cfg.eventPages[0]);
-    const sectionChunks: Section[][] = [];
-    for (let i = 0; i < Math.max(1, sections.length); i += 3) {
-      sectionChunks.push(sections.slice(i, i + 3));
+    // Pages event (on clone la page du type d'événement pour chaque chunk de sections)
+    const evTemplate = getPage(html, cfg.ev);
+    const chunks: Section[][] = [];
+    for (let i = 0; i < Math.max(1, sections.length); i += 3)
+      chunks.push(sections.slice(i, i + 3));
+
+    for (const chunk of chunks) {
+      const chunkTTC = chunks.indexOf(chunk) === 0
+        ? devis.totalTTC
+        : chunk.reduce((s,x) => s + x.subtotal * 1.2, 0);
+      pages.push(buildEventPage(evTemplate, devis, chunk, chunkTTC, pageNum++));
     }
-    sectionChunks.forEach((chunk, ci) => {
-      const totalChunk = ci === 0 ? devis.totalTTC
-        : chunk.reduce((s, sec) => s + sec.subtotal * 1.2, 0);
-      pageBlocks.push(rebuildEventPage(eventTemplatePage, pageBlocks.length + 1, devis, chunk, totalChunk));
-    });
 
-    // Page prestations additionnelles (toujours présente)
-    const prestationsTemplatePage = extractPageSection(templateHtml, 8);
-    pageBlocks.push(rebuildPrestationsPage(prestationsTemplatePage, pageBlocks.length + 1, serviceItems));
+    // Prestations additionnelles (toujours présente)
+    pages.push(buildPrestationsPage(getPage(html, 7), serviceItems, pageNum++));
 
-    // Page récap
-    const recapTemplatePage = extractPageSection(templateHtml, cfg.recapPage);
-    pageBlocks.push(rebuildRecapPage(recapTemplatePage, pageBlocks.length + 1, devis, sections, serviceItems));
+    // Récapitulatif
+    pages.push(buildRecapPage(getPage(html, cfg.recap), devis, sections, serviceItems, pageNum++));
 
-    // Page acompte
-    const acompteTemplatePage = extractPageSection(templateHtml, cfg.acomptePage);
-    pageBlocks.push(rebuildAcomptePage(acompteTemplatePage, pageBlocks.length + 1, devis));
+    // Acompte / Échéancier
+    pages.push(buildAcomptePage(getPage(html, cfg.acompte), devis, sections, pageNum++));
 
-    // Page 20 : Signature/mentions légales
-    const sigTemplatePage = extractPageSection(templateHtml, 20);
-    pageBlocks.push(rebuildSignaturePage(sigTemplatePage, devis, pageBlocks.length + 1, now));
+    // Page 20 : signature/mentions
+    pages.push(buildSignaturePage(getPage(html, 20), devis, now, pageNum++));
 
-    // ── Override CSS pour l'impression ──────────────────────────────────────
-    const printOverrides = `
-<style>
-  .toolbar { display:none !important; }
-  @media screen {
-    body { padding: 20px; background: #111; }
-    .page-host { display:block !important; margin: 0 auto 20px; box-shadow: 0 8px 40px rgba(0,0,0,.5); }
-  }
-  @media print {
-    @page { size: A4; margin: 0; }
-    body { padding: 0; background: white; }
-    .page-host { display: block !important; width: 210mm; height: 297mm; margin: 0;
-                 page-break-after: always; box-shadow: none; }
-    .page-host:last-child { page-break-after: avoid; }
-    .page { transform: none !important; width: 210mm; height: 297mm; }
-    .page-number { display: none !important; }
-  }
-</style>`;
-
-    // ── HTML final ───────────────────────────────────────────────────────────
-    const totalPages = pageBlocks.length;
-    const finalHtml = `${headBlock}${printOverrides}</head>
-<body>
-<main>
-${pageBlocks.join("\n")}
-</main>
-<script>
-(function() {
-  // Inject page footers
-  var pages = document.querySelectorAll('.page');
-  pages.forEach(function(p, i) {
-    var footer = document.createElement('div');
-    footer.style.cssText = 'position:absolute;bottom:6mm;left:14mm;right:14mm;display:flex;justify-content:space-between;font-size:7.5px;color:#6C6A62;border-top:1px solid #D9CEBF;padding-top:3px;font-family:Raleway,Arial,sans-serif;';
-    footer.innerHTML = '<span>C.LC. Traiteur — contact@clctraiteur.fr — Rouen</span><span>Devis ${escHtml(devis.id)} &middot; Page ' + (i+1) + '/${totalPages}</span>';
-    p.style.position = 'relative';
-    p.appendChild(footer);
+    // ── Footer JS ─────────────────────────────────────────────────────────────
+    const total = pages.length;
+    const footerScript = `<script>
+(function(){
+  document.querySelectorAll('.page').forEach(function(p,i){
+    var f=document.createElement('div');
+    f.style.cssText='position:absolute;bottom:5mm;left:14mm;right:14mm;display:flex;justify-content:space-between;font-size:7px;color:#888;border-top:0.5px solid #ccc;padding-top:2px;font-family:Raleway,Arial,sans-serif;';
+    f.innerHTML='<span>C.LC. Traiteur — contact@clctraiteur.fr — Rouen</span><span>Devis ${esc(devis.id)} &middot; '+(i+1)+'/${total}</span>';
+    p.style.position='relative';
+    p.appendChild(f);
   });
-  // Auto print
-  window.onload = function() { window.print(); };
+  window.onload=function(){window.print();};
 })();
-</script>
-</body>
-</html>`;
+</script>`;
 
-    return new NextResponse(finalHtml, {
+    const final = `${head}<body>\n<main>\n${pages.join("\n")}\n</main>\n${footerScript}\n</body>\n</html>`;
+
+    return new NextResponse(final, {
       status: 200,
       headers: {
-        "Content-Type": "text/html; charset=utf-8",
+        "Content-Type": "text/html; charset=latin1",
         "Content-Disposition": `inline; filename="${devis.id}.html"`,
       },
     });
