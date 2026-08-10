@@ -124,22 +124,10 @@ function buildEventPage(templatePage: string, devis: Devis & {lieu?:string}, sec
     (_, open, close) => `${open}${metaVals[mi++] ?? ""}${close}`
   );
 
-  // Supprimer les menu-cards et event-total existants, les réécrire
-  // On localise la fin de la meta-bar et la fin de l'article
-  const metaEnd = (() => {
-    const metaStart = h.indexOf('class="meta"');
-    if (metaStart < 0) return -1;
-    // Trouver la fermeture du div.meta
-    let depth = 0, i = metaStart;
-    while (i < h.length) {
-      if (h[i] === '<') {
-        if (h.slice(i,i+2) === '</') { if (--depth < 0) return i + h.slice(i).indexOf('>') + 1; }
-        else { depth++; i = h.indexOf('>', i) + 1; continue; }
-      }
-      i++;
-    }
-    return -1;
-  })();
+  // La meta se ferme juste avant le premier <div class="menu-card"
+  // Ce marqueur est fiable : la structure est toujours </div></div></div><div class="menu-card"
+  const firstCard = h.indexOf('<div class="menu-card"');
+  const metaEnd   = firstCard > 0 ? firstCard : -1;
 
   const articleEnd = h.lastIndexOf('</article>');
   if (metaEnd > 0 && articleEnd > metaEnd) {
@@ -246,8 +234,7 @@ function buildPrestationsPage(templatePage: string, serviceItems: DevisItem[], o
   );
   h = setField(h, "additional-total-value", hasServices ? fmtMoney(subtotal) : "0 €");
 
-  // Pour chaque slot : remplacer name / detail / price par les vraies données ou vider
-  let nameIdx = 0, detailIdx = 0, priceIdx = 0;
+  // Pour chaque slot : remplacer name / detail / price + gérer checkbox
   const slotData = SLOTS.map(slot => {
     const matched = serviceItems.find(i => slot.keys.some(k => i.dishName.toLowerCase().includes(k)));
     return matched
@@ -255,6 +242,18 @@ function buildPrestationsPage(templatePage: string, serviceItems: DevisItem[], o
       : { name: esc(slot.label), detail: esc(slot.desc), price: "", checked: false };
   });
 
+  // Checkboxes : retirer checked sur les slots non sélectionnés
+  // Chaque service-check correspond à un slot dans l'ordre du template
+  let checkIdx = 0;
+  h = h.replace(/<input[^>]*class="[^"]*\bservice-check\b[^"]*"[^>]*>/g, (full) => {
+    const slot = slotData[checkIdx++];
+    if (!slot) return full;
+    if (slot.checked) return full; // garder checked
+    // Retirer l'attribut checked
+    return full.replace(/\s+checked\b/g, "");
+  });
+
+  let nameIdx = 0, detailIdx = 0, priceIdx = 0;
   h = h.replace(
     /(<(?:div|span)[^>]*class="[^"]*\bservice-name\b[^"]*"[^>]*>)[^<]*(<\/(?:div|span)>)/g,
     (_, open, close) => `${open}${slotData[nameIdx++]?.name ?? ""}${close}`
@@ -477,9 +476,8 @@ export async function POST(req: NextRequest) {
 
     const now = new Date().toLocaleDateString("fr-FR", { day:"numeric", month:"long", year:"numeric" });
 
-    const raw = fs.readFileSync(TEMPLATE_PATH);
-    // Latin1 pour préserver les bytes des images base64 (elles contiennent des bytes > 127)
-    const html = raw.toString("latin1");
+    // UTF-8 : le template est encodé en UTF-8, les base64 ne contiennent que des chars ASCII
+    const html = fs.readFileSync(TEMPLATE_PATH, "utf-8");
 
     // ── Head (CSS, fonts, etc.) ──────────────────────────────────────────────
     const bodyIdx = html.indexOf("<body");
@@ -540,7 +538,7 @@ export async function POST(req: NextRequest) {
     return new NextResponse(final, {
       status: 200,
       headers: {
-        "Content-Type": "text/html; charset=latin1",
+        "Content-Type": "text/html; charset=utf-8",
         "Content-Disposition": `inline; filename="${devis.id}.html"`,
       },
     });
