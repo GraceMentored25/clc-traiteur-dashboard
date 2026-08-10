@@ -370,7 +370,7 @@ function buildRecapPage(templatePage: string, devis: Devis & {lieu?:string}, sec
       // Aucun service : texte full-width, sans icône, sans colonne prix
       newExtras = `<div class="recap-extras">`
         + `<div class="recap-extra" style="display:block;height:auto;padding:12px 0;">`
-        + `<div class="editable extra-name" style="font-weight:400;font-size:16px;color:var(--muted);">Aucune prestation n'a été sélectionnée.</div>`
+        + `<div class="editable extra-name" style="font-weight:400;font-size:16px;color:var(--muted);font-family:Raleway,Arial,sans-serif;">Aucune prestation n'a été sélectionnée.</div>`
         + `</div></div>`;
     } else {
       const rows = extrasData.map((data, i) => {
@@ -481,7 +481,7 @@ const PRINT_CSS = `<style id="print-overrides">
   }
   @media print {
     @page { size:A4; margin:0; }
-    body { padding:0; background:white; }
+    body { padding:0; background:white; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     .page-host {
       display:block !important;
       width:210mm; height:297mm;
@@ -490,6 +490,8 @@ const PRINT_CSS = `<style id="print-overrides">
     }
     .page-host:last-child { page-break-after:avoid; }
     .page { transform:none !important; width:210mm; height:297mm; }
+    img { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   }
 </style>`;
 
@@ -550,14 +552,27 @@ export async function POST(req: NextRequest) {
     const total = pages.length;
     const footerScript = `<script>
 (function(){
+  // Ajouter les footers sur chaque page
   document.querySelectorAll('.page').forEach(function(p,i){
     var f=document.createElement('div');
-    f.style.cssText='position:absolute;bottom:5mm;left:14mm;right:14mm;display:flex;justify-content:space-between;font-size:7px;color:#C99A43;padding-top:2px;font-family:Raleway,Arial,sans-serif;';
+    f.style.cssText='position:absolute;bottom:5mm;left:14mm;right:14mm;display:flex;justify-content:space-between;font-size:7px;color:#C99A43;padding-top:2px;font-family:Montserrat,Raleway,Arial,sans-serif;letter-spacing:0.04em;';
     f.innerHTML='<span>C.LC. Traiteur — contact@clctraiteur.fr — Rouen</span><span>Devis ${esc(devis.id)} &middot; '+(i+1)+'/${total}</span>';
     p.style.position='relative';
     p.appendChild(f);
   });
-  window.onload=function(){window.print();};
+  // Attendre que toutes les images et polices soient chargées avant d'imprimer
+  function doPrint(){
+    var imgs = document.querySelectorAll('img');
+    var pending = imgs.length;
+    if(pending === 0){ window.print(); return; }
+    function tryPrint(){ if(--pending <= 0) window.print(); }
+    imgs.forEach(function(img){
+      if(img.complete){ tryPrint(); }
+      else { img.addEventListener('load', tryPrint); img.addEventListener('error', tryPrint); }
+    });
+  }
+  if(document.readyState === 'complete'){ doPrint(); }
+  else { window.addEventListener('load', doPrint); }
 })();
 </script>`;
 
