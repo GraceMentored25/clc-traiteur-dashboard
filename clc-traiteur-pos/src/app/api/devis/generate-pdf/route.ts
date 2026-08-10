@@ -543,19 +543,36 @@ function buildSignaturePage(templatePage: string, devis: Devis, now: string, out
 
 // ── CSS d'impression ─────────────────────────────────────────────────────────
 const PRINT_CSS = `<style id="print-overrides">
-  /* Garantir les polices sur tous les éléments dynamiques */
-  .card-title, .event-title, .event-total-label, .event-total-value,
-  .recap-title, .recap-event, .extra-name, .section-kicker, .extras-kicker,
-  .recap-event-total-label, .recap-extra-total-label, .grand-label,
-  .payment-title, .payment-event, .additional-title, .schedule-title,
-  .deposit-kicker, .brand-name { font-family: Montserrat, Arial, sans-serif !important; }
-  .card-sub, .food-name, .food-qty, .meta-text, .cover-label, .cover-value,
-  .recap-meta-text, .recap-meta-date, .extra-detail, .recap-sub, .recap-name,
-  .brand-sub, .service-name, .service-detail, .note-text, .payment-note-strong,
-  .payment-note-small, .price-label, .price-value, .grand-sub,
-  .recap-event-total-value, .recap-extra-total-value, .grand-value,
-  .payment-amount, .deposit-amount, .summary-total, .summary-breakdown
+  /* ── Polices : Montserrat = titres, Raleway = tout le reste ── */
+  .card-title, .event-title, .recap-title, .payment-title, .additional-title,
+  .recap-event, .payment-event, .brand-name, .section-kicker, .extras-kicker,
+  .deposit-kicker, .schedule-title, .recap-extra-total-label,
+  .recap-event-total-label, .grand-label
+  { font-family: Montserrat, Arial, sans-serif !important; }
+
+  /* Tout le reste en Raleway */
+  body, .page, .editable, [contenteditable],
+  .card-sub, .food-name, .food-qty, .meta-text,
+  .cover-label, .cover-value, .brand-sub,
+  .recap-name, .recap-sub, .recap-price,
+  .recap-meta-text, .recap-meta-date, .recap-meta-place,
+  .extra-name, .extra-detail, .extra-price,
+  .service-name, .service-detail, .service-price,
+  .note-text, .payment-note-strong, .payment-note-small,
+  .price-label, .price-value,
+  .event-total-label, .event-total-value,
+  .grand-sub, .grand-value,
+  .recap-event-total-value, .recap-extra-total-value,
+  .payment-amount, .deposit-amount, .summary-total, .summary-breakdown,
+  .additional-total-label, .additional-total-value,
+  .payment-part, .payment-when, .payment-detail,
+  .summary-kicker, .summary-breakdown
   { font-family: Raleway, Arial, sans-serif !important; }
+
+  /* ── Alignement recap-section : centrage vertical avec sous-titre ── */
+  .recap-section { align-items: center !important; }
+  .recap-section > div:nth-child(2) { display: flex; flex-direction: column; justify-content: center; gap: 1px; }
+  .recap-sub { margin-top: 2px !important; }
   .toolbar,.page-number { display:none !important; }
   @media screen {
     body { padding:24px; background:#1a1a1a; }
