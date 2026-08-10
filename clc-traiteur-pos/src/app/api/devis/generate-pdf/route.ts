@@ -34,6 +34,78 @@ function groupSections(items: DevisItem[]): Section[] {
   }));
 }
 
+// ── Sous-titres de section ────────────────────────────────────────────────────
+// Associe un label de section à un sous-titre court et italique
+const SECTION_SUBTITLES: Record<string, string> = {
+  "vin d'honneur":          "Cocktails et bouchées élégantes",
+  "vin dhonneur":           "Cocktails et bouchées élégantes",
+  "cocktail":               "Cocktails conviviaux et rafraîchissements",
+  "apéritif":               "Mise en bouche et boissons de bienvenue",
+  "aperitif":               "Mise en bouche et boissons de bienvenue",
+  "soirée":                 "Dîner et fête tout au long de la nuit",
+  "soiree":                 "Dîner et fête tout au long de la nuit",
+  "dîner":                  "Menu gastronomique",
+  "diner":                  "Menu gastronomique",
+  "déjeuner":               "Repas équilibré et raffiné",
+  "dejeuner":               "Repas équilibré et raffiné",
+  "brunch":                 "Saveurs douces et colorées",
+  "buffet":                 "Plats chauds et accompagnements",
+  "dessert":                "Pièce montée et douceurs",
+  "gâteau":                 "Gâteau et mignardises",
+  "gateau":                 "Gâteau et mignardises",
+  "goûter":                 "Douceurs et boissons pour les petits",
+  "gouter":                 "Douceurs et boissons pour les petits",
+  "pause":                  "Café, thé et douceurs",
+  "café":                   "Café, thé et douceurs",
+  "cafe":                   "Café, thé et douceurs",
+  "after":                  "Fin de soirée et digestifs",
+  "gala":                   "Dîner de prestige",
+  "rencontre des familles":  "Repas convivial et chaleureux",
+  "autres moments":         "Prestations complémentaires",
+};
+function getSectionSubtitle(label: string): string {
+  const l = label.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+  for (const [key, sub] of Object.entries(SECTION_SUBTITLES)) {
+    const k = key.normalize("NFD").replace(/[̀-ͯ]/g,"");
+    if (l.includes(k) || k.includes(l)) return sub;
+  }
+  // Texte générique si aucune correspondance
+  return "Prestations et mets sélectionnés";
+}
+
+// ── Calcul des chunks de sections par page ────────────────────────────────────
+// Capacité de la page : espace entre première card (top=235) et event-total (top=963)
+// Hauteur d'une card : 78px (head) + 12px (padding) + items×33px + gap 14px
+const PAGE_USABLE_PX = 963 - 235;         // 728px
+const CARD_HEAD_PX   = 78;
+const CARD_GAP_PX    = 14;
+const CARD_ROW_PX    = 33;
+const TOTAL_BAND_PX  = 48 + 8;           // event-total height + margin above
+
+function sectionHeight(sec: Section): number {
+  return CARD_HEAD_PX + 12 + sec.items.length * CARD_ROW_PX;
+}
+
+function splitSectionsIntoPages(sections: Section[]): Section[][] {
+  const pages: Section[][] = [];
+  let current: Section[] = [];
+  let usedPx = 0;
+
+  for (const sec of sections) {
+    const h = sectionHeight(sec) + CARD_GAP_PX;
+    const needed = usedPx + h + (current.length > 0 ? 0 : 0) + TOTAL_BAND_PX;
+    if (current.length > 0 && needed > PAGE_USABLE_PX) {
+      pages.push(current);
+      current = [];
+      usedPx = 0;
+    }
+    current.push(sec);
+    usedPx += h;
+  }
+  if (current.length > 0 || pages.length === 0) pages.push(current);
+  return pages;
+}
+
 function isService(name: string): boolean {
   const n = name.toLowerCase();
   return ["serveur","marmite","service de table","tente","chapiteau","chaise",
@@ -168,7 +240,8 @@ function buildEventPage(templatePage: string, devis: Devis & {lieu?:string}, sec
           `$1${sectionNum}. ${esc(sec.label)}$2`
         );
         cardHead = cardHead.replace(
-          /(<div[^>]*class="[^"]*\bcard-sub\b[^"]*"[^>]*>)[^<]*(<\/div>)/, `$1$2`
+          /(<div[^>]*class="[^"]*\bcard-sub\b[^"]*"[^>]*>)[^<]*(<\/div>)/,
+          `$1${esc(getSectionSubtitle(sec.label))}$2`
         );
         cardHead = cardHead.replace(
           /(<div[^>]*class="[^"]*\bprice-value\b[^"]*"[^>]*>)[^<]*(<\/div>)/,
@@ -177,6 +250,7 @@ function buildEventPage(templatePage: string, devis: Devis & {lieu?:string}, sec
       } else {
         cardHead = `<div class="card-head"><div class="card-head-gradient"></div>`
           + `<div class="editable card-title">${sectionNum}. ${esc(sec.label)}</div>`
+          + `<div class="editable card-sub">${esc(getSectionSubtitle(sec.label))}</div>`
           + `<div class="price-box"><div class="editable price-label">Sous-total</div>`
           + `<div class="editable price-value">${fmtMoney(sec.subtotal)}</div></div></div>`;
       }
@@ -469,6 +543,19 @@ function buildSignaturePage(templatePage: string, devis: Devis, now: string, out
 
 // ── CSS d'impression ─────────────────────────────────────────────────────────
 const PRINT_CSS = `<style id="print-overrides">
+  /* Garantir les polices sur tous les éléments dynamiques */
+  .card-title, .event-title, .event-total-label, .event-total-value,
+  .recap-title, .recap-event, .extra-name, .section-kicker, .extras-kicker,
+  .recap-event-total-label, .recap-extra-total-label, .grand-label,
+  .payment-title, .payment-event, .additional-title, .schedule-title,
+  .deposit-kicker, .brand-name { font-family: Montserrat, Arial, sans-serif !important; }
+  .card-sub, .food-name, .food-qty, .meta-text, .cover-label, .cover-value,
+  .recap-meta-text, .recap-meta-date, .extra-detail, .recap-sub, .recap-name,
+  .brand-sub, .service-name, .service-detail, .note-text, .payment-note-strong,
+  .payment-note-small, .price-label, .price-value, .grand-sub,
+  .recap-event-total-value, .recap-extra-total-value, .grand-value,
+  .payment-amount, .deposit-amount, .summary-total, .summary-breakdown
+  { font-family: Raleway, Arial, sans-serif !important; }
   .toolbar,.page-number { display:none !important; }
   @media screen {
     body { padding:24px; background:#1a1a1a; }
@@ -524,16 +611,15 @@ export async function POST(req: NextRequest) {
     pages.push(buildCover(getPage(html, 1), devis, now));
     pageNum++;
 
-    // Pages event (on clone la page du type d'événement pour chaque chunk de sections)
+    // Pages event : regrouper les sections selon la capacité réelle de chaque page
     const evTemplate = getPage(html, cfg.ev);
-    const chunks: Section[][] = [];
-    for (let i = 0; i < Math.max(1, sections.length); i += 3)
-      chunks.push(sections.slice(i, i + 3));
+    const chunks = splitSectionsIntoPages(sections);
 
+    let sectionOffset = 0;
     for (let ci = 0; ci < chunks.length; ci++) {
       const isLastChunk = ci === chunks.length - 1;
-      // Total TTC uniquement sur la dernière page event
-      pages.push(buildEventPage(evTemplate, devis, chunks[ci], devis.totalTTC, pageNum++, ci * 3, isLastChunk));
+      pages.push(buildEventPage(evTemplate, devis, chunks[ci], devis.totalTTC, pageNum++, sectionOffset, isLastChunk));
+      sectionOffset += chunks[ci].length;
     }
 
     // Prestations additionnelles (toujours présente)
