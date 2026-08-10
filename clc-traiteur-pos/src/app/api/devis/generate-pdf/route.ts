@@ -228,9 +228,7 @@ function buildPrestationsPage(templatePage: string, serviceItems: DevisItem[], o
       : "Aucune prestation additionnelle n'a été sélectionnée."
   );
   h = setField(h, "note-text",
-    hasServices
-      ? "Les prestations cochées sont incluses au présent devis et seront réalisées. Toute modification devra être validée avant exécution."
-      : "Aucune prestation additionnelle n'a été sélectionnée pour cet événement."
+    "Seules les prestations cochées sont incluses au présent devis et seront réalisées par le traiteur, celles non cochées restent à la charge du client."
   );
   h = setField(h, "additional-total-value", hasServices ? fmtMoney(subtotal) : "0 €");
 
