@@ -107,7 +107,7 @@ function foodRow(name: string, qty: number): string {
 // ── Reconstruction de la page event ─────────────────────────────────────────
 // Stratégie : garder la page template telle quelle (images, css, header),
 // remplacer event-title, meta-text, puis supprimer/réécrire les menu-cards
-function buildEventPage(templatePage: string, devis: Devis & {lieu?:string}, sections: Section[], totalTTC: number, outPageNum: number): string {
+function buildEventPage(templatePage: string, devis: Devis & {lieu?:string}, sections: Section[], totalTTC: number, outPageNum: number, sectionOffset = 0): string {
   let h = templatePage;
 
   // Numéro de page affiché
@@ -159,13 +159,13 @@ function buildEventPage(templatePage: string, devis: Devis & {lieu?:string}, sec
       const tmplCard = origCards[i] ?? origCards[0] ?? "";
       const chStart  = tmplCard.indexOf('<div class="card-head">');
       const chEnd    = tmplCard.indexOf('<div class="food-list">');
+      const sectionNum = sectionOffset + i + 1;
       let cardHead: string;
       if (chStart >= 0 && chEnd > chStart) {
         cardHead = tmplCard.slice(chStart, chEnd);
-        // Remplacer titre, sous-titre, prix
         cardHead = cardHead.replace(
           /(<div[^>]*class="[^"]*\bcard-title\b[^"]*"[^>]*>)[^<]*(<\/div>)/,
-          `$1${i+1}. ${esc(sec.label)}$2`
+          `$1${sectionNum}. ${esc(sec.label)}$2`
         );
         cardHead = cardHead.replace(
           /(<div[^>]*class="[^"]*\bcard-sub\b[^"]*"[^>]*>)[^<]*(<\/div>)/, `$1$2`
@@ -176,7 +176,7 @@ function buildEventPage(templatePage: string, devis: Devis & {lieu?:string}, sec
         );
       } else {
         cardHead = `<div class="card-head"><div class="card-head-gradient"></div>`
-          + `<div class="editable card-title">${i+1}. ${esc(sec.label)}</div>`
+          + `<div class="editable card-title">${sectionNum}. ${esc(sec.label)}</div>`
           + `<div class="price-box"><div class="editable price-label">Sous-total</div>`
           + `<div class="editable price-value">${fmtMoney(sec.subtotal)}</div></div></div>`;
       }
@@ -310,55 +310,84 @@ function buildRecapPage(templatePage: string, devis: Devis & {lieu?:string}, sec
 
   h = setField(h, "recap-event-total-value", fmtMoney(totalTraiteur));
 
-  // Prestations additionnelles
+  // ── Prestations additionnelles : reconstruire le bloc recap-extras ───────────
+  // On extrait les recap-extra du template pour réutiliser leur structure (icônes SVG)
+  // puis on ne garde que ceux qui ont des données
   const SERV_CATS = [
-    { keys: ["serveur","personnel"],          label: "Service & personnel" },
+    { keys: ["serveur","personnel"],            label: "Service & personnel" },
     { keys: ["matériel","couvert","table","chaise","marmite"], label: "Location de matériel" },
-    { keys: ["livraison","transport"],         label: "Livraison" },
-    { keys: ["décoration","déco","floral"],    label: "Décoration" },
-    { keys: ["tente","chapiteau"],             label: "Location de tente" },
-    { keys: ["animation","sono","musique","dj"], label: "Animation musicale" },
-    { keys: ["gâteau","photographe","photo"],  label: "Gâteau & photo" },
+    { keys: ["livraison","transport"],          label: "Livraison" },
+    { keys: ["décoration","déco","floral"],     label: "Décoration" },
+    { keys: ["tente","chapiteau"],              label: "Location de tente" },
+    { keys: ["animation","sono","musique","dj"],label: "Animation musicale" },
+    { keys: ["gâteau","photographe","photo"],   label: "Gâteau & photo" },
   ];
 
-  if (!hasServices) {
-    // Remplacer la première extra-name par le message, vider les autres
-    let en = 0;
-    h = h.replace(
-      /(<(?:div|span)[^>]*class="[^"]*\bextra-name\b[^"]*"[^>]*>)[^<]*(<\/(?:div|span)>)/g,
-      (_, open, close) => en++ === 0
-        ? `${open}Aucune prestation n'a été sélectionnée.${close}`
-        : `${open}${close}`
-    );
-    h = setAllFields(h, "extra-detail", "");
-    h = setAllFields(h, "extra-price",  "");
-  } else {
-    const matched: {label:string; detail:string; total:number}[] = [];
+  // Calculer les données des extras sélectionnés
+  const extrasData: {label:string; detail:string; total:number}[] = [];
+  if (hasServices) {
     for (const cat of SERV_CATS) {
       const its = serviceItems.filter(i => cat.keys.some(k => i.dishName.toLowerCase().includes(k)));
-      if (its.length) matched.push({
-        label: cat.label,
+      if (its.length) extrasData.push({
+        label:  cat.label,
         detail: its.map(i => `${i.quantity} × ${i.dishName}`).join(", "),
-        total: its.reduce((s,i) => s + i.quantity * i.unitPrice, 0),
+        total:  its.reduce((s,i) => s + i.quantity * i.unitPrice, 0),
       });
     }
-    // Autres non catégorisés
     const others = serviceItems.filter(i => !SERV_CATS.some(c => c.keys.some(k => i.dishName.toLowerCase().includes(k))));
-    if (others.length) matched.push({ label: "Autres prestations", detail: others.map(i=>i.dishName).join(", "), total: others.reduce((s,i)=>s+i.quantity*i.unitPrice,0) });
+    if (others.length) extrasData.push({
+      label:  "Autres prestations",
+      detail: others.map(i => i.dishName).join(", "),
+      total:  others.reduce((s,i) => s + i.quantity * i.unitPrice, 0),
+    });
+  }
 
-    let ni=0, di=0, pi2=0;
-    h = h.replace(
-      /(<(?:div|span)[^>]*class="[^"]*\bextra-name\b[^"]*"[^>]*>)[^<]*(<\/(?:div|span)>)/g,
-      (_, open, close) => `${open}${matched[ni++]?.label ? esc(matched[ni-1].label) : ""}${close}`
-    );
-    h = h.replace(
-      /(<(?:div|span)[^>]*class="[^"]*\bextra-detail\b[^"]*"[^>]*>)[^<]*(<\/(?:div|span)>)/g,
-      (_, open, close) => `${open}${matched[di++]?.detail ? esc(matched[di-1].detail) : ""}${close}`
-    );
-    h = h.replace(
-      /(<(?:div|span)[^>]*class="[^"]*\bextra-price\b[^"]*"[^>]*>)[^<]*(<\/(?:div|span)>)/g,
-      (_, open, close) => `${open}${matched[pi2] ? fmtMoney(matched[pi2++].total) : (pi2++ && "")}${close}`
-    );
+  // Extraire les N blocs recap-extra du template (pour leurs icônes SVG)
+  const tmplExtras: string[] = [];
+  {
+    let pos = 0;
+    while (true) {
+      const s = h.indexOf('<div class="recap-extra">', pos);
+      if (s < 0) break;
+      const e = h.indexOf('<div class="recap-extra">', s + 10);
+      // Fin : prochain recap-extra ou fermeture de recap-extras
+      const closingBlock = h.indexOf('</div>', h.indexOf('recap-extra-total') > 0 ? h.indexOf('recap-extra-total') - 50 : s + 200);
+      const end = (e > 0 && e < closingBlock) ? e : closingBlock + 6;
+      tmplExtras.push(h.slice(s, end));
+      pos = s + 10;
+    }
+  }
+
+  // Reconstruire le bloc recap-extras : remplacer tout le <div class="recap-extras">…</div>
+  const extrasBlockStart = h.indexOf('<div class="recap-extras">');
+  const totalLabelPos    = h.indexOf('recap-extra-total-label');
+  const extrasBlockEnd   = h.lastIndexOf('</div>', totalLabelPos) + 6;
+
+  if (extrasBlockStart > 0 && extrasBlockEnd > extrasBlockStart) {
+    let newExtras: string;
+
+    if (extrasData.length === 0) {
+      // Aucun service : message simple sans icône
+      newExtras = `<div class="recap-extras"><div class="recap-extra recap-extra--none">`
+        + `<div><div class="editable extra-name">Aucune prestation n'a été sélectionnée.</div>`
+        + `<div class="editable extra-detail"></div></div>`
+        + `<div class="editable extra-price"></div></div></div>`;
+    } else {
+      const rows = extrasData.map((data, i) => {
+        // Réutiliser l'icône SVG du bloc template correspondant (ou le dernier disponible)
+        const tmpl = tmplExtras[Math.min(i, tmplExtras.length - 1)] ?? "";
+        // Extraire l'icône (<span class="icon">…</span>)
+        const iconEnd   = tmpl.indexOf('</span>') + 7;
+        const iconBlock = iconEnd > 6 ? tmpl.slice(0, iconEnd) : "";
+        return `<div class="recap-extra">${iconBlock}`
+          + `<div><div class="editable extra-name">${esc(data.label)}</div>`
+          + `<div class="editable extra-detail">${esc(data.detail)}</div></div>`
+          + `<div class="editable extra-price">${fmtMoney(data.total)}</div></div>`;
+      });
+      newExtras = `<div class="recap-extras">${rows.join("")}</div>`;
+    }
+
+    h = h.slice(0, extrasBlockStart) + newExtras + h.slice(extrasBlockEnd);
   }
 
   h = setField(h, "recap-extra-total-value", hasServices ? fmtMoney(totalServices) : "0 €");
@@ -499,11 +528,10 @@ export async function POST(req: NextRequest) {
     for (let i = 0; i < Math.max(1, sections.length); i += 3)
       chunks.push(sections.slice(i, i + 3));
 
-    for (const chunk of chunks) {
-      const chunkTTC = chunks.indexOf(chunk) === 0
-        ? devis.totalTTC
-        : chunk.reduce((s,x) => s + x.subtotal * 1.2, 0);
-      pages.push(buildEventPage(evTemplate, devis, chunk, chunkTTC, pageNum++));
+    for (let ci = 0; ci < chunks.length; ci++) {
+      // TTC affiché : toujours le total global (toutes sections + services)
+      // Numérotation des sections : continue d'un chunk à l'autre
+      pages.push(buildEventPage(evTemplate, devis, chunks[ci], devis.totalTTC, pageNum++, ci * 3));
     }
 
     // Prestations additionnelles (toujours présente)
