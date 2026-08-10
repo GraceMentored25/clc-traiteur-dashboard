@@ -107,7 +107,7 @@ function foodRow(name: string, qty: number): string {
 // ── Reconstruction de la page event ─────────────────────────────────────────
 // Stratégie : garder la page template telle quelle (images, css, header),
 // remplacer event-title, meta-text, puis supprimer/réécrire les menu-cards
-function buildEventPage(templatePage: string, devis: Devis & {lieu?:string}, sections: Section[], totalTTC: number, outPageNum: number, sectionOffset = 0): string {
+function buildEventPage(templatePage: string, devis: Devis & {lieu?:string}, sections: Section[], totalTTC: number, outPageNum: number, sectionOffset = 0, showTotal = true): string {
   let h = templatePage;
 
   // Numéro de page affiché
@@ -191,9 +191,11 @@ function buildEventPage(templatePage: string, devis: Devis & {lieu?:string}, sec
     }).join("");
 
     const totalTop = currentTop + 8;
-    const evTotal  = `<div class="event-total" style="top:${totalTop}px">`
-      + `<div class="editable event-total-label">TOTAL TTC</div>`
-      + `<div class="editable event-total-value">${fmtMoney(totalTTC)}</div></div>`;
+    const evTotal  = showTotal
+      ? `<div class="event-total" style="top:${totalTop}px">`
+        + `<div class="editable event-total-label">TOTAL TTC</div>`
+        + `<div class="editable event-total-value">${fmtMoney(totalTTC)}</div></div>`
+      : "";
 
     h = before + cardsHtml + evTotal + after;
   }
@@ -365,11 +367,11 @@ function buildRecapPage(templatePage: string, devis: Devis & {lieu?:string}, sec
     let newExtras: string;
 
     if (extrasData.length === 0) {
-      // Aucun service : message simple sans icône
-      newExtras = `<div class="recap-extras"><div class="recap-extra recap-extra--none">`
-        + `<div><div class="editable extra-name">Aucune prestation n'a été sélectionnée.</div>`
-        + `<div class="editable extra-detail"></div></div>`
-        + `<div class="editable extra-price"></div></div></div>`;
+      // Aucun service : texte full-width, sans icône, sans colonne prix
+      newExtras = `<div class="recap-extras">`
+        + `<div class="recap-extra" style="display:block;height:auto;padding:12px 0;">`
+        + `<div class="editable extra-name" style="font-weight:400;font-size:16px;color:var(--muted);">Aucune prestation n'a été sélectionnée.</div>`
+        + `</div></div>`;
     } else {
       const rows = extrasData.map((data, i) => {
         // Réutiliser l'icône SVG du bloc template correspondant (ou le dernier disponible)
@@ -527,9 +529,9 @@ export async function POST(req: NextRequest) {
       chunks.push(sections.slice(i, i + 3));
 
     for (let ci = 0; ci < chunks.length; ci++) {
-      // TTC affiché : toujours le total global (toutes sections + services)
-      // Numérotation des sections : continue d'un chunk à l'autre
-      pages.push(buildEventPage(evTemplate, devis, chunks[ci], devis.totalTTC, pageNum++, ci * 3));
+      const isLastChunk = ci === chunks.length - 1;
+      // Total TTC uniquement sur la dernière page event
+      pages.push(buildEventPage(evTemplate, devis, chunks[ci], devis.totalTTC, pageNum++, ci * 3, isLastChunk));
     }
 
     // Prestations additionnelles (toujours présente)
@@ -550,7 +552,7 @@ export async function POST(req: NextRequest) {
 (function(){
   document.querySelectorAll('.page').forEach(function(p,i){
     var f=document.createElement('div');
-    f.style.cssText='position:absolute;bottom:5mm;left:14mm;right:14mm;display:flex;justify-content:space-between;font-size:7px;color:#888;border-top:0.5px solid #ccc;padding-top:2px;font-family:Raleway,Arial,sans-serif;';
+    f.style.cssText='position:absolute;bottom:5mm;left:14mm;right:14mm;display:flex;justify-content:space-between;font-size:7px;color:#C99A43;padding-top:2px;font-family:Raleway,Arial,sans-serif;';
     f.innerHTML='<span>C.LC. Traiteur — contact@clctraiteur.fr — Rouen</span><span>Devis ${esc(devis.id)} &middot; '+(i+1)+'/${total}</span>';
     p.style.position='relative';
     p.appendChild(f);
