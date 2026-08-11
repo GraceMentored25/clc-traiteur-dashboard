@@ -570,11 +570,15 @@ const PRINT_CSS = `<style id="print-overrides">
   { font-family: Raleway, Arial, sans-serif !important; }
 
   /* ── Plats : police et alignement exacts du template ── */
-  .food-row { height:33px; display:grid; grid-template-columns:26px 1fr 174px; align-items:center; column-gap:8px !important; }
-  .food-name { font:400 22px/1 Raleway,Arial,sans-serif !important; white-space:nowrap; color:var(--ink); }
-  .food-qty  { font:700 19px/1 Raleway,Arial,sans-serif !important; text-align:right; white-space:nowrap; color:var(--ink); }
-  .menu-ico  { width:21px; height:21px; color:var(--gold); display:flex; align-items:center; justify-content:center; }
-  .menu-ico svg { width:21px; height:21px; }
+  .food-row { height:33px !important; display:grid !important; grid-template-columns:26px 1fr 174px !important; align-items:center !important; column-gap:8px !important; }
+  .food-name,
+  .food-list .food-name,
+  .food-row .food-name { font-family:Raleway,Arial,sans-serif !important; font-size:22px !important; font-weight:400 !important; line-height:1 !important; white-space:nowrap; color:var(--ink) !important; }
+  .food-qty,
+  .food-list .food-qty,
+  .food-row .food-qty  { font-family:Raleway,Arial,sans-serif !important; font-size:19px !important; font-weight:700 !important; line-height:1 !important; text-align:right !important; white-space:nowrap; color:var(--ink) !important; }
+  .menu-ico  { width:21px !important; height:21px !important; color:#a77835 !important; display:flex; align-items:center; justify-content:center; }
+  .menu-ico svg { width:21px !important; height:21px !important; }
 
   /* ── Alignement recap-section : centrage vertical avec sous-titre ── */
   .recap-section { align-items: center !important; }
@@ -699,7 +703,7 @@ export async function POST(req: NextRequest) {
       status: 200,
       headers: {
         "Content-Type": "text/html; charset=utf-8",
-        "Content-Disposition": `inline; filename="${devis.id}.html"`,
+        "Content-Disposition": `inline; filename="CLC-Traiteur-Devis-${devis.id}.html"`,
       },
     });
   } catch (err: unknown) {

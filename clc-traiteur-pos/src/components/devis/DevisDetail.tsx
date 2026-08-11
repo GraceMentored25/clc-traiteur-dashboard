@@ -93,7 +93,7 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement("a");
       a.href     = url;
-      a.download = `${devis.id} - ${devis.clientName}.docx`;
+      a.download = `CLC-Traiteur-Devis-${devis.id}.docx`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
