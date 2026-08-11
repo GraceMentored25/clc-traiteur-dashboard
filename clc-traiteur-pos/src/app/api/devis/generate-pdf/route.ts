@@ -569,6 +569,13 @@ const PRINT_CSS = `<style id="print-overrides">
   .summary-kicker, .summary-breakdown
   { font-family: Raleway, Arial, sans-serif !important; }
 
+  /* ── Plats : police et alignement exacts du template ── */
+  .food-row { height:33px; display:grid; grid-template-columns:26px 1fr 174px; align-items:center; column-gap:8px !important; }
+  .food-name { font:400 22px/1 Raleway,Arial,sans-serif !important; white-space:nowrap; color:var(--ink); }
+  .food-qty  { font:700 19px/1 Raleway,Arial,sans-serif !important; text-align:right; white-space:nowrap; color:var(--ink); }
+  .menu-ico  { width:21px; height:21px; color:var(--gold); display:flex; align-items:center; justify-content:center; }
+  .menu-ico svg { width:21px; height:21px; }
+
   /* ── Alignement recap-section : centrage vertical avec sous-titre ── */
   .recap-section { align-items: center !important; }
   .recap-section > div:nth-child(2) { display: flex; flex-direction: column; justify-content: center; gap: 1px; }
