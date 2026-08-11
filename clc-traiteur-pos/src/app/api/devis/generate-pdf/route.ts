@@ -344,20 +344,14 @@ function buildPrestationsPage(templatePage: string, serviceItems: DevisItem[], o
   return h;
 }
 
-// ── Reconstruction page récap (pages 8,10,12,14,16) ─────────────────────────
-// Champs: recap-event, recap-meta-text, recap-meta-date, recap-meta-place,
-//   recap-name(×3), recap-sub(×3), recap-price(×3),
-//   recap-event-total-value,
-//   extra-name(×3), extra-detail(×3), extra-price(×3),
-//   recap-extra-total-value, grand-value, grand-sub
+// ── Reconstruction page récap ─────────────────────────────────────────────────
+// Toutes les lignes (sections traiteur + services) dans un seul bloc recap-sections
+// avec numérotation continue — identique au style des lignes traiteur
 function buildRecapPage(templatePage: string, devis: Devis & {lieu?:string}, sections: Section[], serviceItems: DevisItem[], outPageNum: number): string {
   let h = templatePage;
   h = h.replace(/(<span[^>]*class="[^"]*\bpn\b[^"]*"[^>]*>)\d*(<\/span>)/, `$1${outPageNum}$2`);
 
-  const totalTraiteur  = sections.reduce((s,x) => s + x.subtotal, 0);
-  const totalServices  = serviceItems.reduce((s,i) => s + i.quantity * i.unitPrice, 0);
-  const hasServices    = serviceItems.length > 0;
-  const totalTTC       = devis.totalTTC;
+  const totalTTC = devis.totalTTC;
 
   // En-tête
   h = setField(h, "recap-event",      esc(devis.eventType.toUpperCase()));
@@ -365,28 +359,7 @@ function buildRecapPage(templatePage: string, devis: Devis & {lieu?:string}, sec
   h = setField(h, "recap-meta-date",  fmtDate(devis.eventDate));
   h = setField(h, "recap-meta-place", esc(devis.lieu ?? "Rouen, France"));
 
-  // Lignes sections (max 3 dans le template)
-  let nameI = 0, subI = 0, priceI = 0;
-  const recapRows = Array.from({length: 3}, (_, i) => sections[i] ?? null);
-
-  h = h.replace(
-    /(<(?:div|span)[^>]*class="[^"]*\brecap-name\b[^"]*"[^>]*>)[^<]*(<\/(?:div|span)>)/g,
-    (_, open, close) => `${open}${recapRows[nameI++]?.label ? esc(recapRows[nameI-1]!.label) : ""}${close}`
-  );
-  h = h.replace(
-    /(<(?:div|span)[^>]*class="[^"]*\brecap-sub\b[^"]*"[^>]*>)[^<]*(<\/(?:div|span)>)/g,
-    (_, open, close) => `${open}${recapRows[subI++] ? "" : ""}${close}`
-  );
-  h = h.replace(
-    /(<(?:div|span)[^>]*class="[^"]*\brecap-price\b[^"]*"[^>]*>)[^<]*(<\/(?:div|span)>)/g,
-    (_, open, close) => `${open}${recapRows[priceI] ? fmtMoney(recapRows[priceI++]!.subtotal) : (priceI++ && "")}${close}`
-  );
-
-  h = setField(h, "recap-event-total-value", fmtMoney(totalTraiteur));
-
-  // ── Prestations additionnelles : reconstruire le bloc recap-extras ───────────
-  // On extrait les recap-extra du template pour réutiliser leur structure (icônes SVG)
-  // puis on ne garde que ceux qui ont des données
+  // ── Construire la liste unifiée : traiteur + services ────────────────────────
   const SERV_CATS = [
     { keys: ["serveur","personnel"],            label: "Service & personnel" },
     { keys: ["matériel","couvert","table","chaise","marmite"], label: "Location de matériel" },
@@ -397,76 +370,68 @@ function buildRecapPage(templatePage: string, devis: Devis & {lieu?:string}, sec
     { keys: ["gâteau","photographe","photo"],   label: "Gâteau & photo" },
   ];
 
-  // Calculer les données des extras sélectionnés
-  const extrasData: {label:string; detail:string; total:number}[] = [];
-  if (hasServices) {
-    for (const cat of SERV_CATS) {
+  const allRows: { label: string; sub: string; total: number }[] = [
+    // Sections traiteur
+    ...sections.map(sec => ({
+      label: sec.label,
+      sub:   getSectionSubtitle(sec.label),
+      total: sec.subtotal,
+    })),
+    // Services sélectionnés
+    ...SERV_CATS.flatMap(cat => {
       const its = serviceItems.filter(i => cat.keys.some(k => i.dishName.toLowerCase().includes(k)));
-      if (its.length) extrasData.push({
-        label:  cat.label,
-        detail: its.map(i => `${i.quantity} × ${i.dishName}`).join(", "),
-        total:  its.reduce((s,i) => s + i.quantity * i.unitPrice, 0),
-      });
-    }
-    const others = serviceItems.filter(i => !SERV_CATS.some(c => c.keys.some(k => i.dishName.toLowerCase().includes(k))));
-    if (others.length) extrasData.push({
-      label:  "Autres prestations",
-      detail: others.map(i => i.dishName).join(", "),
-      total:  others.reduce((s,i) => s + i.quantity * i.unitPrice, 0),
-    });
+      if (!its.length) return [];
+      return [{ label: cat.label, sub: its.map(i=>`${i.quantity} × ${i.dishName}`).join(", "), total: its.reduce((s,i)=>s+i.quantity*i.unitPrice,0) }];
+    }),
+    ...(() => {
+      const others = serviceItems.filter(i => !SERV_CATS.some(c=>c.keys.some(k=>i.dishName.toLowerCase().includes(k))));
+      return others.length ? [{ label: "Autres prestations", sub: others.map(i=>i.dishName).join(", "), total: others.reduce((s,i)=>s+i.quantity*i.unitPrice,0) }] : [];
+    })(),
+  ];
+
+  // Extraire un bloc recap-section du template pour réutiliser sa structure exacte
+  const tmplSectionStart = h.indexOf('<div class="recap-section">');
+  const tmplSectionEnd   = h.indexOf('<div class="recap-section">', tmplSectionStart + 10);
+  const tmplSection      = tmplSectionEnd > tmplSectionStart
+    ? h.slice(tmplSectionStart, tmplSectionEnd)
+    : h.slice(tmplSectionStart, h.indexOf('</div>', tmplSectionStart + 100) + 6);
+
+  // Construire les nouvelles lignes
+  const newSectionRows = allRows.map((row, i) => {
+    let s = tmplSection;
+    // recap-num
+    s = s.replace(/(<div[^>]*class="[^"]*\brecap-num\b[^"]*"[^>]*>)[^<]*(<\/div>)/, `$1${i+1}$2`);
+    // recap-name
+    s = s.replace(/(<div[^>]*class="[^"]*\brecap-name\b[^"]*"[^>]*>)[^<]*(<\/div>)/, `$1${esc(row.label)}$2`);
+    // recap-sub
+    s = s.replace(/(<div[^>]*class="[^"]*\brecap-sub\b[^"]*"[^>]*>)[^<]*(<\/div>)/, `$1${esc(row.sub)}$2`);
+    // recap-price
+    s = s.replace(/(<div[^>]*class="[^"]*\brecap-price\b[^"]*"[^>]*>)[^<]*(<\/div>)/, `$1${fmtMoney(row.total)}$2`);
+    return s;
+  }).join("");
+
+  // Remplacer tout le bloc recap-sections (du premier recap-section jusqu'au recap-event-total)
+  const sectionsBlockStart = h.indexOf('<div class="recap-section">');
+  const eventTotalPos      = h.indexOf('recap-event-total-label');
+  // Trouver la fermeture de recap-sections juste avant recap-event-total
+  const sectionsBlockEnd   = h.lastIndexOf('</div>', eventTotalPos) + 6;
+
+  if (sectionsBlockStart > 0 && sectionsBlockEnd > sectionsBlockStart) {
+    h = h.slice(0, sectionsBlockStart) + newSectionRows + h.slice(sectionsBlockEnd);
   }
 
-  // Extraire les N blocs recap-extra du template (pour leurs icônes SVG)
-  const tmplExtras: string[] = [];
-  {
-    let pos = 0;
-    while (true) {
-      const s = h.indexOf('<div class="recap-extra">', pos);
-      if (s < 0) break;
-      const e = h.indexOf('<div class="recap-extra">', s + 10);
-      // Fin : prochain recap-extra ou fermeture de recap-extras
-      const closingBlock = h.indexOf('</div>', h.indexOf('recap-extra-total') > 0 ? h.indexOf('recap-extra-total') - 50 : s + 200);
-      const end = (e > 0 && e < closingBlock) ? e : closingBlock + 6;
-      tmplExtras.push(h.slice(s, end));
-      pos = s + 10;
-    }
+  // Totaux
+  h = setField(h, "recap-event-total-value", fmtMoney(totalTTC));
+
+  // Supprimer entièrement le bloc recap-extras + recap-extra-total (fusionné dans les sections)
+  const extrasStart = h.indexOf('<div class="recap-extras">');
+  const grandStart  = h.indexOf('<div class="grand-total">');
+  if (extrasStart > 0 && grandStart > extrasStart) {
+    h = h.slice(0, extrasStart) + h.slice(grandStart);
   }
 
-  // Reconstruire le bloc recap-extras : remplacer tout le <div class="recap-extras">…</div>
-  const extrasBlockStart = h.indexOf('<div class="recap-extras">');
-  const totalLabelPos    = h.indexOf('recap-extra-total-label');
-  const extrasBlockEnd   = h.lastIndexOf('</div>', totalLabelPos) + 6;
-
-  if (extrasBlockStart > 0 && extrasBlockEnd > extrasBlockStart) {
-    let newExtras: string;
-
-    if (extrasData.length === 0) {
-      // Aucun service : texte full-width, sans icône, sans colonne prix
-      newExtras = `<div class="recap-extras">`
-        + `<div class="recap-extra" style="display:block;height:auto;padding:12px 0;">`
-        + `<div class="editable extra-name" style="font-weight:400;font-size:16px;color:var(--muted);font-family:Raleway,Arial,sans-serif;">Aucune prestation n'a été sélectionnée.</div>`
-        + `</div></div>`;
-    } else {
-      const rows = extrasData.map((data, i) => {
-        // Réutiliser l'icône SVG du bloc template correspondant (ou le dernier disponible)
-        const tmpl = tmplExtras[Math.min(i, tmplExtras.length - 1)] ?? "";
-        // Extraire l'icône (<span class="icon">…</span>)
-        const iconEnd   = tmpl.indexOf('</span>') + 7;
-        const iconBlock = iconEnd > 6 ? tmpl.slice(0, iconEnd) : "";
-        return `<div class="recap-extra">${iconBlock}`
-          + `<div><div class="editable extra-name">${esc(data.label)}</div>`
-          + `<div class="editable extra-detail">${esc(data.detail)}</div></div>`
-          + `<div class="editable extra-price">${fmtMoney(data.total)}</div></div>`;
-      });
-      newExtras = `<div class="recap-extras">${rows.join("")}</div>`;
-    }
-
-    h = h.slice(0, extrasBlockStart) + newExtras + h.slice(extrasBlockEnd);
-  }
-
-  h = setField(h, "recap-extra-total-value", hasServices ? fmtMoney(totalServices) : "0 €");
   h = setField(h, "grand-value", fmtMoney(totalTTC));
-  h = setField(h, "grand-sub",   hasServices ? "Événement + prestations additionnelles" : "Prestation traiteur uniquement");
+  h = setField(h, "grand-sub",   "Toutes prestations incluses");
 
   return h;
 }
