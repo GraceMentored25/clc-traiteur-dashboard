@@ -380,23 +380,27 @@ function buildRecapPage(templatePage: string, devis: Devis & {lieu?:string}, sec
 
   sectionBlocks.forEach((block, i) => {
     const sec = sections[i] ?? null;
+    if (!sec) {
+      // Slot vide : supprimer entièrement le recap-section
+      h = h.replace(block, "");
+      return;
+    }
     let newBlock = block;
-    // Numéro dans le <span class="editable ">
     newBlock = newBlock.replace(
       /(<span[^>]*class="editable\s*"[^>]*contenteditable="true"[^>]*>)[^<]*(<\/span>)/,
-      `$1${sec ? i+1 : ""}$2`
+      `$1${i+1}$2`
     );
     newBlock = newBlock.replace(
       /(<div[^>]*class="[^"]*\brecap-name\b[^"]*"[^>]*>)[^<]*(<\/div>)/,
-      `$1${sec ? esc(sec.label) : ""}$2`
+      `$1${esc(sec.label)}$2`
     );
     newBlock = newBlock.replace(
       /(<div[^>]*class="[^"]*\brecap-sub\b[^"]*"[^>]*>)[^<]*(<\/div>)/,
-      `$1${sec ? esc(getSectionSubtitle(sec.label)) : ""}$2`
+      `$1${esc(getSectionSubtitle(sec.label))}$2`
     );
     newBlock = newBlock.replace(
       /(<div[^>]*class="[^"]*\brecap-price\b[^"]*"[^>]*>)[^<]*(<\/div>)/,
-      `$1${sec ? fmtMoney(sec.subtotal) : ""}$2`
+      `$1${fmtMoney(sec.subtotal)}$2`
     );
     h = h.replace(block, newBlock);
   });
@@ -584,6 +588,18 @@ const PRINT_CSS = `<style id="print-overrides">
   .recap-section { align-items: center !important; }
   .recap-section > div:nth-child(2) { display: flex; flex-direction: column; justify-content: center; gap: 1px; }
   .recap-sub { margin-top: 2px !important; }
+
+  /* ── Extras : layout relatif pour éviter les superpositions ── */
+  .recap-extras { position:relative !important; top:auto !important; left:auto !important;
+    width:auto !important; margin:0 56px; }
+  .recap-extra  { height:auto !important; min-height:60px; padding:8px 0;
+    border-bottom:1px solid var(--tan); }
+  .recap-extra:last-child { border-bottom:none; }
+  /* recap-extra-total et grand-total : sortir du positionnement absolu */
+  .recap-extra-total { position:relative !important; top:auto !important; left:auto !important;
+    width:auto !important; margin:8px 56px 0; }
+  .grand-total { position:relative !important; top:auto !important; left:auto !important;
+    width:auto !important; margin:8px 56px 0; }
   .toolbar,.page-number { display:none !important; }
   @media screen {
     body { padding:24px; background:#1a1a1a; }
