@@ -31,13 +31,21 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
   const [docxLoading, setDocxLoading] = useState(false);
 
   const downloadPdf = async () => {
+    // Lire les infos entreprise depuis localStorage
+    const factConfig = (() => {
+      try { return JSON.parse(localStorage.getItem("clc-facturation-config") ?? "{}"); }
+      catch { return {}; }
+    })();
+    const brandNom      = factConfig.nom      || "CLC TRAITEUR";
+    const brandSousTitre = factConfig.sousTitre || "Traiteur événementiel";
+
     // window.open doit être appelé AVANT tout await pour ne pas être bloqué
     const win = window.open("", "_blank");
     if (!win) { alert("Veuillez autoriser les popups pour générer le PDF."); return; }
     win.document.write("<html><body style='font-family:sans-serif;padding:40px;color:#555'>Génération du PDF en cours…</body></html>");
     setPdfLoading(true);
     try {
-      const payload = { ...devis, items, totalHT, totalTTC };
+      const payload = { ...devis, items, totalHT, totalTTC, brandNom, brandSousTitre };
       const res = await fetch("/api/devis/generate-pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -62,9 +70,15 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
   };
 
   const downloadDocx = async () => {
+    const factConfig = (() => {
+      try { return JSON.parse(localStorage.getItem("clc-facturation-config") ?? "{}"); }
+      catch { return {}; }
+    })();
+    const brandNom       = factConfig.nom      || "CLC TRAITEUR";
+    const brandSousTitre = factConfig.sousTitre || "Traiteur événementiel";
     setDocxLoading(true);
     try {
-      const payload = { ...devis, items, totalHT, totalTTC };
+      const payload = { ...devis, items, totalHT, totalTTC, brandNom, brandSousTitre };
       const res = await fetch("/api/devis/generate-docx", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

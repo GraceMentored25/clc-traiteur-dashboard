@@ -609,7 +609,7 @@ const PRINT_CSS = `<style id="print-overrides">
 // ── API Route ─────────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
-    const devis = await req.json() as Devis & { lieu?: string };
+    const devis = await req.json() as Devis & { lieu?: string; brandNom?: string; brandSousTitre?: string };
 
     const serviceItems = devis.items.filter(i => isService(i.dishName));
     const dishItems    = devis.items.filter(i => !isService(i.dishName));
@@ -618,8 +618,15 @@ export async function POST(req: NextRequest) {
 
     const now = new Date().toLocaleDateString("fr-FR", { day:"numeric", month:"long", year:"numeric" });
 
+    const brandNom       = devis.brandNom       ?? "CLC TRAITEUR";
+    const brandSousTitre = devis.brandSousTitre ?? "Traiteur événementiel";
+
     // UTF-8 : le template est encodé en UTF-8, les base64 ne contiennent que des chars ASCII
-    const html = fs.readFileSync(TEMPLATE_PATH, "utf-8");
+    let html = fs.readFileSync(TEMPLATE_PATH, "utf-8");
+
+    // Remplacer le nom/sous-titre de la marque dans TOUTES les pages du template
+    html = setAllFields(html, "brand-name",  esc(brandNom));
+    html = setAllFields(html, "brand-sub",   esc(brandSousTitre));
 
     // ── Head (CSS, fonts, etc.) ──────────────────────────────────────────────
     const bodyIdx = html.indexOf("<body");

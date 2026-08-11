@@ -464,7 +464,7 @@ function scheduleTable(ttc: number): Table {
 
 export async function POST(req: NextRequest) {
   try {
-    const devis = await req.json() as Devis & { lieu?: string };
+    const devis = await req.json() as Devis & { lieu?: string; brandNom?: string; brandSousTitre?: string };
 
     const serviceItems = devis.items.filter(i => isService(i.dishName));
     const dishItems    = devis.items.filter(i => !isService(i.dishName));
@@ -477,8 +477,8 @@ export async function POST(req: NextRequest) {
     });
 
     const CLC = {
-      nom: "C.LC. Traiteur",
-      sousTitre: "Chez La Camerounaise — Traiteur événementiel",
+      nom: devis.brandNom ?? "C.LC. Traiteur",
+      sousTitre: devis.brandSousTitre ?? "Traiteur événementiel",
       adresse: "Rouen, France",
       tel: "+33 6 12 34 56 78",
       email: "contact@clctraiteur.fr",

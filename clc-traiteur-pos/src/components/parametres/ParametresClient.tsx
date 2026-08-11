@@ -580,6 +580,8 @@ function TabFacturation() {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("clc-facturation-config");
       return saved ? JSON.parse(saved) : {
+        nom: "CLC TRAITEUR",
+        sousTitre: "Traiteur événementiel",
         tva: 20,
         mentionLegale: "Dispensé d'immatriculation au RCS et au RM",
         conditionsPaiement: "Acompte de 30% à la commande. Solde le jour de l'événement.",
@@ -588,7 +590,7 @@ function TabFacturation() {
         delaiPaiement: 30,
       };
     }
-    return { tva: 20, mentionLegale: "", conditionsPaiement: "", siret: "", iban: "", delaiPaiement: 30 };
+    return { nom: "CLC TRAITEUR", sousTitre: "Traiteur événementiel", tva: 20, mentionLegale: "", conditionsPaiement: "", siret: "", iban: "", delaiPaiement: 30 };
   });
 
   const save = (updated: typeof settings) => {
@@ -633,6 +635,8 @@ function TabFacturation() {
       <div className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] p-5 space-y-3">
         <h3 className="text-sm font-bold text-[var(--text-primary)]">Informations entreprise</h3>
         <div className="grid grid-cols-1 gap-3">
+          {field("Nom commercial", "nom")}
+          {field("Sous-titre / Description", "sousTitre")}
           {field("SIRET", "siret")}
           {field("IBAN (pour virement)", "iban")}
           {field("Délai de paiement (jours)", "delaiPaiement", "number")}
