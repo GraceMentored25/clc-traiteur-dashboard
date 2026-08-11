@@ -285,13 +285,13 @@ function buildPrestationsPage(templatePage: string, serviceItems: DevisItem[], o
   h = h.replace(/(<span[^>]*class="[^"]*\bpn\b[^"]*"[^>]*>)\d*(<\/span>)/, `$1${outPageNum}$2`);
 
   const SLOTS = [
-    { keys: ["serveur","personnel"],          label: "Service & personnel",  desc: "Serveurs, maîtres d'hôtel" },
-    { keys: ["matériel","couvert","table","chaise","marmite"], label: "Location de matériel", desc: "Couverts, tables, chaises, marmites" },
-    { keys: ["livraison","transport"],         label: "Livraison",             desc: "Transport & livraison des plats" },
-    { keys: ["décoration","déco","floral"],    label: "Décoration de table",   desc: "Fleurs, bougies, centres de table" },
-    { keys: ["tente","chapiteau"],             label: "Location de tente",     desc: "Tentes & chapiteaux" },
-    { keys: ["animation","sono","musique","dj"], label: "Animation musicale", desc: "DJ, sonorisation, animation" },
-    { keys: ["gâteau","photographe","photo"],  label: "Gâteau & photo",        desc: "Pièce montée, reportage photo" },
+    { keys: ["serveur","personnel"],           label: "Service & personnel",  desc: "Serveurs, maîtres d'hôtel",         catalogPrice: "80 € / personne" },
+    { keys: ["matériel","couvert","table","chaise","marmite"], label: "Location de matériel", desc: "Couverts, tables, chaises, marmites", catalogPrice: "Sur devis" },
+    { keys: ["livraison","transport"],          label: "Livraison",            desc: "Transport & livraison des plats",    catalogPrice: "60 € / trajet" },
+    { keys: ["décoration","déco","floral"],     label: "Décoration de table",  desc: "Fleurs, bougies, centres de table",  catalogPrice: "120 € / table" },
+    { keys: ["tente","chapiteau"],              label: "Location de tente",    desc: "Tentes & chapiteaux",                catalogPrice: "150 € / unité" },
+    { keys: ["animation","sono","musique","dj"],label: "Animation musicale",   desc: "DJ, sonorisation, animation",        catalogPrice: "250 € / événement" },
+    { keys: ["gâteau","photographe","photo"],   label: "Gâteau & photo",       desc: "Pièce montée, reportage photo",      catalogPrice: "400 € / événement" },
   ];
 
   const hasServices = serviceItems.length > 0;
@@ -313,7 +313,7 @@ function buildPrestationsPage(templatePage: string, serviceItems: DevisItem[], o
     const matched = serviceItems.find(i => slot.keys.some(k => i.dishName.toLowerCase().includes(k)));
     return matched
       ? { name: esc(matched.dishName), detail: `${matched.quantity} unité${matched.quantity>1?"s":""}`, price: fmtMoney(matched.quantity * matched.unitPrice), checked: true }
-      : { name: esc(slot.label), detail: esc(slot.desc), price: "", checked: false };
+      : { name: esc(slot.label), detail: esc(slot.desc), price: slot.catalogPrice, checked: false };
   });
 
   // Checkboxes : retirer checked sur les slots non sélectionnés
@@ -354,7 +354,7 @@ function buildRecapPage(templatePage: string, devis: Devis & {lieu?:string}, sec
   const totalTraiteur = sections.reduce((s,x) => s + x.subtotal, 0);
   const totalServices = serviceItems.reduce((s,i) => s + i.quantity * i.unitPrice, 0);
   const hasServices   = serviceItems.length > 0;
-  const totalTTC      = devis.totalTTC;
+  const totalTTC      = devis.totalHT;  // PDF en HT (sous-totaux sections = HT)
 
   // En-tête
   h = setField(h, "recap-event",      esc(devis.eventType.toUpperCase()));
@@ -478,7 +478,7 @@ function buildAcomptePage(templatePage: string, devis: Devis, sections: Section[
   let h = templatePage;
   h = h.replace(/(<span[^>]*class="[^"]*\bpn\b[^"]*"[^>]*>)\d*(<\/span>)/, `$1${outPageNum}$2`);
 
-  const ttc         = devis.totalTTC;
+  const ttc         = devis.totalHT;  // PDF en HT (cohérent avec les sous-totaux)
   const totalEv     = sections.reduce((s,x) => s + x.subtotal, 0);
   const totalSvc    = ttc - totalEv;
   const hasSvc      = totalSvc > 0;
@@ -635,7 +635,7 @@ export async function POST(req: NextRequest) {
     let sectionOffset = 0;
     for (let ci = 0; ci < chunks.length; ci++) {
       const isLastChunk = ci === chunks.length - 1;
-      pages.push(buildEventPage(evTemplate, devis, chunks[ci], devis.totalTTC, pageNum++, sectionOffset, isLastChunk));
+      pages.push(buildEventPage(evTemplate, devis, chunks[ci], devis.totalHT, pageNum++, sectionOffset, isLastChunk));
       sectionOffset += chunks[ci].length;
     }
 
