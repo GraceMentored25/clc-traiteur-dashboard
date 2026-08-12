@@ -1,4 +1,4 @@
-export const runtime = "nodejs";
+﻿export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
@@ -194,7 +194,7 @@ function buildEventPage(templatePage: string, devis: Devis & {lieu?:string}, sec
   h = setField(h, "event-title", esc(devis.eventType.toUpperCase()));
 
   // Meta-bar (3 valeurs dans l'ordre: convives, date, lieu)
-  const metaVals = [`${devis.guestCount} convives`, fmtDate(devis.eventDate), esc(devis.lieu ?? "Rouen, France")];
+  const metaVals = [`${devis.guestCount} convives`, fmtDate(devis.eventDate), esc(devis.lieu ?? "")];
   let mi = 0;
   h = h.replace(
     /(<(?:div|span)[^>]*class="[^"]*\bmeta-text\b[^"]*"[^>]*>)[^<]*(<\/(?:div|span)>)/g,
@@ -316,9 +316,24 @@ function buildPrestationsPage(templatePage: string, serviceItems: DevisItem[], o
   // Pour chaque slot : remplacer name / detail / price + gérer checkbox
   const slotData = SLOTS.map(slot => {
     const matched = serviceItems.find(i => slot.keys.some(k => i.dishName.toLowerCase().includes(k)));
-    return matched
-      ? { name: esc(matched.dishName), detail: `${matched.quantity} unité${matched.quantity>1?"s":""}`, price: fmtMoney(matched.quantity * matched.unitPrice), checked: true }
-      : { name: esc(slot.label), detail: esc(slot.desc), price: slot.catalogPrice, checked: false };
+    if (!matched) return { name: esc(slot.label), detail: esc(slot.desc), price: slot.catalogPrice, checked: false };
+    // Inférer l'unité depuis le nom du service
+    const svcUnit = (() => {
+      const n = matched.dishName.toLowerCase();
+      if (n.includes("serveur") || n.includes("personnel"))       return "personne";
+      if (n.includes("trajet") || n.includes("livraison") || n.includes("transport")) return "trajet";
+      if (n.includes("table"))                                     return "table";
+      if (n.includes("chaise"))                                    return "chaise";
+      if (n.includes("couvert") || n.includes("service de table")) return "couvert";
+      if (n.includes("marmite"))                                   return "pièce";
+      if (n.includes("tente") || n.includes("chapiteau"))          return "unité";
+      if (n.includes("animation") || n.includes("sono") || n.includes("dj")) return "événement";
+      if (n.includes("photographe") || n.includes("photo"))        return "événement";
+      return "unité";
+    })();
+    const qty = matched.quantity;
+    const detail = `${qty} ${svcUnit}${qty > 1 && !["unité","trajet","pièce"].includes(svcUnit) ? "s" : ""}`;
+    return { name: esc(matched.dishName), detail, price: fmtMoney(matched.quantity * matched.unitPrice), checked: true };
   });
 
   // Checkboxes : forcer checked=true si sélectionné, false sinon
@@ -366,7 +381,7 @@ function buildRecapPage(templatePage: string, devis: Devis & {lieu?:string}, sec
   h = setField(h, "recap-event",      esc(devis.eventType.toUpperCase()));
   h = setField(h, "recap-meta-text",  `${devis.guestCount} convives`);
   h = setField(h, "recap-meta-date",  fmtDate(devis.eventDate));
-  h = setField(h, "recap-meta-place", esc(devis.lieu ?? "Rouen, France"));
+  h = setField(h, "recap-meta-place", esc(devis.lieu ?? ""));
 
   // ── Sections traiteur (3 slots dans le template) ──────────────────────────
   // Le numéro est dans un <span class="editable "> (classe vide) dans recap-num
@@ -574,7 +589,7 @@ function buildCover(templatePage: string, devis: Devis & {lieu?:string}, now: st
     esc(devis.clientName),
     fmtDate(devis.eventDate),
     esc(devis.eventType),
-    esc(devis.lieu ?? "Rouen, France"),
+    esc(devis.lieu ?? ""),
     esc(devis.clientPhone ?? ""),
     esc(devis.id),
   ];
@@ -588,12 +603,14 @@ function buildCover(templatePage: string, devis: Devis & {lieu?:string}, now: st
 }
 
 // ── Reconstruction dernière page (signature / mentions) ──────────────────────
-function buildSignaturePage(templatePage: string, devis: Devis, now: string, outPageNum: number, ville = "Rouen"): string {
+function buildSignaturePage(templatePage: string, devis: Devis, now: string, outPageNum: number): string {
   let h = templatePage;
   h = h.replace(/(<span[^>]*class="[^"]*\bpn\b[^"]*"[^>]*>)\d*(<\/span>)/, `$1${outPageNum}$2`);
   h = setField(h, "sig-client", esc(devis.clientName));
   h = setField(h, "fait-a-date", `Fait à Rouen, le ${now}`);
-  // Remplacer le div.editable (sans classe supplémentaire) qui contient le lieu en bas de page
+  // Supprimer l'icône dorée dans les sign-box
+  h = h.replace(/<span[^>]*class="icon[^"]*"[^>]*>[\s\S]*?<\/span>/g, "");
+  // Remplacer le div.editable vide en bas de page (lieu entreprise)
   h = h.replace(
     /(<div[^>]*class="editable\s*"[^>]*contenteditable="true"[^>]*>)[^<]*(<\/div>)/,
     `$1Rouen, France$2`
@@ -775,3 +792,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Erreur serveur", detail: msg }, { status: 500 });
   }
 }
+
