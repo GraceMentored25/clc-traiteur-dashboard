@@ -472,6 +472,41 @@ function buildRecapPage(templatePage: string, devis: Devis & {lieu?:string}, sec
   h = setField(h, "grand-value", fmtMoney(totalTTC));
   h = setField(h, "grand-sub",   hasServices ? "Événement + prestations additionnelles" : "Prestation traiteur uniquement");
 
+  // ── Recalculer les top de recap-extra-total et grand-total ─────────────────
+  // Le template suppose 3 extras à 69px chacun = 207px total depuis top:670
+  // On recalcule selon le nombre réel d'extras
+  const nExtras   = extrasData.length || 1; // au moins 1 (message vide)
+  const extraH    = 73; // hauteur par extra (69px + 4px padding)
+  const extrasTop = 670;
+  const newExtrasTotalTop = extrasTop + nExtras * extraH + 8;
+  const newGrandTotalTop  = newExtrasTotalTop + 45 + 8;
+
+  h = h.replace(
+    /(<div[^>]*class="[^"]*\brecap-extra-total\b[^"]*"[^>]*style="[^"]*top:)\d+(px)/,
+    `$1${newExtrasTotalTop}$2`
+  );
+  h = h.replace(
+    /(<div[^>]*class="[^"]*\bgrand-total\b[^"]*"[^>]*style="[^"]*top:)\d+(px)/,
+    `$1${newGrandTotalTop}$2`
+  );
+  // Si top est dans le CSS de l'attribut style inline (pas forcément présent)
+  // Essayer aussi sans style inline (top défini dans la feuille de style)
+  // Dans ce cas on injecte un style inline pour override
+  h = h.replace(
+    /(<div[^>]*class="[^"]*\brecap-extra-total\b[^"]*")(?![^>]*style=)/,
+    `$1 style="top:${newExtrasTotalTop}px"`
+  );
+  h = h.replace(
+    /(<div[^>]*class="[^"]*\bgrand-total\b[^"]*")(?![^>]*style=)/,
+    `$1 style="top:${newGrandTotalTop}px"`
+  );
+
+  // Supprimer l'icône parasite dans extras-kicker (span.icon avant le texte)
+  h = h.replace(
+    /(<div[^>]*class="[^"]*\bextras-kicker\b[^"]*"[^>]*>)(<span[^>]*class="icon[^"]*"[^>]*>[\s\S]*?<\/span>)/g,
+    '$1'
+  );
+
   return h;
 }
 
@@ -589,17 +624,8 @@ const PRINT_CSS = `<style id="print-overrides">
   .recap-section > div:nth-child(2) { display: flex; flex-direction: column; justify-content: center; gap: 1px; }
   .recap-sub { margin-top: 2px !important; }
 
-  /* ── Extras : layout relatif pour éviter les superpositions ── */
-  .recap-extras { position:relative !important; top:auto !important; left:auto !important;
-    width:auto !important; margin:0 56px; }
-  .recap-extra  { height:auto !important; min-height:60px; padding:8px 0;
-    border-bottom:1px solid var(--tan); }
-  .recap-extra:last-child { border-bottom:none; }
-  /* recap-extra-total et grand-total : sortir du positionnement absolu */
-  .recap-extra-total { position:relative !important; top:auto !important; left:auto !important;
-    width:auto !important; margin:8px 56px 0; }
-  .grand-total { position:relative !important; top:auto !important; left:auto !important;
-    width:auto !important; margin:8px 56px 0; }
+  /* ── Extras : hauteur auto pour ne pas se superposer ── */
+  .recap-extra { height:auto !important; min-height:69px; box-sizing:border-box; padding-bottom:4px; }
   .toolbar,.page-number { display:none !important; }
   @media screen {
     body { padding:24px; background:#1a1a1a; }
