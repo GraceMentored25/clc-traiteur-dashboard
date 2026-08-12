@@ -117,8 +117,8 @@ export default function DevisModal({ onClose }: Props) {
       lieu: data.lieu || undefined,
       status: "Brouillon" as DevisStatus,
       items,
-      totalHT,
-      totalTTC: totalHT * 1.2,
+      totalHT: Math.round(totalHT * 100) / 100,
+      totalTTC: Math.round(totalHT * 1.2 * 100) / 100,
       notes: data.notes ?? "",
     });
 

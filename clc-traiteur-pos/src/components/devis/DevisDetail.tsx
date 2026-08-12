@@ -121,8 +121,8 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
     }
   };
 
-  const totalHT = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
-  const totalTTC = totalHT * 1.2;
+  const totalHT  = Math.round(items.reduce((s, i) => s + i.quantity * i.unitPrice, 0) * 100) / 100;
+  const totalTTC = Math.round(totalHT * 1.2 * 100) / 100;
 
   const hasSections = useMemo(() => items.some(i => i.section), [items]);
 
@@ -182,9 +182,10 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
   }, [items]);
 
   const handleSave = () => {
-    const newHT = items.reduce((s, i) => s + i.subtotal, 0);
+    const newHT  = Math.round(items.reduce((s, i) => s + i.subtotal, 0) * 100) / 100;
+    const newTTC = Math.round(newHT * 1.2 * 100) / 100;
     updateDevis(devis.id, {
-      items, totalHT: newHT, totalTTC: newHT * 1.2,
+      items, totalHT: newHT, totalTTC: newTTC,
       clientName, clientPhone, eventDate,
       guestCount: Number(guestCount) || devis.guestCount,
       eventType, lieu: lieu || undefined, notes,
