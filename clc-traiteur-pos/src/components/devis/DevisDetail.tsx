@@ -82,13 +82,13 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
     win.document.write("<html><body style='font-family:sans-serif;padding:40px;color:#555'>Génération du PDF en cours…</body></html>");
     setDocxLoading(true);
     try {
-      // PDF Alt : affiche guestCount comme quantité sur les plats uniquement
-      // Les prix, sous-totaux et services restent inchangés
+      // PDF Alt : affiche guestCount comme nombre de convives sur les plats uniquement.
+      // Services, sous-totaux et prix ne changent pas.
+      const SERVICE_RE = /serveur|marmite|service de table|tente|chapiteau|chaise|déco|décoration|transport|livraison|sono|animation|photographe/i;
       const altItems = items.map(i => ({
         ...i,
-        quantity: i.section !== undefined || !i.dishName.toLowerCase().match(/serveur|marmite|service de table|tente|chapiteau|chaise|déco|décoration|transport|livraison|sono|animation|photographe/)
-          ? devis.guestCount
-          : i.quantity,
+        quantity: SERVICE_RE.test(i.dishName) ? i.quantity : devis.guestCount,
+        // subtotal inchangé — seul l'affichage du nombre change
       }));
       const payload = { ...devis, items: altItems, totalHT, totalTTC, brandNom, brandSousTitre, lieu: devis.lieu };
       const res = await fetch("/api/devis/generate-pdf", {
