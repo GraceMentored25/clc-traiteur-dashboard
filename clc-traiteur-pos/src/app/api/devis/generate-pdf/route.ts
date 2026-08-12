@@ -30,7 +30,7 @@ function groupSections(items: DevisItem[]): Section[] {
     map.get(k)!.push(it);
   }
   return [...map.entries()].map(([label, its]) => ({
-    label, items: its, subtotal: its.reduce((s,i) => s + i.quantity * i.unitPrice, 0),
+    label, items: its, subtotal: its.reduce((s,i) => s + i.subtotal, 0),
   }));
 }
 

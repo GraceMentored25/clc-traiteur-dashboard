@@ -21,7 +21,7 @@ const schema = z.object({
   eventDate: z.string().min(1, "Date de l'événement requise"),
   eventType: z.string().min(1, "Type d'événement requis"),
   guestCount: z.string().min(1, "Nombre de convives requis"),
-  lieu: z.string().optional(),
+  lieu: z.string().min(2, "Ville requise"),
   notes: z.string().optional(),
 });
 
@@ -281,9 +281,10 @@ export default function DevisModal({ onClose }: Props) {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-[var(--text-secondary)]">Ville du client (optionnel)</label>
+                  <label className="text-xs font-medium text-[var(--text-secondary)]">Ville du client</label>
                   <input {...register("lieu")} type="text" placeholder="Paris, Lyon, Rouen..."
                     className="w-full h-10 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--amber)]/50 focus:ring-1 focus:ring-[var(--amber)]/15 transition-colors" />
+                  {errors.lieu && <p className="text-[11px] text-[var(--danger)] flex items-center gap-1"><WarningCircle size={11} /> {errors.lieu.message}</p>}
                 </div>
 
                 <div className="space-y-1.5">

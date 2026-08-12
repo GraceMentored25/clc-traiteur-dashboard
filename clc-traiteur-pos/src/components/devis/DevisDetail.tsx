@@ -25,6 +25,13 @@ function getDishCategory(dishId: number): string {
 export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
   const { updateDevis } = useStore();
   const [items, setItems] = useState<DevisItem[]>(devis.items.map(i => ({ ...i })));
+  const [clientName, setClientName] = useState(devis.clientName);
+  const [clientPhone, setClientPhone] = useState(devis.clientPhone);
+  const [eventDate, setEventDate] = useState(devis.eventDate);
+  const [guestCount, setGuestCount] = useState(devis.guestCount);
+  const [eventType, setEventType] = useState(devis.eventType);
+  const [lieu, setLieu] = useState(devis.lieu ?? "");
+  const [notes, setNotes] = useState(devis.notes ?? "");
   const [saved, setSaved] = useState(false);
   const [addSelections, setAddSelections] = useState<Record<string, number>>({});
   const [pdfLoading, setPdfLoading] = useState(false);
@@ -45,7 +52,7 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
     win.document.write("<html><body style='font-family:sans-serif;padding:40px;color:#555'>Génération du PDF en cours…</body></html>");
     setPdfLoading(true);
     try {
-      const payload = { ...devis, items, totalHT, totalTTC, brandNom, brandSousTitre, lieu: devis.lieu };
+      const payload = { ...devis, items, totalHT, totalTTC, brandNom, brandSousTitre, clientName, clientPhone, eventDate, eventType, guestCount, lieu: lieu || undefined };
       const res = await fetch("/api/devis/generate-pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -87,7 +94,7 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
       const SERVICE_RE = /serveur|marmite|service de table|tente|chapiteau|chaise|déco|décoration|transport|livraison|sono|animation|photographe/i;
       const altItems = items.map(i => ({
         ...i,
-        quantity: SERVICE_RE.test(i.dishName) ? i.quantity : devis.guestCount,
+        quantity: SERVICE_RE.test(i.dishName) ? i.quantity : guestCount,
         // subtotal inchangé — seul l'affichage du nombre change
       }));
       const payload = { ...devis, items: altItems, totalHT, totalTTC, brandNom, brandSousTitre, lieu: devis.lieu };
@@ -176,12 +183,25 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
 
   const handleSave = () => {
     const newHT = items.reduce((s, i) => s + i.subtotal, 0);
-    updateDevis(devis.id, { items, totalHT: newHT, totalTTC: newHT * 1.2 });
+    updateDevis(devis.id, {
+      items, totalHT: newHT, totalTTC: newHT * 1.2,
+      clientName, clientPhone, eventDate,
+      guestCount: Number(guestCount) || devis.guestCount,
+      eventType, lieu: lieu || undefined, notes,
+    });
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
   };
 
-  const isDirty = JSON.stringify(items) !== JSON.stringify(devis.items);
+  const isDirty =
+    JSON.stringify(items) !== JSON.stringify(devis.items) ||
+    clientName !== devis.clientName ||
+    clientPhone !== devis.clientPhone ||
+    eventDate !== devis.eventDate ||
+    Number(guestCount) !== devis.guestCount ||
+    eventType !== devis.eventType ||
+    (lieu || undefined) !== devis.lieu ||
+    notes !== (devis.notes ?? "");
 
   const renderItem = (item: DevisItem) => (
     <div key={`${item.dishId}-${item.section ?? ""}`} className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-[var(--surface-2)]">
@@ -371,53 +391,53 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
         </div>
 
         <div className="px-6 py-5 space-y-6">
-          {/* Client info */}
+          {/* Client info — tous les champs éditables */}
           <div>
             <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-widest mb-3">Informations client</p>
             <div className="space-y-2">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-[var(--amber)]/15 flex items-center justify-center shrink-0">
-                  <span className="text-xs font-bold text-[var(--amber)]">
-                    {devis.clientName.split(" ").map((n) => n[0]).join("").slice(0, 2)}
-                  </span>
+              {/* Nom */}
+              <div className="space-y-0.5">
+                <label className="text-[10px] text-[var(--text-muted)] flex items-center gap-1"><Phone size={10} />Nom du client</label>
+                <input value={clientName} onChange={e => setClientName(e.target.value)}
+                  className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-colors" />
+              </div>
+              {/* Téléphone */}
+              <div className="space-y-0.5">
+                <label className="text-[10px] text-[var(--text-muted)] flex items-center gap-1"><Phone size={10} />Téléphone</label>
+                <input value={clientPhone} onChange={e => setClientPhone(e.target.value)} type="tel"
+                  className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-colors" />
+              </div>
+              {/* Date + Convives */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-0.5">
+                  <label className="text-[10px] text-[var(--text-muted)] flex items-center gap-1"><Calendar size={10} />Date</label>
+                  <input value={eventDate} onChange={e => setEventDate(e.target.value)} type="date"
+                    className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-colors" />
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-[var(--text-primary)]">{devis.clientName}</p>
-                  <div className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
-                    <Phone size={11} />
-                    {devis.clientPhone}
-                  </div>
+                <div className="space-y-0.5">
+                  <label className="text-[10px] text-[var(--text-muted)] flex items-center gap-1"><Users size={10} />Convives</label>
+                  <input value={guestCount} onChange={e => setGuestCount(Number(e.target.value))} type="number" min="1"
+                    className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <div className="px-3 py-2 rounded-xl bg-[var(--surface-2)] flex items-center gap-2">
-                  <Calendar size={13} className="text-[var(--amber)]" />
-                  <div>
-                    <p className="text-[10px] text-[var(--text-muted)]">Événement</p>
-                    <p className="text-xs font-medium text-[var(--text-primary)]">{formatDate(devis.eventDate)}</p>
-                  </div>
-                </div>
-                <div className="px-3 py-2 rounded-xl bg-[var(--surface-2)] flex items-center gap-2">
-                  <Users size={13} className="text-[var(--amber)]" />
-                  <div>
-                    <p className="text-[10px] text-[var(--text-muted)]">Convives</p>
-                    <p className="text-xs font-medium text-[var(--text-primary)]">{devis.guestCount} personnes</p>
-                  </div>
-                </div>
+              {/* Type d'événement */}
+              <div className="space-y-0.5">
+                <label className="text-[10px] text-[var(--text-muted)]">Type d&apos;événement</label>
+                <input value={eventType} onChange={e => setEventType(e.target.value)}
+                  className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-colors" />
               </div>
-              <div className="px-3 py-2 rounded-xl bg-[var(--surface-2)]">
-                <p className="text-[10px] text-[var(--text-muted)] mb-0.5">Type d&apos;événement</p>
-                <p className="text-xs font-medium text-[var(--text-primary)]">{devis.eventType}</p>
+              {/* Ville */}
+              <div className="space-y-0.5">
+                <label className="text-[10px] text-[var(--text-muted)] flex items-center gap-1"><MapPin size={10} />Ville du client</label>
+                <input value={lieu} onChange={e => setLieu(e.target.value)} placeholder="Paris, Lyon…"
+                  className="w-full h-9 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-colors placeholder:text-[var(--text-muted)]" />
               </div>
-              {devis.lieu && (
-                <div className="px-3 py-2 rounded-xl bg-[var(--surface-2)] flex items-center gap-2">
-                  <MapPin size={13} className="text-[var(--amber)]" />
-                  <div>
-                    <p className="text-[10px] text-[var(--text-muted)]">Lieu</p>
-                    <p className="text-xs font-medium text-[var(--text-primary)]">{devis.lieu}</p>
-                  </div>
-                </div>
-              )}
+              {/* Notes */}
+              <div className="space-y-0.5">
+                <label className="text-[10px] text-[var(--text-muted)]">Notes</label>
+                <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2}
+                  className="w-full px-3 py-2 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-colors resize-none" />
+              </div>
             </div>
           </div>
 
@@ -520,15 +540,6 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
             </div>
           </div>
 
-          {/* Notes */}
-          {devis.notes && (
-            <div>
-              <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-widest mb-2">Notes</p>
-              <p className="text-xs text-[var(--text-secondary)] leading-relaxed bg-[var(--surface-2)] px-3 py-2.5 rounded-xl">
-                {devis.notes}
-              </p>
-            </div>
-          )}
         </div>
       </m.aside>
     </>
