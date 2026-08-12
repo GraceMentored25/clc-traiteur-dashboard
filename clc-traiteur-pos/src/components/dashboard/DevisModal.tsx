@@ -21,6 +21,7 @@ const schema = z.object({
   eventDate: z.string().min(1, "Date de l'événement requise"),
   eventType: z.string().min(1, "Type d'événement requis"),
   guestCount: z.string().min(1, "Nombre de convives requis"),
+  lieu: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -113,6 +114,7 @@ export default function DevisModal({ onClose }: Props) {
       eventDate: data.eventDate,
       eventType: data.eventType,
       guestCount: parseInt(data.guestCount, 10) || 1,
+      lieu: data.lieu || undefined,
       status: "Brouillon" as DevisStatus,
       items,
       totalHT,
@@ -276,6 +278,12 @@ export default function DevisModal({ onClose }: Props) {
                       className="w-full h-10 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--amber)]/50 focus:ring-1 focus:ring-[var(--amber)]/15 transition-colors" />
                     {errors.guestCount && <p className="text-[11px] text-[var(--danger)] flex items-center gap-1"><WarningCircle size={11} /> {errors.guestCount.message}</p>}
                   </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-[var(--text-secondary)]">Lieu (optionnel)</label>
+                  <input {...register("lieu")} type="text" placeholder="Salle des fêtes, Rouen..."
+                    className="w-full h-10 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--amber)]/50 focus:ring-1 focus:ring-[var(--amber)]/15 transition-colors" />
                 </div>
 
                 <div className="space-y-1.5">

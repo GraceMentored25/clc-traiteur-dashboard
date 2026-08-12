@@ -17,6 +17,7 @@ const schema = z.object({
   eventDate: z.string().min(1, "Requis"),
   eventType: z.string().min(1, "Requis"),
   guestCount: z.string().min(1, "Requis"),
+  lieu: z.string().optional(),
   status: z.enum(["Brouillon", "Envoyé", "Confirmé", "Annulé"]),
   notes: z.string().optional(),
 });
@@ -38,6 +39,7 @@ export default function DevisEditModal({ devis, onClose, onSave }: Props) {
       eventDate: devis.eventDate,
       eventType: devis.eventType,
       guestCount: String(devis.guestCount),
+      lieu: devis.lieu ?? "",
       status: devis.status,
       notes: devis.notes,
     },
@@ -51,6 +53,7 @@ export default function DevisEditModal({ devis, onClose, onSave }: Props) {
       eventDate: data.eventDate,
       eventType: data.eventType,
       guestCount: parseInt(data.guestCount, 10) || devis.guestCount,
+      lieu: data.lieu || undefined,
       status: data.status as DevisStatus,
       notes: data.notes ?? "",
     });
@@ -121,6 +124,11 @@ export default function DevisEditModal({ devis, onClose, onSave }: Props) {
                     <Select value={field.value} onChange={field.onChange} options={STATUS_OPTS} className="w-full" />
                   )} />
                 </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-[var(--text-secondary)]">Lieu (optionnel)</label>
+                <input {...register("lieu")} type="text" placeholder="Salle des fêtes, Rouen..." className="w-full h-10 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all" />
               </div>
 
               <div className="space-y-1.5">

@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { m } from "framer-motion";
-import { X, Phone, Calendar, Users, FileText, Check, FilePdf, Trash, Plus, FileDoc } from "@phosphor-icons/react";
+import { X, Phone, Calendar, Users, FileText, Check, FilePdf, Trash, Plus, MapPin } from "@phosphor-icons/react";
 import { Devis, DevisItem, DevisStatus } from "@/lib/types";
 import { formatCurrency, formatDate, STATUS_COLORS } from "@/lib/utils";
 import { useStore } from "@/lib/store";
@@ -45,7 +45,7 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
     win.document.write("<html><body style='font-family:sans-serif;padding:40px;color:#555'>Génération du PDF en cours…</body></html>");
     setPdfLoading(true);
     try {
-      const payload = { ...devis, items, totalHT, totalTTC, brandNom, brandSousTitre };
+      const payload = { ...devis, items, totalHT, totalTTC, brandNom, brandSousTitre, lieu: devis.lieu };
       const res = await fetch("/api/devis/generate-pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -69,34 +69,45 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
     }
   };
 
-  const downloadDocx = async () => {
+  const downloadPdfAlt = async () => {
     const factConfig = (() => {
       try { return JSON.parse(localStorage.getItem("clc-facturation-config") ?? "{}"); }
       catch { return {}; }
     })();
     const brandNom       = factConfig.nom      || "CLC TRAITEUR";
     const brandSousTitre = factConfig.sousTitre || "Traiteur événementiel";
+
+    const win = window.open("", "_blank");
+    if (!win) { alert("Veuillez autoriser les popups pour générer le PDF."); return; }
+    win.document.write("<html><body style='font-family:sans-serif;padding:40px;color:#555'>Génération du PDF en cours…</body></html>");
     setDocxLoading(true);
     try {
-      const payload = { ...devis, items, totalHT, totalTTC, brandNom, brandSousTitre };
-      const res = await fetch("/api/devis/generate-docx", {
+      // PDF Alt : remplace toutes les quantités par le nombre de convives de l'événement
+      const altItems = items.map(i => ({
+        ...i,
+        quantity: devis.guestCount,
+        subtotal: i.unitPrice * devis.guestCount,
+      }));
+      const altTotalHT  = altItems.reduce((s, i) => s + i.subtotal, 0);
+      const altTotalTTC = altTotalHT * 1.2;
+      const payload = { ...devis, items: altItems, totalHT: altTotalHT, totalTTC: altTotalTTC, brandNom, brandSousTitre };
+      const res = await fetch("/api/devis/generate-pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        alert(`Erreur génération Word : ${err.error ?? res.statusText}`);
+        win.close();
+        alert(`Erreur génération PDF Alt : ${err.error ?? res.statusText}`);
         return;
       }
-      const blob = await res.blob();
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement("a");
-      a.href     = url;
-      a.download = `CLC-Traiteur-Devis-${devis.id}.docx`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const html = await res.text();
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
     } catch (e) {
+      win.close();
       alert(`Erreur : ${e}`);
     } finally {
       setDocxLoading(false);
@@ -341,17 +352,17 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
               PDF
             </button>
             <button
-              onClick={downloadDocx}
+              onClick={downloadPdfAlt}
               disabled={docxLoading}
-              title="Télécharger Word"
-              className="flex items-center gap-1.5 h-8 px-3 rounded-xl bg-[var(--info)]/10 text-[var(--info)] text-xs font-semibold hover:bg-[var(--info)]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="PDF avec nombre de convives uniformisé"
+              className="flex items-center gap-1.5 h-8 px-3 rounded-xl bg-purple-500/10 text-purple-500 text-xs font-semibold hover:bg-purple-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {docxLoading ? (
-                <span className="w-3.5 h-3.5 rounded-full border-2 border-[var(--info)]/30 border-t-[var(--info)] animate-spin" />
+                <span className="w-3.5 h-3.5 rounded-full border-2 border-purple-500/30 border-t-purple-500 animate-spin" />
               ) : (
-                <FileDoc size={14} weight="fill" />
+                <FilePdf size={14} weight="fill" />
               )}
-              Word
+              PDF Alt
             </button>
             <button onClick={onClose} className="w-8 h-8 rounded-xl bg-[var(--surface-2)] hover:bg-[var(--surface-3)] flex items-center justify-center text-[var(--text-secondary)] transition-colors">
               <X size={16} />
@@ -398,6 +409,15 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
                 <p className="text-[10px] text-[var(--text-muted)] mb-0.5">Type d&apos;événement</p>
                 <p className="text-xs font-medium text-[var(--text-primary)]">{devis.eventType}</p>
               </div>
+              {devis.lieu && (
+                <div className="px-3 py-2 rounded-xl bg-[var(--surface-2)] flex items-center gap-2">
+                  <MapPin size={13} className="text-[var(--amber)]" />
+                  <div>
+                    <p className="text-[10px] text-[var(--text-muted)]">Lieu</p>
+                    <p className="text-xs font-medium text-[var(--text-primary)]">{devis.lieu}</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

@@ -37,6 +37,7 @@ export interface Devis {
   eventDate: string;
   eventType: string;
   guestCount: number;
+  lieu?: string;
   createdAt: string;
   status: DevisStatus;
   items: DevisItem[];
