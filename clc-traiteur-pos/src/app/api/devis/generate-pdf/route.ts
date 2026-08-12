@@ -455,9 +455,11 @@ function buildRecapPage(templatePage: string, devis: Devis & {lieu?:string}, sec
         + `</div></div>`;
     } else {
       const rows = extrasData.map((data, i) => {
-        const tmpl   = tmplExtras[Math.min(i, tmplExtras.length - 1)] ?? "";
-        const iconEnd = tmpl.indexOf('</span>') + 7;
-        const icon    = iconEnd > 6 ? tmpl.slice(0, iconEnd) : "";
+        const tmpl     = tmplExtras[Math.min(i, tmplExtras.length - 1)] ?? "";
+        // Extraire uniquement le <span class="icon">…</span> (pas le div englobant)
+        const spanStart = tmpl.indexOf('<span');
+        const spanEnd   = tmpl.indexOf('</span>') + 7;
+        const icon      = spanStart >= 0 && spanEnd > spanStart ? tmpl.slice(spanStart, spanEnd) : "";
         return `<div class="recap-extra">${icon}`
           + `<div><div class="editable extra-name">${esc(data.label)}</div>`
           + `<div class="editable extra-detail">${esc(data.detail)}</div></div>`
