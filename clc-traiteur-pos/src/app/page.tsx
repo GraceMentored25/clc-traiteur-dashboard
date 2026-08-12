@@ -11,17 +11,9 @@ const AuthFormClient = dynamic(() => import("@/components/auth/AuthFormClient"),
 
 export default function Home() {
   return (
-    <div className="min-h-[100dvh] flex relative overflow-hidden" style={{ backgroundColor: "#1a1a1a" }}>
-      {/* Image de fond avec priority — évite le flash blanc */}
-      <Image
-        src="/auth4x.png"
-        alt=""
-        fill
-        priority
-        fetchPriority="high"
-        sizes="100vw"
-        className="object-cover object-[35%_center] pointer-events-none select-none"
-      />
+    <div className="min-h-[100dvh] flex relative overflow-hidden">
+      <div className="absolute inset-0 bg-cover"
+        style={{ backgroundImage: "url(/auth4x.png)", backgroundPosition: "35% center" }} />
       <div className="absolute inset-0 md:hidden bg-gradient-to-b from-black/55 via-black/35 to-black/70" />
 
       {/* Left panel — overlay sombre sur l'image */}
