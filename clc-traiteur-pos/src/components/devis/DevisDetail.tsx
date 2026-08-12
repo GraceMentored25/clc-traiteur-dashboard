@@ -463,17 +463,39 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
 
             {hasSections ? (
               <div className="space-y-4">
-                {sections!.filter(sec => sec.label !== "__services__").map((sec) => (
-                  <div key={sec.label}>
-                    <div className="flex items-center justify-between px-3 py-1.5 rounded-t-xl bg-[var(--amber)]/10 border border-[var(--amber)]/20">
-                      <span className="text-[10px] font-bold text-[var(--amber)] uppercase tracking-wider">{sec.label}</span>
-                      <span className="text-[10px] font-mono font-semibold text-[var(--amber)]">{formatCurrency(sec.subtotal * 1.2)} TTC</span>
-                    </div>
-                    <div className="border border-t-0 border-[var(--amber)]/20 rounded-b-xl p-2">
-                      {renderSectionBody(sec.items, sec.label)}
-                    </div>
-                  </div>
-                ))}
+                {(() => {
+                  const SERVICE_RE = /serveur|marmite|service de table|tente|chapiteau|chaise|déco|décoration|transport|livraison|sono|animation|photographe/i;
+                  const platSecs    = sections!.filter(sec => !SERVICE_RE.test(sec.label) && sec.label !== "__services__");
+                  const serviceSecs = sections!.filter(sec =>  SERVICE_RE.test(sec.label) || sec.label === "__services__");
+                  const serviceItems2 = serviceSecs.flatMap(s => s.items);
+                  const serviceSubtotal = serviceItems2.reduce((s,i) => s + i.subtotal, 0);
+                  return (
+                    <>
+                      {platSecs.map((sec) => (
+                        <div key={sec.label}>
+                          <div className="flex items-center justify-between px-3 py-1.5 rounded-t-xl bg-[var(--amber)]/10 border border-[var(--amber)]/20">
+                            <span className="text-[10px] font-bold text-[var(--amber)] uppercase tracking-wider">{sec.label}</span>
+                            <span className="text-[10px] font-mono font-semibold text-[var(--amber)]">{formatCurrency(sec.subtotal * 1.2)} TTC</span>
+                          </div>
+                          <div className="border border-t-0 border-[var(--amber)]/20 rounded-b-xl p-2">
+                            {renderSectionBody(sec.items, sec.label)}
+                          </div>
+                        </div>
+                      ))}
+                      {serviceItems2.length > 0 && (
+                        <div>
+                          <div className="flex items-center justify-between px-3 py-1.5 rounded-t-xl bg-purple-500/10 border border-purple-500/20">
+                            <span className="text-[10px] font-bold text-purple-500 uppercase tracking-wider">Prestations additionnelles</span>
+                            <span className="text-[10px] font-mono font-semibold text-purple-500">{formatCurrency(serviceSubtotal * 1.2)} TTC</span>
+                          </div>
+                          <div className="border border-t-0 border-purple-500/20 rounded-b-xl p-2 space-y-1.5">
+                            {serviceItems2.map(renderItem)}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             ) : (() => {
               const SERVICE_RE = /serveur|marmite|service de table|tente|chapiteau|chaise|déco|décoration|transport|livraison|sono|animation|photographe/i;

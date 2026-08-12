@@ -316,15 +316,16 @@ function buildPrestationsPage(templatePage: string, serviceItems: DevisItem[], o
       : { name: esc(slot.label), detail: esc(slot.desc), price: slot.catalogPrice, checked: false };
   });
 
-  // Checkboxes : retirer checked sur les slots non sélectionnés
-  // Chaque service-check correspond à un slot dans l'ordre du template
+  // Checkboxes : forcer checked=true si sélectionné, false sinon
   let checkIdx = 0;
   h = h.replace(/<input[^>]*class="[^"]*\bservice-check\b[^"]*"[^>]*>/g, (full) => {
     const slot = slotData[checkIdx++];
     if (!slot) return full;
-    if (slot.checked) return full; // garder checked
-    // Retirer l'attribut checked
-    return full.replace(/\s+checked\b/g, "");
+    // Retirer d'abord tout checked existant, puis rajouter si nécessaire
+    const withoutChecked = full.replace(/\s+checked\b/g, "");
+    return slot.checked
+      ? withoutChecked.replace(/>$/, " checked>")
+      : withoutChecked;
   });
 
   let nameIdx = 0, detailIdx = 0, priceIdx = 0;
