@@ -405,6 +405,18 @@ function buildRecapPage(templatePage: string, devis: Devis & {lieu?:string}, sec
     h = h.replace(block, newBlock);
   });
 
+  // Recalculer la position de recap-event-total selon le nombre réel de sections
+  // sections top:302px, chaque section = 76px + 10px marge = 86px
+  const eventTotalTop = 302 + sections.length * 86 + 8;
+  h = h.replace(
+    /(<div[^>]*class="[^"]*\brecap-event-total\b[^"]*"[^>]*style="[^"]*top:)\d+(px)/,
+    `$1${eventTotalTop}$2`
+  );
+  h = h.replace(
+    /(<div[^>]*class="[^"]*\brecap-event-total\b[^"]*")(?![^>]*style=)/,
+    `$1 style="top:${eventTotalTop}px"`
+  );
+
   h = setField(h, "recap-event-total-value", fmtMoney(totalTraiteur));
 
   // ── Prestations additionnelles (bloc recap-extras du template) ────────────
@@ -474,34 +486,35 @@ function buildRecapPage(templatePage: string, devis: Devis & {lieu?:string}, sec
   h = setField(h, "grand-value", fmtMoney(totalTTC));
   h = setField(h, "grand-sub",   hasServices ? "Événement + prestations additionnelles" : "Prestation traiteur uniquement");
 
-  // ── Recalculer les top de recap-extra-total et grand-total ─────────────────
-  // Le template suppose 3 extras à 69px chacun = 207px total depuis top:670
-  // On recalcule selon le nombre réel d'extras
-  const nExtras   = extrasData.length || 1; // au moins 1 (message vide)
-  const extraH    = 73; // hauteur par extra (69px + 4px padding)
-  const extrasTop = 670;
-  const newExtrasTotalTop = extrasTop + nExtras * extraH + 8;
-  const newGrandTotalTop  = newExtrasTotalTop + 45 + 8;
+  // ── Recalculer tous les top dépendant du nombre de sections + extras ─────────
+  // sections: top:302 + nSections×86px + 8 = eventTotalTop (déjà calculé ci-dessus)
+  // extras-kicker: eventTotalTop + 45 + 16 = 634px dans le template avec 3 sections
+  // recap-extras:  extrasKickerTop + 22
+  // recap-extra-total: extrasTop + nExtras×73 + 8
+  // grand-total:   extrasTotalTop + 45 + 8
+  const nExtras         = extrasData.length || 1;
+  const extrasKickerTop = eventTotalTop + 45 + 16;
+  const extrasTop       = extrasKickerTop + 22;
+  const extrasTotalTop  = extrasTop + nExtras * 73 + 8;
+  const grandTotalTop   = extrasTotalTop + 45 + 8;
 
-  h = h.replace(
-    /(<div[^>]*class="[^"]*\brecap-extra-total\b[^"]*"[^>]*style="[^"]*top:)\d+(px)/,
-    `$1${newExtrasTotalTop}$2`
-  );
-  h = h.replace(
-    /(<div[^>]*class="[^"]*\bgrand-total\b[^"]*"[^>]*style="[^"]*top:)\d+(px)/,
-    `$1${newGrandTotalTop}$2`
-  );
-  // Si top est dans le CSS de l'attribut style inline (pas forcément présent)
-  // Essayer aussi sans style inline (top défini dans la feuille de style)
-  // Dans ce cas on injecte un style inline pour override
-  h = h.replace(
-    /(<div[^>]*class="[^"]*\brecap-extra-total\b[^"]*")(?![^>]*style=)/,
-    `$1 style="top:${newExtrasTotalTop}px"`
-  );
-  h = h.replace(
-    /(<div[^>]*class="[^"]*\bgrand-total\b[^"]*")(?![^>]*style=)/,
-    `$1 style="top:${newGrandTotalTop}px"`
-  );
+  const setTop = (html: string, cls: string, top: number) => {
+    let result = html.replace(
+      new RegExp(`(<div[^>]*class="[^"]*\\b${cls}\\b[^"]*"[^>]*style="[^"]*top:)\\d+(px)`),
+      `$1${top}$2`
+    );
+    // Injecter style inline si pas de style existant
+    result = result.replace(
+      new RegExp(`(<div[^>]*class="[^"]*\\b${cls}\\b[^"]*")(?![^>]*style=)`),
+      `$1 style="top:${top}px"`
+    );
+    return result;
+  };
+
+  h = setTop(h, "extras-kicker",    extrasKickerTop);
+  h = setTop(h, "recap-extras",     extrasTop);
+  h = setTop(h, "recap-extra-total", extrasTotalTop);
+  h = setTop(h, "grand-total",       grandTotalTop);
 
   // Supprimer l'icône parasite dans extras-kicker (span.icon avant le texte)
   h = h.replace(
