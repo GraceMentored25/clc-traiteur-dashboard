@@ -14,7 +14,12 @@ function fmtDate(iso: string): string {
   catch { return iso; }
 }
 function fmtMoney(n: number): string {
-  return n.toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + " €";
+  // Affiche les centimes seulement si nécessaire (1210.50 → "1 210,50 €", 1210 → "1 210 €")
+  const hasCents = n % 1 !== 0;
+  return n.toLocaleString("fr-FR", {
+    minimumFractionDigits: hasCents ? 2 : 0,
+    maximumFractionDigits: 2,
+  }) + " €";
 }
 function esc(s: string): string {
   return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
