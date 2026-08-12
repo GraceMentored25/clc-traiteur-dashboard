@@ -82,15 +82,15 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
     win.document.write("<html><body style='font-family:sans-serif;padding:40px;color:#555'>Génération du PDF en cours…</body></html>");
     setDocxLoading(true);
     try {
-      // PDF Alt : remplace toutes les quantités par le nombre de convives de l'événement
+      // PDF Alt : affiche guestCount comme quantité sur les plats uniquement
+      // Les prix, sous-totaux et services restent inchangés
       const altItems = items.map(i => ({
         ...i,
-        quantity: devis.guestCount,
-        subtotal: i.unitPrice * devis.guestCount,
+        quantity: i.section !== undefined || !i.dishName.toLowerCase().match(/serveur|marmite|service de table|tente|chapiteau|chaise|déco|décoration|transport|livraison|sono|animation|photographe/)
+          ? devis.guestCount
+          : i.quantity,
       }));
-      const altTotalHT  = altItems.reduce((s, i) => s + i.subtotal, 0);
-      const altTotalTTC = altTotalHT * 1.2;
-      const payload = { ...devis, items: altItems, totalHT: altTotalHT, totalTTC: altTotalTTC, brandNom, brandSousTitre };
+      const payload = { ...devis, items: altItems, totalHT, totalTTC, brandNom, brandSousTitre, lieu: devis.lieu };
       const res = await fetch("/api/devis/generate-pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
