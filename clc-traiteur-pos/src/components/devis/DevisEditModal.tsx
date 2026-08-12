@@ -127,8 +127,8 @@ export default function DevisEditModal({ devis, onClose, onSave }: Props) {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-[var(--text-secondary)]">Lieu (optionnel)</label>
-                <input {...register("lieu")} type="text" placeholder="Salle des fêtes, Rouen..." className="w-full h-10 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all" />
+                <label className="text-xs font-medium text-[var(--text-secondary)]">Ville du client (optionnel)</label>
+                <input {...register("lieu")} type="text" placeholder="Paris, Lyon, Rouen..." className="w-full h-10 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--amber)]/50 transition-all" />
               </div>
 
               <div className="space-y-1.5">

@@ -464,7 +464,7 @@ function scheduleTable(ttc: number): Table {
 
 export async function POST(req: NextRequest) {
   try {
-    const devis = await req.json() as Devis & { lieu?: string; brandNom?: string; brandSousTitre?: string };
+    const devis = await req.json() as Devis & { lieu?: string; brandNom?: string; brandSousTitre?: string; brandVille?: string };
 
     const serviceItems = devis.items.filter(i => isService(i.dishName));
     const dishItems    = devis.items.filter(i => !isService(i.dishName));

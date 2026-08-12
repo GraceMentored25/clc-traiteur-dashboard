@@ -281,8 +281,8 @@ export default function DevisModal({ onClose }: Props) {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-[var(--text-secondary)]">Lieu (optionnel)</label>
-                  <input {...register("lieu")} type="text" placeholder="Salle des fêtes, Rouen..."
+                  <label className="text-xs font-medium text-[var(--text-secondary)]">Ville du client (optionnel)</label>
+                  <input {...register("lieu")} type="text" placeholder="Paris, Lyon, Rouen..."
                     className="w-full h-10 px-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--amber)]/50 focus:ring-1 focus:ring-[var(--amber)]/15 transition-colors" />
                 </div>
 

@@ -582,7 +582,7 @@ function buildCover(templatePage: string, devis: Devis & {lieu?:string}, now: st
 }
 
 // ── Reconstruction dernière page (signature / mentions) ──────────────────────
-function buildSignaturePage(templatePage: string, devis: Devis, now: string, outPageNum: number): string {
+function buildSignaturePage(templatePage: string, devis: Devis, now: string, outPageNum: number, ville = "Rouen"): string {
   let h = templatePage;
   h = h.replace(/(<span[^>]*class="[^"]*\bpn\b[^"]*"[^>]*>)\d*(<\/span>)/, `$1${outPageNum}$2`);
   h = setField(h, "sig-client", esc(devis.clientName));
@@ -670,7 +670,7 @@ const PRINT_CSS = `<style id="print-overrides">
 // ── API Route ─────────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
-    const devis = await req.json() as Devis & { lieu?: string; brandNom?: string; brandSousTitre?: string };
+    const devis = await req.json() as Devis & { lieu?: string; brandNom?: string; brandSousTitre?: string; brandVille?: string };
 
     const serviceItems = devis.items.filter(i => isService(i.dishName));
     const dishItems    = devis.items.filter(i => !isService(i.dishName));

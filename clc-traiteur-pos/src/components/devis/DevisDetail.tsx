@@ -36,7 +36,7 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
       try { return JSON.parse(localStorage.getItem("clc-facturation-config") ?? "{}"); }
       catch { return {}; }
     })();
-    const brandNom      = factConfig.nom      || "CLC TRAITEUR";
+    const brandNom       = factConfig.nom       || "CLC TRAITEUR";
     const brandSousTitre = factConfig.sousTitre || "Traiteur événementiel";
 
     // window.open doit être appelé AVANT tout await pour ne pas être bloqué
@@ -74,7 +74,7 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
       try { return JSON.parse(localStorage.getItem("clc-facturation-config") ?? "{}"); }
       catch { return {}; }
     })();
-    const brandNom       = factConfig.nom      || "CLC TRAITEUR";
+    const brandNom       = factConfig.nom       || "CLC TRAITEUR";
     const brandSousTitre = factConfig.sousTitre || "Traiteur événementiel";
 
     const win = window.open("", "_blank");
@@ -443,25 +443,41 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
 
             {hasSections ? (
               <div className="space-y-4">
-                {sections!.map((sec) => (
+                {sections!.filter(sec => sec.label !== "__services__").map((sec) => (
                   <div key={sec.label}>
-                    {/* Header section */}
                     <div className="flex items-center justify-between px-3 py-1.5 rounded-t-xl bg-[var(--amber)]/10 border border-[var(--amber)]/20">
                       <span className="text-[10px] font-bold text-[var(--amber)] uppercase tracking-wider">{sec.label}</span>
                       <span className="text-[10px] font-mono font-semibold text-[var(--amber)]">{formatCurrency(sec.subtotal * 1.2)} TTC</span>
                     </div>
-                    {/* Corps section avec sous-sections */}
                     <div className="border border-t-0 border-[var(--amber)]/20 rounded-b-xl p-2">
                       {renderSectionBody(sec.items, sec.label)}
                     </div>
                   </div>
                 ))}
               </div>
-            ) : (
-              <div className="space-y-1.5">
-                {items.map(renderItem)}
-              </div>
-            )}
+            ) : (() => {
+              const SERVICE_RE = /serveur|marmite|service de table|tente|chapiteau|chaise|déco|décoration|transport|livraison|sono|animation|photographe/i;
+              const plats    = items.filter(i => !SERVICE_RE.test(i.dishName));
+              const services = items.filter(i =>  SERVICE_RE.test(i.dishName));
+              return (
+                <div className="space-y-4">
+                  {plats.length > 0 && (
+                    <div className="space-y-1.5">{plats.map(renderItem)}</div>
+                  )}
+                  {services.length > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between px-3 py-1.5 rounded-t-xl bg-purple-500/10 border border-purple-500/20">
+                        <span className="text-[10px] font-bold text-purple-500 uppercase tracking-wider">Prestations additionnelles</span>
+                        <span className="text-[10px] font-mono font-semibold text-purple-500">{formatCurrency(services.reduce((s,i)=>s+i.subtotal,0) * 1.2)} TTC</span>
+                      </div>
+                      <div className="border border-t-0 border-purple-500/20 rounded-b-xl p-2 space-y-1.5">
+                        {services.map(renderItem)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Save button */}
             {(isDirty || saved) && (

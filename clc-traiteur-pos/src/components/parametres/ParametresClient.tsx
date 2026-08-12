@@ -582,6 +582,7 @@ function TabFacturation() {
       return saved ? JSON.parse(saved) : {
         nom: "CLC TRAITEUR",
         sousTitre: "Traiteur événementiel",
+        ville: "Rouen",
         tva: 20,
         mentionLegale: "Dispensé d'immatriculation au RCS et au RM",
         conditionsPaiement: "Acompte de 30% à la commande. Solde le jour de l'événement.",
@@ -590,7 +591,7 @@ function TabFacturation() {
         delaiPaiement: 30,
       };
     }
-    return { nom: "CLC TRAITEUR", sousTitre: "Traiteur événementiel", tva: 20, mentionLegale: "", conditionsPaiement: "", siret: "", iban: "", delaiPaiement: 30 };
+    return { nom: "CLC TRAITEUR", sousTitre: "Traiteur événementiel", ville: "Rouen", tva: 20, mentionLegale: "", conditionsPaiement: "", siret: "", iban: "", delaiPaiement: 30 };
   });
 
   const save = (updated: typeof settings) => {
