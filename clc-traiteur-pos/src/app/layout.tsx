@@ -39,8 +39,9 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://ndmpfsaqnxwznizivjcu.supabase.co" />
         <link rel="dns-prefetch" href="https://ndmpfsaqnxwznizivjcu.supabase.co" />
+        <link rel="preload" as="image" href="/auth4x.png" fetchPriority="high" />
       </head>
-      <body className="min-h-[100dvh] flex flex-col">
+      <body className="min-h-[100dvh] flex flex-col" style={{ backgroundColor: "#1a1a1a" }}>
         <ThemeApplier />
         <MotionProvider>{children}</MotionProvider>
       </body>
