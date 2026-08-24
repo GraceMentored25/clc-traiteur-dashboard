@@ -195,7 +195,7 @@ function foodRow(item: DevisItem): string {
 // ── Reconstruction de la page event ─────────────────────────────────────────
 // Stratégie : garder la page template telle quelle (images, css, header),
 // remplacer event-title, meta-text, puis supprimer/réécrire les menu-cards
-function buildEventPage(templatePage: string, devis: Devis & {lieu?:string}, sections: Section[], totalTTC: number, outPageNum: number, sectionOffset = 0, showTotal = true): string {
+function buildEventPage(templatePage: string, devis: Devis & {lieu?:string}, sections: Section[], subtotalHT: number, outPageNum: number, sectionOffset = 0, showTotal = true): string {
   let h = templatePage;
 
   // Numéro de page affiché
@@ -287,8 +287,8 @@ function buildEventPage(templatePage: string, devis: Devis & {lieu?:string}, sec
     const totalTop = currentTop + 8;
     const evTotal  = showTotal
       ? `<div class="event-total" style="top:${totalTop}px">`
-        + `<div class="editable event-total-label">TOTAL TTC</div>`
-        + `<div class="editable event-total-value">${fmtMoney(totalTTC)}</div></div>`
+        + `<div class="editable event-total-label">SOUS-TOTAL ÉVÉNEMENT</div>`
+        + `<div class="editable event-total-value">${fmtMoney(subtotalHT)}</div></div>`
       : "";
 
     h = before + cardsHtml + evTotal + after;
@@ -380,14 +380,14 @@ function buildPrestationsPage(templatePage: string, serviceItems: DevisItem[], o
 // ── Reconstruction page récap ─────────────────────────────────────────────────
 // Respecte la structure absolue du template :
 //   recap-sections (3 slots) → recap-event-total → extras-kicker → recap-extras → recap-extra-total → grand-total
-function buildRecapPage(templatePage: string, devis: Devis & {lieu?:string}, sections: Section[], serviceItems: DevisItem[], outPageNum: number, totalHT: number): string {
+function buildRecapPage(templatePage: string, devis: Devis & {lieu?:string}, sections: Section[], serviceItems: DevisItem[], outPageNum: number, totalHT: number, totalTTC: number): string {
   let h = templatePage;
   h = h.replace(/(<span[^>]*class="[^"]*\bpn\b[^"]*"[^>]*>)\d*(<\/span>)/, `$1${outPageNum}$2`);
 
   const totalTraiteur = sections.reduce((s,x) => s + x.subtotal, 0);
   const totalServices = serviceItems.reduce((s, i) => s + i.subtotal, 0);
   const hasServices   = serviceItems.length > 0;
-  const totalTTC      = totalHT;
+  const totalTVA      = Math.round((totalTTC - totalHT) * 100) / 100;
 
   // En-tête
   h = setField(h, "recap-event",      esc(devis.eventType.toUpperCase()));
@@ -516,21 +516,25 @@ function buildRecapPage(templatePage: string, devis: Devis & {lieu?:string}, sec
   }
 
   h = setField(h, "recap-extra-total-value", hasServices ? fmtMoney(totalServices) : "0 €");
-  h = setField(h, "grand-value", fmtMoney(totalTTC));
-  h = setField(h, "grand-sub",   hasServices ? "Événement + prestations additionnelles" : "Prestation traiteur uniquement");
 
-  // ── Recalculer tous les top dépendant du nombre de sections + extras ─────────
-  // sections: top:302 + nSections×86px + 8 = eventTotalTop (déjà calculé ci-dessus)
-  // extras-kicker: eventTotalTop + 45 + 16 = 634px dans le template avec 3 sections
-  // recap-extras:  extrasKickerTop + 22
-  // recap-extra-total: extrasTop + nExtras×73 + 8
-  // grand-total:   extrasTotalTop + 45 + 8
+  // ── Ligne TVA (20%) entre sous-total extras et grand total ─────────────────
   const nExtras         = extrasData.length || 1;
   const extrasKickerTop = eventTotalTop + 45 + 16;
   const extrasTop       = extrasKickerTop + 22;
   const extrasTotalTop  = extrasTop + nExtras * 73 + 8;
-  const grandTotalTop   = extrasTotalTop + 45 + 8;
+  const tvaTop          = extrasTotalTop + 45 + 8;
+  const grandTotalTop   = tvaTop + 45 + 8;
 
+  const tvaRow = `<div class="recap-tva" style="top:${tvaTop}px;position:absolute;left:56px;width:682px;height:45px;border:1px solid var(--gold2);border-radius:11px;background:var(--ivory2);display:flex;align-items:center;padding:0 21px;justify-content:space-between;">`
+    + `<div class="editable recap-tva-label" style="font-family:Montserrat,Arial,sans-serif;font-weight:700;font-size:11px;letter-spacing:.12em;color:var(--green);">TVA (20%)</div>`
+    + `<div class="editable recap-tva-value" style="font-family:Raleway,Arial,sans-serif;font-weight:700;font-size:18px;color:var(--ink);">${fmtMoney(totalTVA)}</div>`
+    + `</div>`;
+  h = h.replace('<div class="grand-total"', tvaRow + '<div class="grand-total"');
+
+  h = setField(h, "grand-value", fmtMoney(totalTTC));
+  h = setField(h, "grand-sub",   hasServices ? "Événement + prestations additionnelles (TTC)" : "Prestation traiteur uniquement (TTC)");
+
+  // ── Recalculer tous les top dépendant du nombre de sections + extras ─────────
   const setTop = (html: string, cls: string, top: number) => {
     let result = html.replace(
       new RegExp(`(<div[^>]*class="[^"]*\\b${cls}\\b[^"]*"[^>]*style="[^"]*top:)\\d+(px)`),
@@ -561,11 +565,11 @@ function buildRecapPage(templatePage: string, devis: Devis & {lieu?:string}, sec
 // ── Reconstruction page acompte (pages 9,11,13,15,17) ───────────────────────
 // Champs: payment-event, summary-total, summary-breakdown(×2),
 //   deposit-amount, payment-amount(×3)
-function buildAcomptePage(templatePage: string, devis: Devis, sections: Section[], serviceItems: DevisItem[], outPageNum: number, totalHT: number): string {
+function buildAcomptePage(templatePage: string, devis: Devis, sections: Section[], serviceItems: DevisItem[], outPageNum: number, totalTTC: number): string {
   let h = templatePage;
   h = h.replace(/(<span[^>]*class="[^"]*\bpn\b[^"]*"[^>]*>)\d*(<\/span>)/, `$1${outPageNum}$2`);
 
-  const ttc         = totalHT;
+  const ttc         = totalTTC;
   const totalEv     = sections.reduce((s,x) => s + x.subtotal, 0);
   const totalSvc    = serviceItems.reduce((s, i) => s + i.subtotal, 0);
   const hasSvc      = totalSvc > 0;
@@ -615,17 +619,21 @@ function buildCover(templatePage: string, devis: Devis & {lieu?:string}, now: st
 }
 
 // ── Reconstruction dernière page (signature / mentions) ──────────────────────
-function buildSignaturePage(templatePage: string, devis: Devis, now: string, outPageNum: number): string {
+function buildSignaturePage(templatePage: string, devis: Devis, now: string, outPageNum: number, brandVille: string): string {
   let h = templatePage;
   h = h.replace(/(<span[^>]*class="[^"]*\bpn\b[^"]*"[^>]*>)\d*(<\/span>)/, `$1${outPageNum}$2`);
   h = setField(h, "sig-client", esc(devis.clientName));
-  h = setField(h, "fait-a-date", `Fait à Rouen, le ${now}`);
   // Supprimer l'icône dorée dans les sign-box
   h = h.replace(/<span[^>]*class="icon[^"]*"[^>]*>[\s\S]*?<\/span>/g, "");
-  // Remplacer le div.editable vide en bas de page (lieu entreprise)
+  // Pré-remplir « Fait à » (ville du traiteur) et « Le » (date de génération)
+  let bottomLineIdx = 0;
+  const bottomValues = [esc(brandVille), esc(now)];
   h = h.replace(
-    /(<div[^>]*class="editable\s*"[^>]*contenteditable="true"[^>]*>)[^<]*(<\/div>)/,
-    `$1Rouen, France$2`
+    /(<div class="bottom-line"[^>]*>)[^<]*(<\/div>)/g,
+    (_, open, close) => {
+      const val = bottomValues[bottomLineIdx++] ?? "";
+      return `${open}${val}${close}`;
+    }
   );
   return h;
 }
@@ -652,6 +660,7 @@ const PRINT_CSS = `<style id="print-overrides">
   .event-total-label, .event-total-value,
   .grand-sub, .grand-value,
   .recap-event-total-value, .recap-extra-total-value,
+  .recap-tva-label, .recap-tva-value,
   .payment-amount, .deposit-amount, .summary-total, .summary-breakdown,
   .additional-total-label, .additional-total-value,
   .payment-part, .payment-when, .payment-detail,
@@ -711,13 +720,15 @@ export async function POST(req: NextRequest) {
     const dishItems    = devis.items.filter(i => !isServiceItem(i));
     const sections     = groupSections(dishItems);
     const cfg          = getEventPages(devis.eventType);
-    const { totalHT }  = computeTotals(devis.items);
+    const { totalHT, totalTTC } = computeTotals(devis.items);
+    const resolvedTTC = devis.totalTTC ?? totalTTC;
     const foodTotal    = sections.reduce((s, x) => s + x.subtotal, 0);
 
     const now = new Date().toLocaleDateString("fr-FR", { day:"numeric", month:"long", year:"numeric" });
 
     const brandNom       = devis.brandNom       ?? "CLC TRAITEUR";
     const brandSousTitre = devis.brandSousTitre ?? "Traiteur événementiel";
+    const brandVille     = devis.brandVille     ?? "Rouen";
 
     // UTF-8 : le template est encodé en UTF-8, les base64 ne contiennent que des chars ASCII
     let html = fs.readFileSync(TEMPLATE_PATH, "utf-8");
@@ -755,13 +766,13 @@ export async function POST(req: NextRequest) {
     pages.push(buildPrestationsPage(getPage(html, 7), serviceItems, pageNum++));
 
     // Récapitulatif
-    pages.push(buildRecapPage(getPage(html, cfg.recap), devis, sections, serviceItems, pageNum++, totalHT));
+    pages.push(buildRecapPage(getPage(html, cfg.recap), devis, sections, serviceItems, pageNum++, totalHT, resolvedTTC));
 
     // Acompte / Échéancier
-    pages.push(buildAcomptePage(getPage(html, cfg.acompte), devis, sections, serviceItems, pageNum++, totalHT));
+    pages.push(buildAcomptePage(getPage(html, cfg.acompte), devis, sections, serviceItems, pageNum++, resolvedTTC));
 
     // Page 20 : signature/mentions
-    pages.push(buildSignaturePage(getPage(html, 20), devis, now, pageNum++));
+    pages.push(buildSignaturePage(getPage(html, 20), devis, now, pageNum++, brandVille));
 
     // ── Footer JS ─────────────────────────────────────────────────────────────
     const total = pages.length;

@@ -4,6 +4,7 @@ export type DevisPdfPayload = Devis & {
   lieu?: string;
   brandNom?: string;
   brandSousTitre?: string;
+  brandVille?: string;
 };
 
 /** Ouvre le devis HTML (template devis_modele.html) dans un nouvel onglet pour impression PDF. */
@@ -17,6 +18,7 @@ export async function downloadDevisPdf(devis: DevisPdfPayload): Promise<void> {
     ...devis,
     brandNom:       devis.brandNom       ?? factConfig.nom       ?? "CLC TRAITEUR",
     brandSousTitre: devis.brandSousTitre ?? factConfig.sousTitre ?? "Traiteur événementiel",
+    brandVille:       devis.brandVille       ?? factConfig.ville       ?? "Rouen",
   };
 
   const win = window.open("", "_blank");
