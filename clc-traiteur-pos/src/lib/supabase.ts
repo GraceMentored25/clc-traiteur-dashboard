@@ -63,13 +63,11 @@ export async function saveToSupabase(state: Record<string, unknown>) {
   if (error) console.error("Supabase save error:", error);
 }
 
-// Helper : sauvegarde immédiate de l'état courant du store
+// Helper : sauvegarde immédiate de l'état courant du store (via API serveur)
 export async function syncStoreNow() {
-  // Import dynamique pour éviter les dépendances circulaires
   const { useStore } = await import("@/lib/store");
   const s = useStore.getState();
-  await saveToSupabase({
-    user: s.user,
+  const payload = {
     devisListPro: s.devisListPro,
     devisListLab: s.devisListLab,
     devisList: s.devisList,
@@ -84,7 +82,17 @@ export async function syncStoreNow() {
     customRecipes: s.customRecipes,
     demandesCourses: s.demandesCourses,
     demandesLogistique: s.demandesLogistique,
-  });
+  };
+
+  try {
+    await fetch("/api/sync/store", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    console.error("[syncStoreNow]", err);
+  }
 }
 
 /** Fusionne l'état local avec le cloud — ne jamais perdre des devis locaux. */

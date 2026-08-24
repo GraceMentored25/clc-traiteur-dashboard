@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { m, AnimatePresence } from "framer-motion";
-import { MagnifyingGlass, Plus, Calendar, Receipt, PencilSimple, Trash, Warning, FilePdf, PresentationChart } from "@phosphor-icons/react";
+import { MagnifyingGlass, Plus, Calendar, Receipt, PencilSimple, Trash, Warning, FilePdf, PresentationChart, CloudCheck, CloudSlash } from "@phosphor-icons/react";
 import { downloadDevisPdf } from "@/lib/downloadDevisPdf";
 
 async function downloadDevisPptx(devis: Devis) {
@@ -33,18 +33,41 @@ import StatusSelect from "./StatusSelect";
 const STATUS_OPTIONS: (DevisStatus | "Tous")[] = ["Tous", "Brouillon", "Envoyé", "Confirmé", "Annulé"];
 
 // Gabarit des colonnes du tableau desktop.
-// Défini en style inline (et non via une classe arbitraire Tailwind) car la virgule
-// de minmax(0,240px) casse la génération de la classe `grid-cols-[…]` par Tailwind v4.
 const GRID_TEMPLATE = "80px minmax(0, 240px) 130px 120px 1fr 120px 100px 80px";
 
+type CloudSyncInfo = {
+  configured: boolean;
+  devisCount: number;
+  devisIds: string[];
+  loadError: string | null;
+  updatedAt: string | null;
+};
+
 export default function DevisClient() {
-  const { devisList, updateDevisStatus, updateDevis, deleteDevis } = useStore();
+  const { devisList, devisListPro, appMode, updateDevisStatus, updateDevis, deleteDevis } = useStore();
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<DevisStatus | "Tous">("Tous");
   const [selected, setSelected] = useState<Devis | null>(null);
   const [editing, setEditing] = useState<Devis | null>(null);
   const [toDelete, setToDelete] = useState<Devis | null>(null);
+  const [cloudSync, setCloudSync] = useState<CloudSyncInfo | null>(null);
+
+  useEffect(() => {
+    fetch("/api/sync/store", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data) return;
+        setCloudSync({
+          configured: data.configured,
+          devisCount: data.devisCount ?? 0,
+          devisIds: data.devisIds ?? [],
+          loadError: data.loadError ?? null,
+          updatedAt: data.updatedAt ?? null,
+        });
+      })
+      .catch(() => setCloudSync(null));
+  }, [devisList.length, devisListPro.length]);
 
   const filtered = useMemo(() => {
     return devisList.filter((d) => {
@@ -55,6 +78,12 @@ export default function DevisClient() {
       return matchStatus && matchSearch;
     });
   }, [devisList, search, statusFilter]);
+
+  const syncMismatch =
+    cloudSync?.configured &&
+    !cloudSync.loadError &&
+    appMode === "pro" &&
+    cloudSync.devisCount !== devisListPro.length;
 
   const stats = useMemo(() => {
     const confirmed = devisList.filter((d) => d.status === "Confirmé");
@@ -87,6 +116,28 @@ export default function DevisClient() {
           <p className="text-sm text-[var(--text-muted)] mt-1">
             {devisList.length} devis — {stats.confirmed} confirmés
           </p>
+          {cloudSync && (
+            <p className={`text-xs mt-1.5 flex items-center gap-1.5 ${cloudSync.loadError || syncMismatch ? "text-amber-400" : "text-[var(--text-muted)]"}`}>
+              {cloudSync.loadError ? (
+                <>
+                  <CloudSlash size={13} />
+                  Cloud inaccessible : {cloudSync.loadError}
+                </>
+              ) : !cloudSync.configured ? (
+                <>
+                  <CloudSlash size={13} />
+                  Synchronisation cloud non configurée sur Vercel
+                </>
+              ) : (
+                <>
+                  <CloudCheck size={13} />
+                  Cloud : {cloudSync.devisCount} devis
+                  {syncMismatch ? ` (local : ${devisListPro.length})` : ""}
+                  {cloudSync.updatedAt ? ` — maj ${formatDate(cloudSync.updatedAt)}` : ""}
+                </>
+              )}
+            </p>
+          )}
         </div>
         <m.button
           whileTap={{ scale: 0.97 }}

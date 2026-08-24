@@ -6,10 +6,45 @@ import { useStore } from "@/lib/store";
 import { applyTheme } from "@/lib/themes";
 import Sidebar from "./Sidebar";
 import { List } from "@phosphor-icons/react";
-import { loadFromSupabase, saveToSupabase, mapSupabaseToStore, mergeCloudStore } from "@/lib/supabase";
+import { mapSupabaseToStore, mergeCloudStore } from "@/lib/supabase";
 import { DEFAULT_INGREDIENTS, DEFAULT_MATERIEL } from "@/lib/data/stocks";
 import { MOCK_DEVIS } from "@/lib/data/mock-events";
 import type { AppState } from "@/lib/store";
+import type { Devis } from "@/lib/types";
+
+interface CloudSyncResponse {
+  configured: boolean;
+  store: {
+    devisListPro: Devis[];
+    devisList: Devis[];
+    appMode: "pro" | "lab";
+    [key: string]: unknown;
+  } | null;
+  devisCount: number;
+  loadError?: string | null;
+}
+
+async function loadCloudStore(): Promise<CloudSyncResponse | null> {
+  try {
+    const res = await fetch("/api/sync/store", { cache: "no-store" });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+async function saveCloudStore(payload: ReturnType<typeof buildPayload>) {
+  try {
+    await fetch("/api/sync/store", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    console.error("[cloud save]", err);
+  }
+}
 
 function buildPayload(s: AppState) {
   return {
@@ -98,11 +133,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!hydrated || !user || cloudReady) return;
 
-    loadFromSupabase().then((data) => {
+    loadCloudStore().then((cloudResp) => {
       const current = useStore.getState();
 
-      if (data) {
-        const cloudMapped = mapSupabaseToStore(data as Record<string, unknown>);
+      if (cloudResp?.loadError) {
+        console.error("[cloud sync]", cloudResp.loadError);
+      }
+
+      if (cloudResp?.store) {
+        const cloudMapped = mapSupabaseToStore(cloudResp.store as Record<string, unknown>);
         const { merged, needsCloudPush } = mergeCloudStore(current, cloudMapped);
         const { user: _u, ...rest } = merged;
         void _u;
@@ -122,11 +161,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         } as Partial<AppState>);
 
         if (needsCloudPush) {
-          saveToSupabase(buildPayload(useStore.getState()));
+          saveCloudStore(buildPayload(useStore.getState()));
         }
       } else if (current.devisListPro.length > 0) {
         // Premier appareil avec des devis locaux : initialiser le cloud
-        saveToSupabase(buildPayload(current));
+        saveCloudStore(buildPayload(current));
       } else {
         // Réhydratation locale : s'assurer que devisList reflète appMode
         const appMode = current.appMode ?? "pro";
@@ -150,7 +189,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         state.devisListLab !== prev.devisListLab ||
         state.entreesCapital !== prev.entreesCapital
       ) {
-        saveToSupabase(buildPayload(state));
+        saveCloudStore(buildPayload(state));
       }
     });
 
@@ -166,7 +205,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       if (!cloudReady) return;
       clearTimeout(timer);
       timer = setTimeout(() => {
-        saveToSupabase(buildPayload(useStore.getState()));
+        saveCloudStore(buildPayload(useStore.getState()));
       }, 3000);
     });
 
@@ -181,7 +220,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     if (!user) return;
     const handleBeforeUnload = () => {
       if (cloudReady) {
-        saveToSupabase(buildPayload(useStore.getState()));
+        saveCloudStore(buildPayload(useStore.getState()));
       }
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
