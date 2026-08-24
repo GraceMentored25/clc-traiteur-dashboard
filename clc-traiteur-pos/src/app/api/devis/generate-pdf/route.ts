@@ -668,6 +668,11 @@ function buildSignaturePage(templatePage: string, devis: Devis, now: string, out
   return h;
 }
 
+// Google Fonts : repli fiable quand la CSP parente bloque les @font-face data: du template
+const FONT_HEAD = `<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&amp;family=Raleway:ital,wght@0,400;0,700;1,400;1,700&amp;display=swap" rel="stylesheet">`;
+
 // ── CSS d'impression ─────────────────────────────────────────────────────────
 const PRINT_CSS = `<style id="print-overrides">
   /* Polices : le template devis_modele.html définit Montserrat/Raleway via @font-face.
@@ -765,7 +770,7 @@ export async function POST(req: NextRequest) {
     const bodyIdx = html.indexOf("<body");
     let head = html.slice(0, bodyIdx);
     // Injecter le CSS d'impression juste avant </head>
-    head = head.replace("</head>", PRINT_CSS + "</head>");
+    head = head.replace("</head>", FONT_HEAD + PRINT_CSS + "</head>");
 
     // ── Pages ────────────────────────────────────────────────────────────────
     const pages: string[] = [];
@@ -810,23 +815,32 @@ export async function POST(req: NextRequest) {
     p.style.position='relative';
     p.appendChild(f);
   });
-  // Attendre polices + images avant impression
+  // Attendre polices (Google Fonts + base64 template) et images avant impression
   function doPrint(){
-    function launchPrint(){
+    function waitImages(cb){
       var imgs = document.querySelectorAll('img');
       var pending = imgs.length;
-      if(pending === 0){ window.print(); return; }
-      function tryPrint(){ if(--pending <= 0) window.print(); }
+      if(pending === 0){ cb(); return; }
+      function done(){ if(--pending <= 0) cb(); }
       imgs.forEach(function(img){
-        if(img.complete){ tryPrint(); }
-        else { img.addEventListener('load', tryPrint); img.addEventListener('error', tryPrint); }
+        if(img.complete){ done(); }
+        else { img.addEventListener('load', done); img.addEventListener('error', done); }
       });
     }
-    if(document.fonts && document.fonts.ready){
-      document.fonts.ready.then(launchPrint).catch(launchPrint);
-    } else {
-      launchPrint();
+    function ensureFonts(){
+      if(!document.fonts) return Promise.resolve();
+      var specs=[
+        '400 92px Montserrat','700 55px Montserrat','700 54px Montserrat','700 41px Montserrat',
+        '700 36px Montserrat','700 29px Montserrat','700 23px Montserrat','700 21px Montserrat',
+        '400 22px Raleway','700 19px Raleway','700 16.5px Raleway',
+        'italic 14px Raleway','italic 16.5px Raleway','italic 27px Raleway'
+      ];
+      return Promise.all(specs.map(function(s){
+        return document.fonts.load(s).catch(function(){});
+      })).then(function(){ return document.fonts.ready; });
     }
+    ensureFonts().then(function(){ waitImages(function(){ window.print(); }); })
+      .catch(function(){ waitImages(function(){ window.print(); }); });
   }
   if(document.readyState === 'complete'){ doPrint(); }
   else { window.addEventListener('load', doPrint); }

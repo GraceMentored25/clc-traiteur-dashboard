@@ -44,7 +44,9 @@ export async function downloadDevisPdf(devis: DevisPdfPayload): Promise<void> {
   }
 
   const html = await res.text();
-  win.document.open();
-  win.document.write(html);
-  win.document.close();
+  // Blob URL : chargement plus fiable des polices que document.write (soumis à la CSP parente)
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  win.location.replace(url);
+  win.addEventListener("load", () => URL.revokeObjectURL(url), { once: true });
 }
