@@ -177,7 +177,8 @@ function getPage(html: string, n: number): string {
 /** Garantit la bordure dorée (.frame) sur chaque page, comme dans le template. */
 function ensurePageFrame(pageHtml: string): string {
   if (!pageHtml || pageHtml.includes('class="frame"')) return pageHtml;
-  const frame = '<div class="frame"></div>';
+  const isCover = pageHtml.includes("cover-page");
+  const frame = isCover ? '<div class="frame light"></div>' : '<div class="frame"></div>';
   const pnIdx = pageHtml.indexOf('<div class="page-number"');
   if (pnIdx >= 0) return pageHtml.slice(0, pnIdx) + frame + pageHtml.slice(pnIdx);
   const artIdx = pageHtml.lastIndexOf("</article>");
