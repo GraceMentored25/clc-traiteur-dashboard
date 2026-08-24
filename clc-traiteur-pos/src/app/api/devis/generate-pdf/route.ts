@@ -651,6 +651,10 @@ function buildSignaturePage(templatePage: string, devis: Devis, now: string, out
 
 // ── CSS d'impression ─────────────────────────────────────────────────────────
 const PRINT_CSS = `<style id="print-overrides">
+  /* ── Polices embarquées du template (Montserrat + Raleway) ── */
+  html, body, .page, .editable, [contenteditable] {
+    font-family: Raleway, Arial, sans-serif !important;
+  }
   /* ── Polices : Montserrat = titres, Raleway = tout le reste ── */
   .card-title, .event-title, .recap-title, .payment-title, .additional-title,
   .recap-event, .payment-event, .brand-name, .section-kicker, .extras-kicker,
@@ -708,7 +712,7 @@ const PRINT_CSS = `<style id="print-overrides">
   }
   .toolbar,.page-number { display:none !important; }
   @media screen {
-    body { padding:24px; background:#1a1a1a; }
+    body { padding:24px; background:#1a1a1a; font-family:Raleway,Arial,sans-serif !important; }
     .page-host {
       display:block !important;
       margin:0 auto 24px;
@@ -806,23 +810,30 @@ export async function POST(req: NextRequest) {
     p.style.position='relative';
     p.appendChild(f);
   });
-  // Attendre que toutes les images et polices soient chargées avant d'imprimer
+  // Attendre polices + images avant impression
   function doPrint(){
-    var imgs = document.querySelectorAll('img');
-    var pending = imgs.length;
-    if(pending === 0){ window.print(); return; }
-    function tryPrint(){ if(--pending <= 0) window.print(); }
-    imgs.forEach(function(img){
-      if(img.complete){ tryPrint(); }
-      else { img.addEventListener('load', tryPrint); img.addEventListener('error', tryPrint); }
-    });
+    function launchPrint(){
+      var imgs = document.querySelectorAll('img');
+      var pending = imgs.length;
+      if(pending === 0){ window.print(); return; }
+      function tryPrint(){ if(--pending <= 0) window.print(); }
+      imgs.forEach(function(img){
+        if(img.complete){ tryPrint(); }
+        else { img.addEventListener('load', tryPrint); img.addEventListener('error', tryPrint); }
+      });
+    }
+    if(document.fonts && document.fonts.ready){
+      document.fonts.ready.then(launchPrint).catch(launchPrint);
+    } else {
+      launchPrint();
+    }
   }
   if(document.readyState === 'complete'){ doPrint(); }
   else { window.addEventListener('load', doPrint); }
 })();
 </script>`;
 
-    const final = `${head}<body>\n<main>\n${pages.join("\n")}\n</main>\n${footerScript}\n</body>\n</html>`;
+    const final = `${head}<body style="font-family:Raleway,Arial,sans-serif;margin:0;padding:0;background:white">\n<main>\n${pages.join("\n")}\n</main>\n${footerScript}\n</body>\n</html>`;
 
     return new NextResponse(final, {
       status: 200,

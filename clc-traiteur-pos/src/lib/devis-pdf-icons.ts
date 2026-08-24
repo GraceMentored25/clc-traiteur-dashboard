@@ -82,11 +82,14 @@ const CATEGORY_TO_LEGEND: Record<string, string> = {
   "Entrées": "Entrées & légumes frais",
   "Apéritif": "Plats cuisinés",
   "Repas": "Plats cuisinés",
-  "Grillades": "Viandes",
+  "Grillades": "Plats cuisinés",
   "Accompagnements": "Plats cuisinés",
   "Desserts": "Desserts & pâtisseries",
   "Cocktails & Boissons": "Boissons & cocktails",
 };
+
+/** Icône assiette du template (légende « Plats cuisinés »). */
+export const PLAT_CUISINES_ICON = CATEGORY_ICONS["Plats cuisinés"];
 
 const SERVICE_NAME_RE =
   /serveur|marmite|service de table|tente|chapiteau|chaise|déco|décoration|transport|livraison|sono|animation|photographe/i;
@@ -115,19 +118,22 @@ function inferLegendCategory(dishName: string, dishId?: number): string {
   }
 
   const n = normalized;
-  if (/poisson|tilapia|bar|attieke/.test(n)) return "Poissons";
+  // Heuristiques spécifiques avant le catalogue (ex. poisson en catégorie Grillades)
+  if (/poisson|tilapia|bar|attieke|thon|crevette/.test(n)) return "Poissons";
   if (/jus|bissap|cocktail|gingembre/.test(n)) return "Boissons & cocktails";
   if (/gateau|crepe|caramel|dessert|chinchin|patisserie/.test(n)) return "Desserts & pâtisseries";
-  if (/braise|grille|porc|boeuf|poulet|viande|ndole|eru|okok|koki|mbongo|sanga/.test(n)) return "Viandes";
-  if (/riz|plantain|bobolo|couscous|tapioca|frites/.test(n)) return "Plats cuisinés";
-  if (/crudite|plateau|entree|salade|nem|pastel|beignet|brochette/.test(n)) return "Entrées & légumes frais";
   if (/cafe|the|infusion/.test(n)) return "Cafés, thés & infusions";
   if (/fruit/.test(n)) return "Fruits & frais";
 
+  // Catalogue applicatif (Repas, Grillades viande → icône plat)
   if (dishId) {
     const cat = DISH_CATEGORY.get(dishId);
     if (cat && CATEGORY_TO_LEGEND[cat]) return CATEGORY_TO_LEGEND[cat];
   }
+
+  if (/ndole|eru|okok|koki|mbongo|sanga|riz|plantain|bobolo|couscous|tapioca|frites|braise|grille|mafé|jollof/.test(n)) return "Plats cuisinés";
+  if (/porc|boeuf|poulet|viande|samoussa|yakitori/.test(n)) return "Viandes";
+  if (/crudite|plateau|entree|salade|nem|pastel|beignet|brochette/.test(n)) return "Entrées & légumes frais";
 
   return "Plats cuisinés";
 }
