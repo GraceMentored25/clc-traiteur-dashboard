@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { m, AnimatePresence } from "framer-motion";
 import { MagnifyingGlass, Plus, Calendar, Receipt, PencilSimple, Trash, Warning, FilePdf, PresentationChart } from "@phosphor-icons/react";
-import { generateDevisPDF } from "@/lib/generateDevisPDF";
+import { downloadDevisPdf } from "@/lib/downloadDevisPdf";
 
 async function downloadDevisPptx(devis: Devis) {
   try {
@@ -198,7 +198,7 @@ export default function DevisClient() {
                       />
                     </div>
                     <div className="self-center flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                      <button onClick={() => generateDevisPDF(devis)} title="Télécharger PDF" className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 transition-all">
+                      <button onClick={() => downloadDevisPdf(devis).catch((e) => alert(`Erreur : ${e}`))} title="Télécharger PDF" className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 transition-all">
                         <FilePdf size={14} weight="fill" />
                       </button>
                       <button onClick={() => downloadDevisPptx(devis)} title="Télécharger PPTX" className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--info)] hover:bg-[var(--info)]/10 transition-all">
@@ -229,7 +229,7 @@ export default function DevisClient() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                        <button onClick={() => generateDevisPDF(devis)} title="PDF" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 transition-all">
+                        <button onClick={() => downloadDevisPdf(devis).catch((e) => alert(`Erreur : ${e}`))} title="PDF" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 transition-all">
                           <FilePdf size={15} weight="fill" />
                         </button>
                         <button onClick={() => downloadDevisPptx(devis)} title="PPTX" className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--info)] hover:bg-[var(--info)]/10 transition-all">

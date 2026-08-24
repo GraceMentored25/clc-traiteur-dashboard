@@ -6,6 +6,7 @@ import { X, Phone, Calendar, Users, FileText, Check, FilePdf, Trash, Plus, MapPi
 import { Devis, DevisItem, DevisStatus } from "@/lib/types";
 import { formatCurrency, formatDate, STATUS_COLORS } from "@/lib/utils";
 import { useStore } from "@/lib/store";
+import { downloadDevisPdf } from "@/lib/downloadDevisPdf";
 import { Select } from "@/components/ui/SelectV2";
 import { DISHES } from "@/lib/data/dishes";
 import { ALL_KNOWN_CATEGORIES, SUBSECTION_MAP } from "@/lib/data/subsections";
@@ -38,38 +39,11 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
   const [docxLoading, setDocxLoading] = useState(false);
 
   const downloadPdf = async () => {
-    // Lire les infos entreprise depuis localStorage
-    const factConfig = (() => {
-      try { return JSON.parse(localStorage.getItem("clc-facturation-config") ?? "{}"); }
-      catch { return {}; }
-    })();
-    const brandNom       = factConfig.nom       || "CLC TRAITEUR";
-    const brandSousTitre = factConfig.sousTitre || "Traiteur événementiel";
-
-    // window.open doit être appelé AVANT tout await pour ne pas être bloqué
-    const win = window.open("", "_blank");
-    if (!win) { alert("Veuillez autoriser les popups pour générer le PDF."); return; }
-    win.document.write("<html><body style='font-family:sans-serif;padding:40px;color:#555'>Génération du PDF en cours…</body></html>");
     setPdfLoading(true);
     try {
-      const payload = { ...devis, items, totalHT, totalTTC, brandNom, brandSousTitre, clientName, clientPhone, eventDate, eventType, guestCount, lieu: lieu || undefined };
-      const res = await fetch("/api/devis/generate-pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        win.close();
-        alert(`Erreur génération PDF : ${err.error ?? res.statusText}`);
-        return;
-      }
-      const html = await res.text();
-      win.document.open();
-      win.document.write(html);
-      win.document.close();
+      const payload = { ...devis, items, totalHT, totalTTC, clientName, clientPhone, eventDate, eventType, guestCount, lieu: lieu || undefined };
+      await downloadDevisPdf(payload);
     } catch (e) {
-      win.close();
       alert(`Erreur : ${e}`);
     } finally {
       setPdfLoading(false);
@@ -77,44 +51,16 @@ export default function DevisDetail({ devis, onClose, onStatusChange }: Props) {
   };
 
   const downloadPdfAlt = async () => {
-    const factConfig = (() => {
-      try { return JSON.parse(localStorage.getItem("clc-facturation-config") ?? "{}"); }
-      catch { return {}; }
-    })();
-    const brandNom       = factConfig.nom       || "CLC TRAITEUR";
-    const brandSousTitre = factConfig.sousTitre || "Traiteur événementiel";
-
-    const win = window.open("", "_blank");
-    if (!win) { alert("Veuillez autoriser les popups pour générer le PDF."); return; }
-    win.document.write("<html><body style='font-family:sans-serif;padding:40px;color:#555'>Génération du PDF en cours…</body></html>");
     setDocxLoading(true);
     try {
-      // PDF Alt : affiche guestCount comme nombre de convives sur les plats uniquement.
-      // Services, sous-totaux et prix ne changent pas.
       const SERVICE_RE = /serveur|marmite|service de table|tente|chapiteau|chaise|déco|décoration|transport|livraison|sono|animation|photographe/i;
       const altItems = items.map(i => ({
         ...i,
         quantity: SERVICE_RE.test(i.dishName) ? i.quantity : guestCount,
-        // subtotal inchangé — seul l'affichage du nombre change
       }));
-      const payload = { ...devis, items: altItems, totalHT, totalTTC, brandNom, brandSousTitre, lieu: devis.lieu };
-      const res = await fetch("/api/devis/generate-pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        win.close();
-        alert(`Erreur génération PDF Alt : ${err.error ?? res.statusText}`);
-        return;
-      }
-      const html = await res.text();
-      win.document.open();
-      win.document.write(html);
-      win.document.close();
+      const payload = { ...devis, items: altItems, totalHT, totalTTC, clientName, clientPhone, eventDate, eventType, guestCount, lieu: lieu || undefined };
+      await downloadDevisPdf(payload);
     } catch (e) {
-      win.close();
       alert(`Erreur : ${e}`);
     } finally {
       setDocxLoading(false);

@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import type { Devis, DevisItem } from "@/lib/types";
+import { getDishIcon, getDishUnit, isServiceItem } from "@/lib/devis-pdf-icons";
 
 const TEMPLATE_PATH = path.join(process.cwd(), "public", "devis_modele.html");
 
@@ -34,9 +35,13 @@ function groupSections(items: DevisItem[]): Section[] {
     if (!map.has(k)) map.set(k, []);
     map.get(k)!.push(it);
   }
-  return [...map.entries()].map(([label, its]) => ({
-    label, items: its, subtotal: its.reduce((s,i) => s + i.subtotal, 0),
-  }));
+  return [...map.entries()]
+    .map(([label, its]) => ({
+      label,
+      items: its,
+      subtotal: Math.round(its.reduce((s, i) => s + i.subtotal, 0) * 100) / 100,
+    }))
+    .filter((sec) => sec.items.length > 0);
 }
 
 // ── Sous-titres de section ────────────────────────────────────────────────────
@@ -111,11 +116,19 @@ function splitSectionsIntoPages(sections: Section[]): Section[][] {
   return pages;
 }
 
-function isService(name: string): boolean {
-  const n = name.toLowerCase();
-  return ["serveur","marmite","service de table","tente","chapiteau","chaise",
-          "déco","décoration","transport","livraison","sono","animation","photographe"]
-    .some(k => n.includes(k));
+function sectionPhotoUrl(label: string): string {
+  const l = label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (/vin d.?honneur|aperitif|cocktail/.test(l)) return "/sections/aperitif.png";
+  if (/soiree|diner|gala|dejeuner|rencontre des familles/.test(l)) return "/sections/diner.png";
+  if (/brunch|pause|cafe/.test(l)) return "/sections/cafe.png";
+  if (/dessert|gateau|gouter|after/.test(l)) return "/sections/dessert.png";
+  if (/buffet/.test(l)) return "/sections/buffet.png";
+  return "/sections/generique.png";
+}
+
+function computeTotals(items: DevisItem[]) {
+  const totalHT = Math.round(items.reduce((s, i) => s + i.subtotal, 0) * 100) / 100;
+  return { totalHT, totalTTC: Math.round(totalHT * 1.2 * 100) / 100 };
 }
 
 // ── Mapping événement → pages template ──────────────────────────────────────
@@ -171,14 +184,12 @@ function setAllFields(html: string, cls: string, value: string): string {
   return html.replace(re, (_, open, close) => `${open}${value}${close}`);
 }
 
-// ── Icône SVG générique du template ─────────────────────────────────────────
-const FOOD_ICON = `<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path fill="currentColor" d="M3 10v2h2v7c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2v-7h2v-2zm4 2h10v7H7z"/></svg>`;
-
 // ── Construction d'un food-row avec la structure exacte du template ──────────
-function foodRow(name: string, qty: number): string {
-  return `<div class="food-row"><span class="icon menu-ico">${FOOD_ICON}</span>`
-    + `<div class="editable food-name" contenteditable="true" spellcheck="false">${esc(name)}</div>`
-    + `<div class="editable food-qty" contenteditable="true" spellcheck="false">${qty} convives</div></div>`;
+function foodRow(item: DevisItem): string {
+  const icon = getDishIcon(item.dishName, item.dishId);
+  return `<div class="food-row"><span class="icon menu-ico">${icon}</span>`
+    + `<div class="editable food-name" contenteditable="true" spellcheck="false">${esc(item.dishName)}</div>`
+    + `<div class="editable food-qty" contenteditable="true" spellcheck="false">${item.quantity} convives</div></div>`;
 }
 
 // ── Reconstruction de la page event ─────────────────────────────────────────
@@ -241,6 +252,10 @@ function buildEventPage(templatePage: string, devis: Devis & {lieu?:string}, sec
       if (chStart >= 0 && chEnd > chStart) {
         cardHead = tmplCard.slice(chStart, chEnd);
         cardHead = cardHead.replace(
+          /(<img[^>]*class="[^"]*\bcard-photo\b[^"]*"[^>]*src=")[^"]*(")/,
+          `$1${sectionPhotoUrl(sec.label)}$2`
+        );
+        cardHead = cardHead.replace(
           /(<div[^>]*class="[^"]*\bcard-title\b[^"]*"[^>]*>)[^<]*(<\/div>)/,
           `$1${sectionNum}. ${esc(sec.label)}$2`
         );
@@ -260,7 +275,7 @@ function buildEventPage(templatePage: string, devis: Devis & {lieu?:string}, sec
           + `<div class="editable price-value">${fmtMoney(sec.subtotal)}</div></div></div>`;
       }
 
-      const rows = sec.items.map(it => foodRow(it.dishName, it.quantity)).join("");
+      const rows = sec.items.map(it => foodRow(it)).join("");
       const card = `<div class="menu-card" style="top:${currentTop}px;height:${height}px">`
         + cardHead
         + `<div class="food-list">${rows}</div></div>`;
@@ -290,17 +305,17 @@ function buildPrestationsPage(templatePage: string, serviceItems: DevisItem[], o
   h = h.replace(/(<span[^>]*class="[^"]*\bpn\b[^"]*"[^>]*>)\d*(<\/span>)/, `$1${outPageNum}$2`);
 
   const SLOTS = [
-    { keys: ["serveur","personnel"],           label: "Service & personnel",  desc: "Serveurs, maîtres d'hôtel",         catalogPrice: "80 € / personne" },
-    { keys: ["matériel","couvert","table","chaise","marmite"], label: "Location de matériel", desc: "Couverts, tables, chaises, marmites", catalogPrice: "Sur devis" },
-    { keys: ["livraison","transport"],          label: "Livraison",            desc: "Transport & livraison des plats",    catalogPrice: "60 € / trajet" },
-    { keys: ["décoration","déco","floral"],     label: "Décoration de table",  desc: "Fleurs, bougies, centres de table",  catalogPrice: "120 € / table" },
-    { keys: ["tente","chapiteau"],              label: "Location de tente",    desc: "Tentes & chapiteaux",                catalogPrice: "150 € / unité" },
-    { keys: ["animation","sono","musique","dj"],label: "Animation musicale",   desc: "DJ, sonorisation, animation",        catalogPrice: "250 € / événement" },
-    { keys: ["gâteau","photographe","photo"],   label: "Gâteau & photo",       desc: "Pièce montée, reportage photo",      catalogPrice: "400 € / événement" },
+    { keys: ["serveur"],                              label: "Service & personnel",  desc: "Serveurs, maîtres d'hôtel",         catalogPrice: "80 € / personne" },
+    { keys: ["marmite","service de table","table","chaise","couvert"], label: "Location de matériel", desc: "Couverts, tables, chaises, marmites", catalogPrice: "Sur devis" },
+    { keys: ["livraison","transport"],                label: "Livraison",            desc: "Transport & livraison des plats",    catalogPrice: "60 € / trajet" },
+    { keys: ["décoration","déco","floral"],           label: "Décoration de table",  desc: "Fleurs, bougies, centres de table",  catalogPrice: "120 € / table" },
+    { keys: ["tente","chapiteau"],                    label: "Location de tente",    desc: "Tentes & chapiteaux",                catalogPrice: "150 € / unité" },
+    { keys: ["animation","sono","musique","dj"],      label: "Animation musicale",   desc: "DJ, sonorisation, animation",        catalogPrice: "250 € / événement" },
+    { keys: ["gâteau","photographe","photo"],         label: "Gâteau sur mesure",    desc: "Pièce montée, reportage photo",      catalogPrice: "400 € / événement" },
   ];
 
   const hasServices = serviceItems.length > 0;
-  const subtotal = serviceItems.reduce((s,i) => s + i.quantity * i.unitPrice, 0);
+  const subtotal = serviceItems.reduce((s, i) => s + i.subtotal, 0);
 
   // Remplacer la note
   h = setField(h, "additional-sub",
@@ -315,25 +330,22 @@ function buildPrestationsPage(templatePage: string, serviceItems: DevisItem[], o
 
   // Pour chaque slot : remplacer name / detail / price + gérer checkbox
   const slotData = SLOTS.map(slot => {
-    const matched = serviceItems.find(i => slot.keys.some(k => i.dishName.toLowerCase().includes(k)));
-    if (!matched) return { name: esc(slot.label), detail: esc(slot.desc), price: slot.catalogPrice, checked: false };
-    // Inférer l'unité depuis le nom du service
-    const svcUnit = (() => {
-      const n = matched.dishName.toLowerCase();
-      if (n.includes("serveur") || n.includes("personnel"))       return "personne";
-      if (n.includes("trajet") || n.includes("livraison") || n.includes("transport")) return "trajet";
-      if (n.includes("table"))                                     return "table";
-      if (n.includes("chaise"))                                    return "chaise";
-      if (n.includes("couvert") || n.includes("service de table")) return "couvert";
-      if (n.includes("marmite"))                                   return "pièce";
-      if (n.includes("tente") || n.includes("chapiteau"))          return "unité";
-      if (n.includes("animation") || n.includes("sono") || n.includes("dj")) return "événement";
-      if (n.includes("photographe") || n.includes("photo"))        return "événement";
-      return "unité";
-    })();
-    const qty = matched.quantity;
-    const detail = `${qty} ${svcUnit}${qty > 1 && !["unité","trajet","pièce"].includes(svcUnit) ? "s" : ""}`;
-    return { name: esc(matched.dishName), detail, price: fmtMoney(matched.quantity * matched.unitPrice), checked: true };
+    const matched = serviceItems.filter(i => slot.keys.some(k => i.dishName.toLowerCase().includes(k)));
+    if (!matched.length) {
+      return { name: esc(slot.label), detail: esc(slot.desc), price: slot.catalogPrice, checked: false };
+    }
+    const total = matched.reduce((s, i) => s + i.subtotal, 0);
+    const detail = matched.map(i => {
+      const unit = getDishUnit(i.dishId);
+      const plural = i.quantity > 1 && !["unité", "trajet", "pièce", "événement"].includes(unit) ? "s" : "";
+      return `${i.quantity} ${unit}${plural} · ${i.dishName}`;
+    }).join(" · ");
+    return {
+      name: esc(matched.length === 1 ? matched[0].dishName : slot.label),
+      detail: esc(detail),
+      price: fmtMoney(total),
+      checked: true,
+    };
   });
 
   // Checkboxes : forcer checked=true si sélectionné, false sinon
@@ -368,14 +380,14 @@ function buildPrestationsPage(templatePage: string, serviceItems: DevisItem[], o
 // ── Reconstruction page récap ─────────────────────────────────────────────────
 // Respecte la structure absolue du template :
 //   recap-sections (3 slots) → recap-event-total → extras-kicker → recap-extras → recap-extra-total → grand-total
-function buildRecapPage(templatePage: string, devis: Devis & {lieu?:string}, sections: Section[], serviceItems: DevisItem[], outPageNum: number): string {
+function buildRecapPage(templatePage: string, devis: Devis & {lieu?:string}, sections: Section[], serviceItems: DevisItem[], outPageNum: number, totalHT: number): string {
   let h = templatePage;
   h = h.replace(/(<span[^>]*class="[^"]*\bpn\b[^"]*"[^>]*>)\d*(<\/span>)/, `$1${outPageNum}$2`);
 
   const totalTraiteur = sections.reduce((s,x) => s + x.subtotal, 0);
-  const totalServices = serviceItems.reduce((s,i) => s + i.quantity * i.unitPrice, 0);
+  const totalServices = serviceItems.reduce((s, i) => s + i.subtotal, 0);
   const hasServices   = serviceItems.length > 0;
-  const totalTTC      = devis.totalHT;  // PDF en HT (sous-totaux sections = HT)
+  const totalTTC      = totalHT;
 
   // En-tête
   h = setField(h, "recap-event",      esc(devis.eventType.toUpperCase()));
@@ -549,13 +561,13 @@ function buildRecapPage(templatePage: string, devis: Devis & {lieu?:string}, sec
 // ── Reconstruction page acompte (pages 9,11,13,15,17) ───────────────────────
 // Champs: payment-event, summary-total, summary-breakdown(×2),
 //   deposit-amount, payment-amount(×3)
-function buildAcomptePage(templatePage: string, devis: Devis, sections: Section[], outPageNum: number): string {
+function buildAcomptePage(templatePage: string, devis: Devis, sections: Section[], serviceItems: DevisItem[], outPageNum: number, totalHT: number): string {
   let h = templatePage;
   h = h.replace(/(<span[^>]*class="[^"]*\bpn\b[^"]*"[^>]*>)\d*(<\/span>)/, `$1${outPageNum}$2`);
 
-  const ttc         = devis.totalHT;  // PDF en HT (cohérent avec les sous-totaux)
+  const ttc         = totalHT;
   const totalEv     = sections.reduce((s,x) => s + x.subtotal, 0);
-  const totalSvc    = ttc - totalEv;
+  const totalSvc    = serviceItems.reduce((s, i) => s + i.subtotal, 0);
   const hasSvc      = totalSvc > 0;
   const a30 = Math.round(ttc * 0.30);
   const a40 = Math.round(ttc * 0.40);
@@ -695,10 +707,12 @@ export async function POST(req: NextRequest) {
   try {
     const devis = await req.json() as Devis & { lieu?: string; brandNom?: string; brandSousTitre?: string; brandVille?: string };
 
-    const serviceItems = devis.items.filter(i => isService(i.dishName));
-    const dishItems    = devis.items.filter(i => !isService(i.dishName));
+    const serviceItems = devis.items.filter(i => isServiceItem(i));
+    const dishItems    = devis.items.filter(i => !isServiceItem(i));
     const sections     = groupSections(dishItems);
     const cfg          = getEventPages(devis.eventType);
+    const { totalHT }  = computeTotals(devis.items);
+    const foodTotal    = sections.reduce((s, x) => s + x.subtotal, 0);
 
     const now = new Date().toLocaleDateString("fr-FR", { day:"numeric", month:"long", year:"numeric" });
 
@@ -733,7 +747,7 @@ export async function POST(req: NextRequest) {
     let sectionOffset = 0;
     for (let ci = 0; ci < chunks.length; ci++) {
       const isLastChunk = ci === chunks.length - 1;
-      pages.push(buildEventPage(evTemplate, devis, chunks[ci], devis.totalHT, pageNum++, sectionOffset, isLastChunk));
+      pages.push(buildEventPage(evTemplate, devis, chunks[ci], foodTotal, pageNum++, sectionOffset, isLastChunk));
       sectionOffset += chunks[ci].length;
     }
 
@@ -741,10 +755,10 @@ export async function POST(req: NextRequest) {
     pages.push(buildPrestationsPage(getPage(html, 7), serviceItems, pageNum++));
 
     // Récapitulatif
-    pages.push(buildRecapPage(getPage(html, cfg.recap), devis, sections, serviceItems, pageNum++));
+    pages.push(buildRecapPage(getPage(html, cfg.recap), devis, sections, serviceItems, pageNum++, totalHT));
 
     // Acompte / Échéancier
-    pages.push(buildAcomptePage(getPage(html, cfg.acompte), devis, sections, pageNum++));
+    pages.push(buildAcomptePage(getPage(html, cfg.acompte), devis, sections, serviceItems, pageNum++, totalHT));
 
     // Page 20 : signature/mentions
     pages.push(buildSignaturePage(getPage(html, 20), devis, now, pageNum++));
