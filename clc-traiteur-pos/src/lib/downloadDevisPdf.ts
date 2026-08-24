@@ -18,8 +18,10 @@ export async function downloadDevisPdf(devis: DevisPdfPayload): Promise<void> {
     ...devis,
     brandNom:       devis.brandNom       ?? factConfig.nom       ?? "CLC TRAITEUR",
     brandSousTitre: devis.brandSousTitre ?? factConfig.sousTitre ?? "Traiteur événementiel",
-    brandVille:       devis.brandVille       ?? factConfig.ville       ?? "Rouen",
+    brandVille:     devis.brandVille     ?? factConfig.ville     ?? "Rouen",
+    totalHT:        Math.round(devis.items.reduce((s, i) => s + i.subtotal, 0) * 100) / 100,
   };
+  payload.totalTTC = Math.round(payload.totalHT * 1.2 * 100) / 100;
 
   const win = window.open("", "_blank");
   if (!win) {

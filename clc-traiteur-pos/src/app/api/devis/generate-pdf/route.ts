@@ -25,6 +25,20 @@ function fmtMoney(n: number): string {
 function esc(s: string): string {
   return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
+function fillBottomLines(html: string, values: string[]): string {
+  let i = 0;
+  return html.replace(
+    /(<div class="bottom-line"[^>]*>)\s*(<\/div>)/g,
+    (_, open, close) => {
+      const val = values[i++] ?? "";
+      const style = 'font:500 17px Raleway,Arial,sans-serif;color:#15271F;line-height:24px;';
+      const withStyle = open.includes("style=")
+        ? open.replace(/style="([^"]*)"/, `style="$1${style}"`)
+        : open.replace(/>$/, ` style="${style}">`);
+      return `${withStyle}${val}${close}`;
+    }
+  );
+}
 
 // ── Groupement sections ──────────────────────────────────────────────────────
 interface Section { label: string; items: DevisItem[]; subtotal: number; }
@@ -522,14 +536,19 @@ function buildRecapPage(templatePage: string, devis: Devis & {lieu?:string}, sec
   const extrasKickerTop = eventTotalTop + 45 + 16;
   const extrasTop       = extrasKickerTop + 22;
   const extrasTotalTop  = extrasTop + nExtras * 73 + 8;
-  const tvaTop          = extrasTotalTop + 45 + 8;
+  const htTop           = extrasTotalTop + 45 + 8;
+  const tvaTop          = htTop + 45 + 8;
   const grandTotalTop   = tvaTop + 45 + 8;
 
+  const htRow = `<div class="recap-ht-total" style="top:${htTop}px;position:absolute;left:56px;width:682px;height:45px;border:1px solid var(--gold2);border-radius:11px;background:var(--ivory2);display:flex;align-items:center;padding:0 21px;justify-content:space-between;">`
+    + `<div class="editable recap-ht-label" style="font-family:Montserrat,Arial,sans-serif;font-weight:700;font-size:11px;letter-spacing:.12em;color:var(--green);">SOUS-TOTAL HT</div>`
+    + `<div class="editable recap-ht-value" style="font-family:Raleway,Arial,sans-serif;font-weight:700;font-size:18px;color:var(--ink);">${fmtMoney(totalHT)}</div>`
+    + `</div>`;
   const tvaRow = `<div class="recap-tva" style="top:${tvaTop}px;position:absolute;left:56px;width:682px;height:45px;border:1px solid var(--gold2);border-radius:11px;background:var(--ivory2);display:flex;align-items:center;padding:0 21px;justify-content:space-between;">`
     + `<div class="editable recap-tva-label" style="font-family:Montserrat,Arial,sans-serif;font-weight:700;font-size:11px;letter-spacing:.12em;color:var(--green);">TVA (20%)</div>`
     + `<div class="editable recap-tva-value" style="font-family:Raleway,Arial,sans-serif;font-weight:700;font-size:18px;color:var(--ink);">${fmtMoney(totalTVA)}</div>`
     + `</div>`;
-  h = h.replace('<div class="grand-total"', tvaRow + '<div class="grand-total"');
+  h = h.replace('<div class="grand-total"', htRow + tvaRow + '<div class="grand-total"');
 
   h = setField(h, "grand-value", fmtMoney(totalTTC));
   h = setField(h, "grand-sub",   hasServices ? "Événement + prestations additionnelles (TTC)" : "Prestation traiteur uniquement (TTC)");
@@ -626,15 +645,7 @@ function buildSignaturePage(templatePage: string, devis: Devis, now: string, out
   // Supprimer l'icône dorée dans les sign-box
   h = h.replace(/<span[^>]*class="icon[^"]*"[^>]*>[\s\S]*?<\/span>/g, "");
   // Pré-remplir « Fait à » (ville du traiteur) et « Le » (date de génération)
-  let bottomLineIdx = 0;
-  const bottomValues = [esc(brandVille), esc(now)];
-  h = h.replace(
-    /(<div class="bottom-line"[^>]*>)[^<]*(<\/div>)/g,
-    (_, open, close) => {
-      const val = bottomValues[bottomLineIdx++] ?? "";
-      return `${open}${val}${close}`;
-    }
-  );
+  h = fillBottomLines(h, [esc(brandVille), esc(now)]);
   return h;
 }
 
@@ -660,6 +671,7 @@ const PRINT_CSS = `<style id="print-overrides">
   .event-total-label, .event-total-value,
   .grand-sub, .grand-value,
   .recap-event-total-value, .recap-extra-total-value,
+  .recap-ht-label, .recap-ht-value,
   .recap-tva-label, .recap-tva-value,
   .payment-amount, .deposit-amount, .summary-total, .summary-breakdown,
   .additional-total-label, .additional-total-value,
@@ -685,6 +697,15 @@ const PRINT_CSS = `<style id="print-overrides">
 
   /* ── Extras : hauteur auto pour ne pas se superposer ── */
   .recap-extra { height:auto !important; min-height:69px; box-sizing:border-box; padding-bottom:4px; }
+  .signature-bottom .bottom-line {
+    font-family: Raleway, Arial, sans-serif !important;
+    font-size: 17px !important;
+    font-weight: 500 !important;
+    color: var(--ink) !important;
+    line-height: 24px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
   .toolbar,.page-number { display:none !important; }
   @media screen {
     body { padding:24px; background:#1a1a1a; }
@@ -721,7 +742,6 @@ export async function POST(req: NextRequest) {
     const sections     = groupSections(dishItems);
     const cfg          = getEventPages(devis.eventType);
     const { totalHT, totalTTC } = computeTotals(devis.items);
-    const resolvedTTC = devis.totalTTC ?? totalTTC;
     const foodTotal    = sections.reduce((s, x) => s + x.subtotal, 0);
 
     const now = new Date().toLocaleDateString("fr-FR", { day:"numeric", month:"long", year:"numeric" });
@@ -766,10 +786,10 @@ export async function POST(req: NextRequest) {
     pages.push(buildPrestationsPage(getPage(html, 7), serviceItems, pageNum++));
 
     // Récapitulatif
-    pages.push(buildRecapPage(getPage(html, cfg.recap), devis, sections, serviceItems, pageNum++, totalHT, resolvedTTC));
+    pages.push(buildRecapPage(getPage(html, cfg.recap), devis, sections, serviceItems, pageNum++, totalHT, totalTTC));
 
     // Acompte / Échéancier
-    pages.push(buildAcomptePage(getPage(html, cfg.acompte), devis, sections, serviceItems, pageNum++, resolvedTTC));
+    pages.push(buildAcomptePage(getPage(html, cfg.acompte), devis, sections, serviceItems, pageNum++, totalTTC));
 
     // Page 20 : signature/mentions
     pages.push(buildSignaturePage(getPage(html, 20), devis, now, pageNum++, brandVille));
