@@ -1,0 +1,10 @@
+{
+  "name": "CLC Traiteur POS",
+  "install": "bash .cursor/install.sh",
+  "terminals": [
+    {
+      "name": "next-dev",
+      "command": "cd clc-traiteur-pos && npm run dev"
+    }
+  ]
+}
