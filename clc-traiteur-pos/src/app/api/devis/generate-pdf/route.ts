@@ -174,9 +174,14 @@ function getPage(html: string, n: number): string {
   return end > start ? html.slice(start, end) : html.slice(start);
 }
 
+/** Détecte une bordure .frame / .frame.light (class="frame" seul ne matche pas "frame light"). */
+function hasPageFrame(pageHtml: string): boolean {
+  return /class="frame(?:\s|")/.test(pageHtml);
+}
+
 /** Garantit la bordure dorée (.frame) sur chaque page, comme dans le template. */
 function ensurePageFrame(pageHtml: string): string {
-  if (!pageHtml || pageHtml.includes('class="frame"')) return pageHtml;
+  if (!pageHtml || hasPageFrame(pageHtml)) return pageHtml;
   const isCover = pageHtml.includes("cover-page");
   const frame = isCover ? '<div class="frame light"></div>' : '<div class="frame"></div>';
   const pnIdx = pageHtml.indexOf('<div class="page-number"');
@@ -246,8 +251,9 @@ function buildEventPage(templatePage: string, devis: Devis & {lieu?:string}, sec
   const articleEnd = h.lastIndexOf('</article>');
   if (metaEnd > 0 && articleEnd > metaEnd) {
     const before = h.slice(0, metaEnd);
-    const frameIdx = h.indexOf('<div class="frame"', metaEnd);
-    const after    = frameIdx >= 0 ? h.slice(frameIdx) : h.slice(articleEnd);
+    const frameMatch = h.slice(metaEnd).match(/<div class="frame(?:\s|")/);
+    const frameIdx   = frameMatch ? metaEnd + (frameMatch.index ?? 0) : -1;
+    const after      = frameIdx >= 0 ? h.slice(frameIdx) : h.slice(articleEnd);
 
     // Extraire les card-heads du template (pour réutiliser photos)
     const origCards: string[] = [];
@@ -664,6 +670,9 @@ function buildSignaturePage(templatePage: string, devis: Devis, now: string, out
 
 // ── CSS d'impression ─────────────────────────────────────────────────────────
 const PRINT_CSS = `<style id="print-overrides">
+  /* Polices : le template devis_modele.html définit Montserrat/Raleway via @font-face.
+     Ne pas surcharger .editable — cela écrasait Montserrat sur les titres. */
+
   /* ── Bordure dorée sur toutes les pages ── */
   .frame {
     position: absolute !important;
@@ -672,55 +681,10 @@ const PRINT_CSS = `<style id="print-overrides">
     border-radius: 15px !important;
     pointer-events: none !important;
     display: block !important;
-    z-index: 1 !important;
+    z-index: 50 !important;
+    box-sizing: border-box !important;
   }
   .frame.light { border-color: #cba45b !important; }
-
-  /* ── Polices identiques au template devis_modele.html ── */
-  html, body { font-family: Raleway, Arial, sans-serif; }
-
-  /* Montserrat — titres et montants */
-  .brand-name,
-  .card-title, .event-title,
-  .recap-title, .recap-name, .recap-event,
-  .payment-title, .payment-event, .additional-title,
-  .section-kicker, .extras-kicker, .deposit-kicker,
-  .schedule-title, .recap-extra-total-label, .recap-event-total-label,
-  .grand-label, .legend-label, .legal-title, .signature-title,
-  .price-value, .event-total-label, .event-total-value,
-  .grand-value, .recap-price, .recap-event-total-value, .recap-extra-total-value,
-  .recap-ht-label, .recap-tva-label,
-  .payment-part, .payment-amount, .deposit-amount, .summary-total,
-  .additional-total-value, .extra-price, .service-price,
-  .step-num, .legend-title, .legal-name
-  { font-family: Montserrat, Arial, sans-serif !important; }
-
-  .brand-name  { font-weight: 700 !important; font-size: 29px !important; }
-  .brand-sub   { font-family: Raleway, Arial, sans-serif !important; font-style: italic !important; font-size: 14px !important; font-weight: 400 !important; }
-  .card-title  { font-weight: 700 !important; font-size: 23px !important; }
-  .card-sub    { font-family: Raleway, Arial, sans-serif !important; font-style: italic !important; font-size: 16.5px !important; font-weight: 400 !important; }
-  .event-title { font-weight: 700 !important; font-size: 54px !important; }
-  .meta-text   { font-family: Raleway, Arial, sans-serif !important; font-weight: 700 !important; font-size: 16.5px !important; }
-  .food-name   { font-family: Raleway, Arial, sans-serif !important; font-weight: 400 !important; font-size: 22px !important; }
-  .food-qty    { font-family: Raleway, Arial, sans-serif !important; font-weight: 700 !important; font-size: 19px !important; }
-  .cover-label { font-family: Raleway, Arial, sans-serif !important; font-weight: 700 !important; font-size: 14.5px !important; }
-  .cover-value { font-family: Raleway, Arial, sans-serif !important; font-weight: 400 !important; font-size: 18px !important; }
-  .recap-sub   { font-family: Raleway, Arial, sans-serif !important; font-style: italic !important; font-size: 16.5px !important; }
-  .price-label { font-family: Raleway, Arial, sans-serif !important; font-weight: 400 !important; font-size: 12.5px !important; }
-  .price-value { font-weight: 700 !important; font-size: 22px !important; }
-  .event-total-label { font-weight: 700 !important; font-size: 21px !important; }
-  .event-total-value { font-weight: 700 !important; font-size: 28px !important; }
-  .grand-value { font-weight: 700 !important; font-size: 36px !important; }
-
-  /* Raleway — corps de texte */
-  .page, .editable, [contenteditable],
-  .recap-sub, .recap-meta-text, .recap-meta-date, .recap-meta-place,
-  .extra-name, .extra-detail, .service-name, .service-detail,
-  .note-text, .payment-note-strong, .payment-note-small,
-  .grand-sub, .recap-ht-value, .recap-tva-value,
-  .summary-breakdown, .summary-kicker, .payment-when, .payment-detail,
-  .additional-total-label, .deposit-note, .agreement-text, .sign-label
-  { font-family: Raleway, Arial, sans-serif !important; }
 
   /* ── Plats : alignement exact du template ── */
   .food-row { height:33px !important; display:grid !important; grid-template-columns:26px 1fr 174px !important; align-items:center !important; column-gap:8px !important; }
