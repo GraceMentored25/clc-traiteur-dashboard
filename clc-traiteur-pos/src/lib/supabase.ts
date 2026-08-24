@@ -1,4 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
+import type { Devis } from "@/lib/types";
+import { MOCK_DEVIS } from "@/lib/data/mock-events";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -6,6 +8,25 @@ const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 export const supabase = createClient(url, key);
 
 const ROW_ID = "main";
+
+/** Fusionne deux listes de devis par id (garde la version la plus récente). */
+export function mergeDevisLists(local: Devis[] = [], cloud: Devis[] = []): Devis[] {
+  const map = new Map<string, Devis>();
+  for (const d of cloud) map.set(d.id, d);
+  for (const d of local) {
+    const existing = map.get(d.id);
+    if (!existing) {
+      map.set(d.id, d);
+      continue;
+    }
+    const localTs = new Date(d.createdAt).getTime();
+    const cloudTs = new Date(existing.createdAt).getTime();
+    map.set(d.id, localTs >= cloudTs ? d : existing);
+  }
+  return Array.from(map.values()).sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}
 
 // Charger tout le store depuis Supabase
 export async function loadFromSupabase() {
@@ -66,14 +87,38 @@ export async function syncStoreNow() {
   });
 }
 
+/** Fusionne l'état local avec le cloud — ne jamais perdre des devis locaux. */
+export function mergeCloudStore(
+  local: {
+    devisListPro: Devis[];
+    appMode: "pro" | "lab";
+  },
+  cloud: ReturnType<typeof mapSupabaseToStore>
+) {
+  const mergedPro = mergeDevisLists(local.devisListPro, cloud.devisListPro ?? []);
+  const appMode = local.appMode ?? cloud.appMode ?? "pro";
+  const cloudProCount = cloud.devisListPro?.length ?? 0;
+
+  return {
+    merged: {
+      ...cloud,
+      appMode,
+      devisListPro: mergedPro,
+      devisListLab: MOCK_DEVIS,
+      devisList: appMode === "pro" ? mergedPro : MOCK_DEVIS,
+    },
+    needsCloudPush: mergedPro.length > cloudProCount,
+  };
+}
+
 // Mapper les colonnes Supabase vers le format store
 export function mapSupabaseToStore(data: Record<string, unknown>) {
   return {
     user: data.user_data,
-    devisListPro: data.devis_list_pro ?? [],
-    devisListLab: data.devis_list_lab ?? [],
-    devisList: data.devis_list ?? [],
-    appMode: data.app_mode ?? "pro",
+    devisListPro: (data.devis_list_pro as Devis[]) ?? [],
+    devisListLab: (data.devis_list_lab as Devis[]) ?? [],
+    devisList: (data.devis_list as Devis[]) ?? [],
+    appMode: (data.app_mode as "pro" | "lab") ?? "pro",
     theme: data.theme ?? "dark",
     customPrices: data.custom_prices ?? {},
     customDishes: data.custom_dishes ?? [],

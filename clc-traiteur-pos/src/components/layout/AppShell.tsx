@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useStore } from "@/lib/store";
 import { applyTheme } from "@/lib/themes";
 import Sidebar from "./Sidebar";
 import { List } from "@phosphor-icons/react";
-import { loadFromSupabase, saveToSupabase, mapSupabaseToStore } from "@/lib/supabase";
+import { loadFromSupabase, saveToSupabase, mapSupabaseToStore, mergeCloudStore } from "@/lib/supabase";
 import { DEFAULT_INGREDIENTS, DEFAULT_MATERIEL } from "@/lib/data/stocks";
+import { MOCK_DEVIS } from "@/lib/data/mock-events";
 import type { AppState } from "@/lib/store";
 
 function buildPayload(s: AppState) {
@@ -38,7 +39,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [hydrated, setHydrated] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const cloudReadyRef = useRef(false); // true une fois le chargement Supabase terminé
+  const [cloudReady, setCloudReady] = useState(false);
 
   useEffect(() => {
     // Restaurer l'user depuis le cookie de session (store chiffré async ne persiste plus user)
@@ -93,35 +94,55 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     root.style.setProperty("--secondary-text-hover", darkHover);
   }, [themeId]); // recalcule quand le thème change
 
-  // ── 1. Charger depuis Supabase au login ────────────────────────────────
+  // ── 1. Charger depuis Supabase au login (fusion avec le local) ─────────
   useEffect(() => {
-    if (!hydrated || !user || cloudReadyRef.current) return;
+    if (!hydrated || !user || cloudReady) return;
 
     loadFromSupabase().then((data) => {
+      const current = useStore.getState();
+
       if (data) {
-        const mapped = mapSupabaseToStore(data as Record<string, unknown>);
-        // Renuméroter les IDs hex legacy → DV-001, DV-002…
-        // devisListPro est la source de vérité ; devisList (mode pro) en est une copie
-        // Ne jamais écraser user
-        const { user: _u, ...rest } = mapped;
+        const cloudMapped = mapSupabaseToStore(data as Record<string, unknown>);
+        const { merged, needsCloudPush } = mergeCloudStore(current, cloudMapped);
+        const { user: _u, ...rest } = merged;
         void _u;
+
         useStore.setState({
           ...rest,
-          ingredients: rest.ingredients && (rest.ingredients as unknown[]).length > 0
-            ? rest.ingredients as typeof DEFAULT_INGREDIENTS
-            : DEFAULT_INGREDIENTS,
-          materiel: rest.materiel && (rest.materiel as unknown[]).length > 0
-            ? rest.materiel as typeof DEFAULT_MATERIEL
-            : DEFAULT_MATERIEL,
+          ingredients: current.ingredients?.length
+            ? current.ingredients
+            : rest.ingredients && (rest.ingredients as unknown[]).length > 0
+              ? (rest.ingredients as typeof DEFAULT_INGREDIENTS)
+              : DEFAULT_INGREDIENTS,
+          materiel: current.materiel?.length
+            ? current.materiel
+            : rest.materiel && (rest.materiel as unknown[]).length > 0
+              ? (rest.materiel as typeof DEFAULT_MATERIEL)
+              : DEFAULT_MATERIEL,
         } as Partial<AppState>);
+
+        if (needsCloudPush) {
+          saveToSupabase(buildPayload(useStore.getState()));
+        }
+      } else if (current.devisListPro.length > 0) {
+        // Premier appareil avec des devis locaux : initialiser le cloud
+        saveToSupabase(buildPayload(current));
+      } else {
+        // Réhydratation locale : s'assurer que devisList reflète appMode
+        const appMode = current.appMode ?? "pro";
+        useStore.setState({
+          devisListLab: MOCK_DEVIS,
+          devisList: appMode === "pro" ? current.devisListPro : MOCK_DEVIS,
+        });
       }
-      cloudReadyRef.current = true;
+
+      setCloudReady(true);
     });
-  }, [hydrated, user]);
+  }, [hydrated, user, cloudReady]);
 
   // ── 2. Subscriber Zustand → sauvegarde immédiate dès que les devis changent
   useEffect(() => {
-    if (!cloudReadyRef.current) return;
+    if (!cloudReady) return;
 
     const unsub = useStore.subscribe((state, prev) => {
       if (
@@ -134,7 +155,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     });
 
     return () => unsub();
-  }, [cloudReadyRef.current]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cloudReady]);
 
   // ── 3. Sauvegarde générale debounce 3s pour les autres changements ─────
   useEffect(() => {
@@ -142,7 +163,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
     let timer: ReturnType<typeof setTimeout>;
     const unsub = useStore.subscribe(() => {
-      if (!cloudReadyRef.current) return;
+      if (!cloudReady) return;
       clearTimeout(timer);
       timer = setTimeout(() => {
         saveToSupabase(buildPayload(useStore.getState()));
@@ -153,19 +174,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       clearTimeout(timer);
       unsub();
     };
-  }, [hydrated, user]);
+  }, [hydrated, user, cloudReady]);
 
   // ── 4. Sauvegarde avant fermeture de page (beforeunload) ──────────────
   useEffect(() => {
     if (!user) return;
     const handleBeforeUnload = () => {
-      if (cloudReadyRef.current) {
+      if (cloudReady) {
         saveToSupabase(buildPayload(useStore.getState()));
       }
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [user]);
+  }, [user, cloudReady]);
 
   useEffect(() => {
     if (hydrated && !user) router.replace("/");

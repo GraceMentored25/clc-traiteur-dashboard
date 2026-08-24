@@ -497,6 +497,7 @@ export const useStore = create<AppState>()(
           devisList: [newDevis, ...s.devisList],
           ...(mode === "pro" ? { devisListPro: [newDevis, ...s.devisListPro] } : { devisListLab: [newDevis, ...s.devisListLab] }),
         }));
+        void import("@/lib/supabase").then(({ syncStoreNow }) => syncStoreNow());
       },
       updateDevisStatus: (id, status) => {
         logAudit("DEVIS_STATUS_CHANGED", { id, status });
@@ -529,6 +530,7 @@ export const useStore = create<AppState>()(
           demandesCourses: s.demandesCourses.filter((d) => d.devisId !== id),
           demandesLogistique: s.demandesLogistique.filter((d) => d.devisId !== id),
         }));
+        void import("@/lib/supabase").then(({ syncStoreNow }) => syncStoreNow());
       },
     }),
     {
@@ -615,6 +617,15 @@ export const useStore = create<AppState>()(
         demandesCourses: state.demandesCourses,
         demandesLogistique: state.demandesLogistique,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        state.devisListLab = MOCK_DEVIS;
+        if (state.appMode === "lab") {
+          state.devisList = MOCK_DEVIS;
+        } else {
+          state.devisList = state.devisListPro ?? [];
+        }
+      },
     }
   )
 );
