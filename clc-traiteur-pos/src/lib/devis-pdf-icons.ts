@@ -3,8 +3,15 @@
 import type { DevisItem } from "@/lib/types";
 import { DISHES } from "@/lib/data/dishes";
 
+/** Deux flûtes à champagne croisées (apéritif / vin d'honneur). */
+export const APERITIF_ICON =
+  '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="currentColor">' +
+  '<path d="M6 2h2.2l-1.3 8.2-.1 1.1 9.4 8.1c.35.3.25.85-.2 1.05l-.75.35c-.5.22-1.08-.05-1.28-.58L5.6 11.1 6 2z"/>' +
+  '<path d="M15.8 2h2.2l1.3 8.2.1 1.1-9.4 8.1c-.35.3-.25.85.2 1.05l.75.35c.5.22 1.08-.05 1.28-.58L18.4 11.1 17.8 2z"/>' +
+  "</svg>";
+
 const CATEGORY_ICONS: Record<string, string> = {
-  "Apéritifs": '<svg aria-hidden="true" focusable="false" class="lucide lucide-grape" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 5V2l-5.89 5.89"/><circle cx="16.6" cy="15.89" r="3"/><circle cx="8.11" cy="15.89" r="3"/><circle cx="12.35" cy="3" r="3"/><circle cx="2.87" cy="8.26" r="3"/><circle cx="6.24" cy="21.61" r="3"/><circle cx="21.13" cy="8.26" r="3"/></svg>',
+  "Apéritifs": APERITIF_ICON,
   "Accompagnements": '<svg aria-hidden="true" focusable="false" class="lucide lucide-wheat" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 22 16 8"/><path d="M3.47 12.53 5 11l1.53 1.53a3.5 3.5 0 0 1 0 4.94L5 19l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/><path d="M7.47 8.53 9 7l1.53 1.53a3.5 3.5 0 0 1 0 4.94L9 15l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/><path d="M11.47 4.53 13 3l1.53 1.53a3.5 3.5 0 0 1 0 4.94L13 11l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/><path d="M15.47 8.53 17 7l1.53 1.53a3.5 3.5 0 0 1 0 4.94L17 15l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/><path d="M19.47 12.53 21 11l1.53 1.53a3.5 3.5 0 0 1 0 4.94L21 19l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/></svg>',
   "Entrées & légumes frais": '<svg aria-hidden="true" focusable="false" class="lucide lucide-salad" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M7 21h10" /> <path d="M12 21a9 9 0 0 0 9-9H3a9 9 0 0 0 9 9Z" /> <path d="M11.38 12a2.4 2.4 0 0 1-.4-4.77 2.4 2.4 0 0 1 3.2-2.77 2.4 2.4 0 0 1 3.47-.63 2.4 2.4 0 0 1 3.37 3.37 2.4 2.4 0 0 1-1.1 3.7 2.51 2.51 0 0 1 .03 1.1" /> <path d="m13 12 4-4" /> <path d="M10.9 7.25A3.99 3.99 0 0 0 4 10c0 .73.2 1.41.54 2" /> </svg>',
   "Veloutés & potages": '<svg aria-hidden="true" focusable="false" class="lucide lucide-soup" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M12 21a9 9 0 0 0 9-9H3a9 9 0 0 0 9 9Z" /> <path d="M7 21h10" /> <path d="M19.5 12 22 6" /> <path d="M16.25 3c.27.1.8.53.75 1.36-.06.83-.93 1.2-1 2.02-.05.78.34 1.24.73 1.62" /> <path d="M11.25 3c.27.1.8.53.74 1.36-.05.83-.93 1.2-.98 2.02-.06.78.33 1.24.72 1.62" /> <path d="M6.25 3c.27.1.8.53.75 1.36-.06.83-.93 1.2-1 2.02-.05.78.34 1.24.74 1.62" /> </svg>',
