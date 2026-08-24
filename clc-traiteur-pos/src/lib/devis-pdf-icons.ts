@@ -10,14 +10,24 @@ export const APERITIF_ICON =
   '<path d="M15.8 2h2.2l1.3 8.2.1 1.1-9.4 8.1c-.35.3-.25.85.2 1.05l.75.35c.5.22 1.08-.05 1.28-.58L18.4 11.1 17.8 2z"/>' +
   "</svg>";
 
+/** Barbecue / grillades (viandes et poissons grillés). */
+export const GRILL_ICON =
+  '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="currentColor">' +
+  '<circle cx="12" cy="12" r="9.2" fill="none" stroke="currentColor" stroke-width="1.7"/>' +
+  '<path d="M5.8 9.2 18.2 18.8M4.2 12.4 19.8 16.6" stroke="currentColor" stroke-width="1.1" fill="none" opacity=".55"/>' +
+  '<path d="M8.6 8.4h1.7v8.4H8.6zm2.2-.7h1.7v9.1h-1.7zm2.2.3h1.7v8.4h-1.7z"/>' +
+  '<path d="M9.1 10.2h.9M9.1 12h.9M9.1 13.8h.9M11.3 9.8h.9M11.3 11.6h.9M11.3 13.4h.9M13.5 10.4h.9M13.5 12.2h.9M13.5 14h.9" opacity=".45"/>' +
+  "</svg>";
+
 const CATEGORY_ICONS: Record<string, string> = {
   "Apéritifs": APERITIF_ICON,
+  "Grillades": GRILL_ICON,
   "Accompagnements": '<svg aria-hidden="true" focusable="false" class="lucide lucide-wheat" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 22 16 8"/><path d="M3.47 12.53 5 11l1.53 1.53a3.5 3.5 0 0 1 0 4.94L5 19l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/><path d="M7.47 8.53 9 7l1.53 1.53a3.5 3.5 0 0 1 0 4.94L9 15l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/><path d="M11.47 4.53 13 3l1.53 1.53a3.5 3.5 0 0 1 0 4.94L13 11l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/><path d="M15.47 8.53 17 7l1.53 1.53a3.5 3.5 0 0 1 0 4.94L17 15l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/><path d="M19.47 12.53 21 11l1.53 1.53a3.5 3.5 0 0 1 0 4.94L21 19l-1.53-1.53a3.5 3.5 0 0 1 0-4.94Z"/></svg>',
   "Entrées & légumes frais": '<svg aria-hidden="true" focusable="false" class="lucide lucide-salad" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M7 21h10" /> <path d="M12 21a9 9 0 0 0 9-9H3a9 9 0 0 0 9 9Z" /> <path d="M11.38 12a2.4 2.4 0 0 1-.4-4.77 2.4 2.4 0 0 1 3.2-2.77 2.4 2.4 0 0 1 3.47-.63 2.4 2.4 0 0 1 3.37 3.37 2.4 2.4 0 0 1-1.1 3.7 2.51 2.51 0 0 1 .03 1.1" /> <path d="m13 12 4-4" /> <path d="M10.9 7.25A3.99 3.99 0 0 0 4 10c0 .73.2 1.41.54 2" /> </svg>',
   "Veloutés & potages": '<svg aria-hidden="true" focusable="false" class="lucide lucide-soup" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M12 21a9 9 0 0 0 9-9H3a9 9 0 0 0 9 9Z" /> <path d="M7 21h10" /> <path d="M19.5 12 22 6" /> <path d="M16.25 3c.27.1.8.53.75 1.36-.06.83-.93 1.2-1 2.02-.05.78.34 1.24.73 1.62" /> <path d="M11.25 3c.27.1.8.53.74 1.36-.05.83-.93 1.2-.98 2.02-.06.78.33 1.24.72 1.62" /> <path d="M6.25 3c.27.1.8.53.75 1.36-.06.83-.93 1.2-1 2.02-.05.78.34 1.24.74 1.62" /> </svg>',
   "Plats cuisinés": '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path fill="currentColor" d="M3 10v2h2v7c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2v-7h2v-2zm4 2h10v7H7z"/></svg>',
-  "Viandes": '<svg aria-hidden="true" focusable="false" class="lucide lucide-beef" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M16.4 13.7A6.5 6.5 0 1 0 6.28 6.6c-1.1 3.13-.78 3.9-3.18 6.08A3 3 0 0 0 5 18c4 0 8.4-1.8 11.4-4.3" /> <path d="m18.5 6 2.19 4.5a6.48 6.48 0 0 1-2.29 7.2C15.4 20.2 11 22 7 22a3 3 0 0 1-2.68-1.66L2.4 16.5" /> <circle cx="12.5" cy="8.5" r="2.5" /> </svg>',
-  "Poissons": '<svg aria-hidden="true" focusable="false" class="lucide lucide-fish" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M6.5 12c.94-3.46 4.94-6 8.5-6 3.56 0 6.06 2.54 7 6-.94 3.47-3.44 6-7 6s-7.56-2.53-8.5-6Z" /> <path d="M18 12v.5" /> <path d="M16 17.93a9.77 9.77 0 0 1 0-11.86" /> <path d="M7 10.67C7 8 5.58 5.97 2.73 5.5c-1 1.5-1 5 .23 6.5-1.24 1.5-1.24 5-.23 6.5C5.58 18.03 7 16 7 13.33" /> <path d="M10.46 7.26C10.2 5.88 9.17 4.24 8 3h5.8a2 2 0 0 1 1.98 1.67l.23 1.4" /> <path d="m16.01 17.93-.23 1.4A2 2 0 0 1 13.8 21H9.5a5.96 5.96 0 0 0 1.49-3.98" /> </svg>',
+  "Viandes": GRILL_ICON,
+  "Poissons": GRILL_ICON,
   "Desserts & pâtisseries": '<svg aria-hidden="true" focusable="false" class="lucide lucide-cake-slice" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M16 13H3" /> <path d="M16 17H3" /> <path d="m7.2 7.9-3.388 2.5A2 2 0 0 0 3 12.01V20a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-8.654c0-2-2.44-6.026-6.44-8.026a1 1 0 0 0-1.082.057L10.4 5.6" /> <circle cx="9" cy="7" r="2" /> </svg>',
   "Boissons & cocktails": '<svg aria-hidden="true" focusable="false" class="lucide lucide-martini" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M12 12 4.207 4.207A.707.707 0 0 1 4.707 3h14.586a.707.707 0 0 1 .5 1.207z" /> <path d="M12 12v10" /> <path d="M7 22h10" /> </svg>',
   "Eaux & boissons fraîches": '<svg aria-hidden="true" focusable="false" class="lucide lucide-glass-water" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M5.116 4.104A1 1 0 0 1 6.11 3h11.78a1 1 0 0 1 .994 1.105L17.19 20.21A2 2 0 0 1 15.2 22H8.8a2 2 0 0 1-2-1.79z" /> <path d="M6 12a5 5 0 0 1 6 0 5 5 0 0 0 6 0" /> </svg>',
@@ -49,10 +59,14 @@ const DISH_LEGEND_MAP: Record<string, string> = {
   "jollof rice au poulet": "Viandes",
   "mafé de bœuf": "Viandes",
   "mini wraps au poulet": "Viandes",
-  "poulet grillé sauce moutarde": "Viandes",
+  "poulet grillé sauce moutarde": "Grillades",
+  "porc braisé": "Grillades",
+  "poulet braisé": "Grillades",
+  "boeuf braisé": "Grillades",
+  "poisson braisé": "Grillades",
   "filet de bar sauce beurre blanc": "Poissons",
-  "attiéké & poisson braisé": "Poissons",
-  "poisson braisé façon du chef": "Poissons",
+  "attiéké & poisson braisé": "Grillades",
+  "poisson braisé façon du chef": "Grillades",
   "pièce montée vanille & fruits rouges": "Desserts & pâtisseries",
   "mignardises assorties": "Desserts & pâtisseries",
   "gâteau d’anniversaire personnalisé": "Desserts & pâtisseries",
@@ -109,7 +123,7 @@ const CATEGORY_TO_LEGEND: Record<string, string> = {
   "Entrées": "Entrées & légumes frais",
   "Apéritif": "Apéritifs",
   "Repas": "Plats cuisinés",
-  "Grillades": "Plats cuisinés",
+  "Grillades": "Grillades",
   "Accompagnements": "Accompagnements",
   "Desserts": "Desserts & pâtisseries",
   "Cocktails & Boissons": "Boissons & cocktails",
@@ -145,8 +159,9 @@ function inferLegendCategory(dishName: string, dishId?: number): string {
   }
 
   const n = normalized;
-  // Heuristiques spécifiques avant le catalogue (ex. poisson en catégorie Grillades)
-  if (/poisson|tilapia|bar|attieke|thon|crevette/.test(n)) return "Poissons";
+  // Grillades (viandes & poissons au barbecue) avant les catégories génériques
+  if (/brais[eé]|grill[eé]|grille|yakitori|brochette/.test(n)) return "Grillades";
+  if (/poisson|tilapia|bar|attieke|thon/.test(n)) return "Poissons";
   if (/jus|bissap|cocktail|gingembre/.test(n)) return "Boissons & cocktails";
   if (/gateau|crepe|caramel|dessert|chinchin|patisserie/.test(n)) return "Desserts & pâtisseries";
   if (/cafe|the|infusion/.test(n)) return "Cafés, thés & infusions";
@@ -154,13 +169,13 @@ function inferLegendCategory(dishName: string, dishId?: number): string {
   if (/nem|pastel|beignet|crepe|croquette|chinchin|bouchée|bouchee|canapé|canape/.test(n)) return "Apéritifs";
   if (/bobolo|plantain frit|riz cantonais|riz sauté|riz saute|couscous|frites de pomme|frites/.test(n)) return "Accompagnements";
 
-  // Catalogue applicatif (Repas, Grillades viande → icône plat)
+  // Catalogue applicatif
   if (dishId) {
     const cat = DISH_CATEGORY.get(dishId);
     if (cat && CATEGORY_TO_LEGEND[cat]) return CATEGORY_TO_LEGEND[cat];
   }
 
-  if (/ndole|eru|okok|koki|mbongo|sanga|braise|grille|mafé|jollof/.test(n)) return "Plats cuisinés";
+  if (/ndole|eru|okok|koki|mbongo|sanga|mafé|jollof/.test(n)) return "Plats cuisinés";
   if (/riz|plantain|tapioca/.test(n)) return "Accompagnements";
   if (/porc|boeuf|poulet|viande|samoussa|yakitori/.test(n)) return "Viandes";
   if (/crudite|plateau|entree|salade|nem|pastel|beignet|brochette/.test(n)) return "Entrées & légumes frais";
