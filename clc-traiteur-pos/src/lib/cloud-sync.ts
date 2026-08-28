@@ -149,11 +149,15 @@ async function loadDevisViaApi(): Promise<{
     const res = await fetch("/api/sync/devis", { cache: "no-store" });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
+      const msg =
+        res.status === 401
+          ? "Session expirée — reconnectez-vous pour synchroniser"
+          : (data.error ?? `HTTP ${res.status}`);
       return {
-        configured: data.configured ?? false,
+        configured: data.configured ?? res.status !== 401,
         devis: [],
         updatedAt: null,
-        error: data.error ?? `HTTP ${res.status}`,
+        error: msg,
       };
     }
     return {

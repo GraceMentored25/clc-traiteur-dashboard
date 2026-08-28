@@ -150,7 +150,21 @@ export default function DevisClient() {
                 {cloudSync.loadError ? (
                   <>
                     <CloudSlash size={13} />
-                    Lecture cloud : {cloudSync.loadError}
+                    {cloudSync.loadError.includes("Session expirée") ? (
+                      <span>
+                        {cloudSync.loadError}
+                        {" — "}
+                        <button
+                          type="button"
+                          onClick={() => router.push("/")}
+                          className="underline hover:text-[var(--amber)]"
+                        >
+                          Se reconnecter
+                        </button>
+                      </span>
+                    ) : (
+                      <>Lecture cloud : {cloudSync.loadError}</>
+                    )}
                   </>
                 ) : cloudSync.saveError ? (
                   <>

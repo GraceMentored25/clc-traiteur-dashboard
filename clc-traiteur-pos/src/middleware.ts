@@ -22,8 +22,7 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Vérifier la présence du cookie — la validité est vérifiée côté serveur dans AppShell
-  // Note: Edge Runtime ≠ Node.js runtime, la Map sessions n'est pas partageable
+  // Vérifier la présence du cookie — validité vérifiée côté serveur (jeton signé)
   const token = req.cookies.get(SESSION_COOKIE)?.value;
   if (!token) {
     return NextResponse.redirect(new URL("/", req.url));
