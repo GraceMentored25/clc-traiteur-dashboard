@@ -77,7 +77,13 @@ export default function DevisClient() {
   };
 
   useEffect(() => {
-    runFullCloudSync().then(applySyncResult);
+    const syncAfterHydration = async () => {
+      if (!useStore.persist.hasHydrated()) {
+        await new Promise<void>((resolve) => useStore.persist.onFinishHydration(() => resolve()));
+      }
+      applySyncResult(await runFullCloudSync());
+    };
+    syncAfterHydration();
   }, []);
 
   const filtered = useMemo(() => {

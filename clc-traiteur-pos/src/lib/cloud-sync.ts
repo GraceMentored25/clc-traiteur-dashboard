@@ -16,7 +16,7 @@ export interface CloudSyncResult {
   updatedAt: string | null;
   loadError: string | null;
   saveError: string | null;
-  source: "devis-direct";
+  source: "api-blob" | "supabase-direct" | "none";
 }
 
 function applyMergedDevis(merged: Devis[]) {
@@ -48,39 +48,44 @@ export function buildSyncPayload(s: AppState) {
   };
 }
 
-/** Sync devis : union local + cloud, puis push de la version la plus complète. */
+/** Sync devis : union local + cloud via API (Vercel Blob), Supabase direct en secours. */
 export async function runFullCloudSync(): Promise<CloudSyncResult> {
-  const configured = isSupabaseConfigured();
   const local = useStore.getState().devisListPro;
 
+  // 1. Charger depuis l'API serveur (Vercel Blob — fiable)
+  const apiLoad = await loadDevisViaApi();
+  let cloud = apiLoad.devis;
+  let cloudUpdatedAt = apiLoad.updatedAt;
+  let loadErr = apiLoad.error;
+  let source: CloudSyncResult["source"] = apiLoad.configured ? "api-blob" : "none";
+
+  // 2. Secours Supabase direct si l'API échoue et Supabase est configuré
+  if (isSupabaseConfigured() && (loadErr || cloud.length === 0)) {
+    const direct = await loadDevisFromCloud();
+    if (!direct.error && direct.devis.length > cloud.length) {
+      cloud = direct.devis;
+      cloudUpdatedAt = direct.updatedAt;
+      loadErr = null;
+      source = "supabase-direct";
+    } else if (loadErr && direct.error) {
+      loadErr = `${loadErr} | Supabase : ${direct.error}`;
+    }
+  }
+
+  const configured = apiLoad.configured || isSupabaseConfigured();
   if (!configured) {
     return {
       configured: false,
       devisCount: local.length,
       devisIds: local.map((d) => d.id),
       updatedAt: null,
-      loadError: "Variables Supabase absentes du déploiement Vercel",
+      loadError: "Stockage cloud non configuré sur Vercel",
       saveError: null,
-      source: "devis-direct",
+      source: "none",
     };
   }
 
-  const { devis: cloudDevis, updatedAt, error: loadError } = await loadDevisFromCloud();
-  let cloud = cloudDevis;
-  let loadErr = loadError;
-  let cloudUpdatedAt = updatedAt;
-
-  if (loadError) {
-    const apiLoad = await loadDevisViaApi();
-    if (!apiLoad.error && apiLoad.devis.length >= cloudDevis.length) {
-      cloud = apiLoad.devis;
-      cloudUpdatedAt = apiLoad.updatedAt;
-      loadErr = null;
-    }
-  }
-
   const merged = mergeDevisLists(local, cloud);
-
   applyMergedDevis(merged);
 
   let saveError: string | null = null;
@@ -88,21 +93,19 @@ export async function runFullCloudSync(): Promise<CloudSyncResult> {
     JSON.stringify(merged.map((d) => d.id).sort()) !==
     JSON.stringify(cloud.map((d) => d.id).sort());
 
-  if (merged.length > cloud.length || idsChanged || merged.length > 0) {
-    const save = await saveDevisToCloud(merged);
-    saveError = save.error;
-
-    if (!save.error) {
-      const verify = await loadDevisFromCloud();
-      if (verify.error) saveError = verify.error;
-      else if (verify.devis.length < merged.length) {
-        saveError =
-          "Écriture refusée par Supabase (politiques RLS — exécutez supabase/migrations/20260828100000_clc_store_rls.sql)";
+  if (merged.length > cloud.length || idsChanged) {
+    const apiSave = await pushDevisViaApi(merged);
+    if (!apiSave.ok) {
+      saveError = apiSave.error;
+      if (isSupabaseConfigured()) {
+        const direct = await saveDevisToCloud(merged);
+        if (!direct.error) {
+          saveError = null;
+          source = "supabase-direct";
+        } else if (saveError) {
+          saveError = `${saveError} | Supabase : ${direct.error}`;
+        }
       }
-    } else {
-      const apiSave = await pushDevisViaApi(merged);
-      if (apiSave.ok) saveError = null;
-      else if (apiSave.error) saveError = apiSave.error;
     }
   }
 
@@ -114,12 +117,15 @@ export async function runFullCloudSync(): Promise<CloudSyncResult> {
     updatedAt: cloudUpdatedAt,
     loadError: loadErr,
     saveError,
-    source: "devis-direct",
+    source,
   };
 }
 
 export async function pushCloudStore(payload: Record<string, unknown>): Promise<boolean> {
   const devis = (payload.devisListPro as Devis[]) ?? [];
+  const api = await pushDevisViaApi(devis);
+  if (api.ok) return true;
+  if (!isSupabaseConfigured()) return false;
   const { error } = await saveDevisToCloud(devis);
   return !error;
 }
@@ -170,6 +176,7 @@ async function pushDevisViaApi(devis: Devis[]): Promise<{ ok: boolean; error: st
 }
 
 async function loadDevisViaApi(): Promise<{
+  configured: boolean;
   devis: Devis[];
   updatedAt: string | null;
   error: string | null;
@@ -178,14 +185,25 @@ async function loadDevisViaApi(): Promise<{
     const res = await fetch("/api/sync/devis", { cache: "no-store" });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      return { devis: [], updatedAt: null, error: data.error ?? `HTTP ${res.status}` };
+      return {
+        configured: data.configured ?? false,
+        devis: [],
+        updatedAt: null,
+        error: data.error ?? `HTTP ${res.status}`,
+      };
     }
     return {
+      configured: data.configured !== false,
       devis: (data.devisListPro as Devis[]) ?? [],
       updatedAt: data.updatedAt ?? null,
       error: data.error ?? null,
     };
   } catch (err) {
-    return { devis: [], updatedAt: null, error: err instanceof Error ? err.message : "Erreur réseau" };
+    return {
+      configured: false,
+      devis: [],
+      updatedAt: null,
+      error: err instanceof Error ? err.message : "Erreur réseau",
+    };
   }
 }
