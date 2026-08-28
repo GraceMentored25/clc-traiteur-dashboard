@@ -1,61 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireSession } from "@/lib/session";
-import { loadDevisFromBlob, saveDevisToBlob, isBlobConfigured } from "@/lib/devis-blob-store";
-import { createSupabaseServer, getSupabaseConfigStatus, ROW_ID } from "@/lib/supabase-server";
+import {
+  getCloudStoreStatus,
+  loadDevisFromCloudStore,
+  saveDevisToCloudStore,
+} from "@/lib/devis-cloud-store";
 import type { Devis } from "@/lib/types";
 
-async function loadFromSupabase() {
-  const supabase = createSupabaseServer();
-  if (!supabase) return { devis: [] as Devis[], updatedAt: null as string | null, error: "Supabase non configuré" };
-
-  try {
-    const { data, error } = await supabase
-      .from("clc_store")
-      .select("devis_list_pro, updated_at")
-      .eq("id", ROW_ID)
-      .maybeSingle();
-
-    if (error) return { devis: [], updatedAt: null, error: error.message };
-    const devis = (data?.devis_list_pro as Devis[]) ?? [];
-    return { devis, updatedAt: data?.updated_at ?? null, error: null };
-  } catch (err) {
-    return {
-      devis: [],
-      updatedAt: null,
-      error: err instanceof Error ? err.message : "Erreur Supabase",
-    };
-  }
-}
-
-async function saveToSupabase(devisListPro: Devis[]) {
-  const supabase = createSupabaseServer();
-  if (!supabase) return { error: "Supabase non configuré" };
-
-  try {
-    const { error } = await supabase.from("clc_store").upsert(
-      {
-        id: ROW_ID,
-        devis_list_pro: devisListPro,
-        devis_list: devisListPro,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "id" }
-    );
-    return { error: error?.message ?? null };
-  } catch (err) {
-    return { error: err instanceof Error ? err.message : "Erreur Supabase" };
-  }
-}
-
-/** GET — devis cloud (Vercel Blob prioritaire) */
+/** GET — devis cloud (Supabase prioritaire, Blob secours) */
 export async function GET() {
   const guard = await requireSession();
   if (guard) return guard;
 
-  const config = getSupabaseConfigStatus();
-  const blobConfigured = isBlobConfigured();
-
-  if (!blobConfigured && !config.urlConfigured) {
+  const status = getCloudStoreStatus();
+  if (!status.supabaseConfigured && !status.blobConfigured) {
     return NextResponse.json({
       configured: false,
       devisCount: 0,
@@ -64,34 +22,20 @@ export async function GET() {
     });
   }
 
-  if (blobConfigured) {
-    const blob = await loadDevisFromBlob();
-    return NextResponse.json({
-      configured: true,
-      config: { ...config, blobConfigured: true },
-      devisCount: blob.devis.length,
-      devisIds: blob.devis.map((d) => d.id),
-      devisListPro: blob.devis,
-      updatedAt: blob.updatedAt,
-      error: blob.devis.length > 0 ? null : blob.error,
-      source: "blob",
-    });
-  }
-
-  const supa = await loadFromSupabase();
+  const cloud = await loadDevisFromCloudStore();
   return NextResponse.json({
     configured: true,
-    config: { ...config, blobConfigured: false },
-    devisCount: supa.devis.length,
-    devisIds: supa.devis.map((d) => d.id),
-    devisListPro: supa.devis,
-    updatedAt: supa.updatedAt,
-    error: supa.devis.length > 0 ? null : supa.error,
-    source: "supabase",
+    config: status,
+    devisCount: cloud.devis.length,
+    devisIds: cloud.devis.map((d) => d.id),
+    devisListPro: cloud.devis,
+    updatedAt: cloud.updatedAt,
+    error: cloud.error,
+    source: cloud.source,
   });
 }
 
-/** POST — sauvegarde devis_list_pro (Blob prioritaire) */
+/** POST — sauvegarde devis_list_pro */
 export async function POST(req: NextRequest) {
   const guard = await requireSession();
   if (guard) return guard;
@@ -104,20 +48,9 @@ export async function POST(req: NextRequest) {
   }
 
   const devisListPro = body.devisListPro ?? [];
-  const blobConfigured = isBlobConfigured();
-
-  if (!blobConfigured) {
-    const supa = await saveToSupabase(devisListPro);
-    if (supa.error) {
-      return NextResponse.json({ ok: false, error: supa.error }, { status: 500 });
-    }
-    return NextResponse.json({ ok: true, devisCount: devisListPro.length, source: "supabase" });
+  const save = await saveDevisToCloudStore(devisListPro);
+  if (save.error) {
+    return NextResponse.json({ ok: false, error: save.error }, { status: 500 });
   }
-
-  const blob = await saveDevisToBlob(devisListPro);
-  if (blob.error) {
-    return NextResponse.json({ ok: false, error: blob.error }, { status: 500 });
-  }
-
-  return NextResponse.json({ ok: true, devisCount: devisListPro.length, source: "blob" });
+  return NextResponse.json({ ok: true, devisCount: devisListPro.length, source: save.source });
 }

@@ -37,8 +37,12 @@ export default function RootLayout({
   return (
     <html lang="fr" className={`h-full ${outfit.variable} ${jetbrainsMono.variable}`}>
       <head>
-        <link rel="preconnect" href="https://ndmpfsaqnxwznizivjcu.supabase.co" />
-        <link rel="dns-prefetch" href="https://ndmpfsaqnxwznizivjcu.supabase.co" />
+        {process.env.NEXT_PUBLIC_SUPABASE_URL ? (
+          <>
+            <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL} />
+            <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_SUPABASE_URL} />
+          </>
+        ) : null}
       </head>
       <body className="min-h-[100dvh] flex flex-col">
         <ThemeApplier />

@@ -11,7 +11,7 @@ export interface CloudSyncResult {
   updatedAt: string | null;
   loadError: string | null;
   saveError: string | null;
-  source: "api-blob" | "none";
+  source: "api-cloud" | "none";
 }
 
 function applyMergedDevis(merged: Devis[]) {
@@ -43,7 +43,7 @@ export function buildSyncPayload(s: AppState) {
   };
 }
 
-/** Sync devis : union local + cloud via API (Vercel Blob). */
+/** Sync devis : union local + cloud via API (Supabase + Blob). */
 export async function runFullCloudSync(): Promise<CloudSyncResult> {
   const local = useStore.getState().devisListPro;
   const apiLoad = await loadDevisViaApi();
@@ -84,7 +84,7 @@ export async function runFullCloudSync(): Promise<CloudSyncResult> {
     updatedAt: apiLoad.updatedAt,
     loadError,
     saveError,
-    source: "api-blob",
+    source: "api-cloud",
   };
 }
 

@@ -1,0 +1,11 @@
+# Supabase local config — projet CLC Traiteur
+# Docs : https://supabase.com/docs/guides/cli
+
+project_id = "clc-traiteur"
+
+[api]
+enabled = true
+
+[db]
+port = 54322
+major_version = 15
