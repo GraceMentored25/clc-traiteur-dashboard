@@ -6,66 +6,55 @@ import { useStore } from "@/lib/store";
 import { applyTheme } from "@/lib/themes";
 import Sidebar from "./Sidebar";
 import { List } from "@phosphor-icons/react";
-import { mapSupabaseToStore, mergeCloudStore } from "@/lib/supabase";
 import { DEFAULT_INGREDIENTS, DEFAULT_MATERIEL } from "@/lib/data/stocks";
-import { MOCK_DEVIS } from "@/lib/data/mock-events";
 import type { AppState } from "@/lib/store";
-import type { Devis } from "@/lib/types";
+import {
+  applyCloudMerge,
+  buildSyncPayload,
+  ensureDevisListView,
+  fetchCloudStore,
+  pushCloudStore,
+} from "@/lib/cloud-sync";
 
-interface CloudSyncResponse {
-  configured: boolean;
-  store: {
-    devisListPro: Devis[];
-    devisList: Devis[];
-    appMode: "pro" | "lab";
-    [key: string]: unknown;
-  } | null;
-  devisCount: number;
-  loadError?: string | null;
-}
+async function runCloudSync() {
+  const current = useStore.getState();
+  const cloudResp = await fetchCloudStore();
 
-async function loadCloudStore(): Promise<CloudSyncResponse | null> {
-  try {
-    const res = await fetch("/api/sync/store", { cache: "no-store" });
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
-    return null;
+  if (cloudResp?.loadError) {
+    console.error("[cloud sync]", cloudResp.loadError);
   }
-}
 
-async function saveCloudStore(payload: ReturnType<typeof buildPayload>) {
-  try {
-    await fetch("/api/sync/store", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+  if (cloudResp?.store) {
+    const { needsCloudPush } = applyCloudMerge(cloudResp.store);
+    const state = useStore.getState();
+
+    useStore.setState({
+      ingredients:
+        state.ingredients?.length > 0
+          ? state.ingredients
+          : cloudResp.store.ingredients && (cloudResp.store.ingredients as unknown[]).length > 0
+            ? (cloudResp.store.ingredients as typeof DEFAULT_INGREDIENTS)
+            : DEFAULT_INGREDIENTS,
+      materiel:
+        state.materiel?.length > 0
+          ? state.materiel
+          : cloudResp.store.materiel && (cloudResp.store.materiel as unknown[]).length > 0
+            ? (cloudResp.store.materiel as typeof DEFAULT_MATERIEL)
+            : DEFAULT_MATERIEL,
     });
-  } catch (err) {
-    console.error("[cloud save]", err);
+
+    if (needsCloudPush || current.devisListPro.length > (cloudResp.devisCount ?? 0)) {
+      await pushCloudStore(buildSyncPayload(useStore.getState()));
+    }
+    return;
+  }
+
+  ensureDevisListView();
+  const afterView = useStore.getState();
+  if (afterView.devisListPro.length > 0) {
+    await pushCloudStore(buildSyncPayload(afterView));
   }
 }
-
-function buildPayload(s: AppState) {
-  return {
-    user: s.user,
-    devisListPro: s.devisListPro,
-    devisListLab: s.devisListLab,
-    devisList: s.devisList,
-    appMode: s.appMode,
-    theme: s.theme,
-    customPrices: s.customPrices,
-    customDishes: s.customDishes,
-    customCategories: s.customCategories,
-    entreesCapital: s.entreesCapital,
-    ingredients: s.ingredients,
-    materiel: s.materiel,
-    customRecipes: s.customRecipes,
-    demandesCourses: s.demandesCourses,
-    demandesLogistique: s.demandesLogistique,
-  };
-}
-
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const user = useStore((s) => s.user);
@@ -73,18 +62,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const themeId = useStore((s) => s.themeId);
   const router = useRouter();
   const [hydrated, setHydrated] = useState(false);
+  const [storeReady, setStoreReady] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [cloudReady, setCloudReady] = useState(false);
 
+  // Session utilisateur (cookie HttpOnly)
   useEffect(() => {
-    // Restaurer l'user depuis le cookie de session (store chiffré async ne persiste plus user)
     if (!user) {
       fetch("/api/auth/session")
-        .then((res) => res.ok ? res.json() : null)
+        .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (data?.authenticated) {
             useStore.setState({
-              user: { username: data.username, role: "admin", displayName: "Administrateur" }
+              user: { username: data.username, role: "admin", displayName: "Administrateur" },
             });
           }
           setHydrated(true);
@@ -95,12 +85,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Applique le thème complet puis l'accent et la couleur secondaire
+  // Attendre la réhydratation localStorage (critique pour desktop → cloud)
+  useEffect(() => {
+    if (useStore.persist.hasHydrated()) {
+      setStoreReady(true);
+      return;
+    }
+    return useStore.persist.onFinishHydration(() => setStoreReady(true));
+  }, []);
+
   useEffect(() => {
     applyTheme(themeId ?? "nuit", accentColor ?? "#E8960C");
   }, [themeId, accentColor]);
 
-  // Applique la couleur secondaire (après le thème, pour recalculer les bonnes bases)
   useEffect(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem("clc-secondary-color") : null;
     const c = saved ?? "#8B949E";
@@ -113,73 +110,26 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     root.style.setProperty("--secondary-bg", `rgba(${r},${g},${b},0.08)`);
     root.style.setProperty("--secondary-border", `rgba(${r},${g},${b},0.25)`);
     const isDark = !root.classList.contains("light");
-    const mix = isDark ? 0.07 : 0.06;
-    const tint = [r, g, b];
     root.style.setProperty("--surface-2", `rgba(${r},${g},${b},0.10)`);
     root.style.setProperty("--surface-3", `rgba(${r},${g},${b},0.18)`);
     if (!isDark) {
       root.style.setProperty("--surface-2", `rgba(${r},${g},${b},0.13)`);
       root.style.setProperty("--surface-3", `rgba(${r},${g},${b},0.22)`);
-      root.style.setProperty("--text-secondary", `rgba(${Math.round(r*0.35)},${Math.round(g*0.35)},${Math.round(b*0.35)},0.9)`);
+      root.style.setProperty("--text-secondary", `rgba(${Math.round(r * 0.35)},${Math.round(g * 0.35)},${Math.round(b * 0.35)},0.9)`);
     }
-    // Hover texte : version très foncée en mode clair, couleur pure en mode sombre
     const darkHover = isDark
       ? `rgb(${r},${g},${b})`
-      : `rgb(${Math.round(r*0.3)},${Math.round(g*0.3)},${Math.round(b*0.3)})`;
+      : `rgb(${Math.round(r * 0.3)},${Math.round(g * 0.3)},${Math.round(b * 0.3)})`;
     root.style.setProperty("--secondary-text-hover", darkHover);
-  }, [themeId]); // recalcule quand le thème change
+  }, [themeId]);
 
-  // ── 1. Charger depuis Supabase au login (fusion avec le local) ─────────
+  // Sync cloud APRÈS réhydratation localStorage
   useEffect(() => {
-    if (!hydrated || !user || cloudReady) return;
+    if (!hydrated || !user || !storeReady || cloudReady) return;
 
-    loadCloudStore().then((cloudResp) => {
-      const current = useStore.getState();
+    runCloudSync().finally(() => setCloudReady(true));
+  }, [hydrated, user, storeReady, cloudReady]);
 
-      if (cloudResp?.loadError) {
-        console.error("[cloud sync]", cloudResp.loadError);
-      }
-
-      if (cloudResp?.store) {
-        const cloudMapped = mapSupabaseToStore(cloudResp.store as Record<string, unknown>);
-        const { merged, needsCloudPush } = mergeCloudStore(current, cloudMapped);
-        const { user: _u, ...rest } = merged;
-        void _u;
-
-        useStore.setState({
-          ...rest,
-          ingredients: current.ingredients?.length
-            ? current.ingredients
-            : rest.ingredients && (rest.ingredients as unknown[]).length > 0
-              ? (rest.ingredients as typeof DEFAULT_INGREDIENTS)
-              : DEFAULT_INGREDIENTS,
-          materiel: current.materiel?.length
-            ? current.materiel
-            : rest.materiel && (rest.materiel as unknown[]).length > 0
-              ? (rest.materiel as typeof DEFAULT_MATERIEL)
-              : DEFAULT_MATERIEL,
-        } as Partial<AppState>);
-
-        if (needsCloudPush) {
-          saveCloudStore(buildPayload(useStore.getState()));
-        }
-      } else if (current.devisListPro.length > 0) {
-        // Premier appareil avec des devis locaux : initialiser le cloud
-        saveCloudStore(buildPayload(current));
-      } else {
-        // Réhydratation locale : s'assurer que devisList reflète appMode
-        const appMode = current.appMode ?? "pro";
-        useStore.setState({
-          devisListLab: MOCK_DEVIS,
-          devisList: appMode === "pro" ? current.devisListPro : MOCK_DEVIS,
-        });
-      }
-
-      setCloudReady(true);
-    });
-  }, [hydrated, user, cloudReady]);
-
-  // ── 2. Subscriber Zustand → sauvegarde immédiate dès que les devis changent
   useEffect(() => {
     if (!cloudReady) return;
 
@@ -189,14 +139,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         state.devisListLab !== prev.devisListLab ||
         state.entreesCapital !== prev.entreesCapital
       ) {
-        saveCloudStore(buildPayload(state));
+        pushCloudStore(buildSyncPayload(state));
       }
     });
 
     return () => unsub();
   }, [cloudReady]);
 
-  // ── 3. Sauvegarde générale debounce 3s pour les autres changements ─────
   useEffect(() => {
     if (!hydrated || !user) return;
 
@@ -205,7 +154,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       if (!cloudReady) return;
       clearTimeout(timer);
       timer = setTimeout(() => {
-        saveCloudStore(buildPayload(useStore.getState()));
+        pushCloudStore(buildSyncPayload(useStore.getState()));
       }, 3000);
     });
 
@@ -215,16 +164,26 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     };
   }, [hydrated, user, cloudReady]);
 
-  // ── 4. Sauvegarde avant fermeture de page (beforeunload) ──────────────
+  // Sauvegarde à la fermeture (desktop) + quand l'app passe en arrière-plan (mobile Safari)
   useEffect(() => {
     if (!user) return;
-    const handleBeforeUnload = () => {
+
+    const flush = () => {
       if (cloudReady) {
-        saveCloudStore(buildPayload(useStore.getState()));
+        pushCloudStore(buildSyncPayload(useStore.getState()));
       }
     };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+
+    window.addEventListener("beforeunload", flush);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("beforeunload", flush);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [user, cloudReady]);
 
   useEffect(() => {
@@ -241,8 +200,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <main className="lg:ml-64 min-h-[100dvh] overflow-x-hidden">
         <div className="lg:hidden flex items-center gap-3 px-4 py-3 border-b border-[var(--border)] bg-[var(--surface-1)] sticky top-0 z-20">
-          <button onClick={() => setSidebarOpen(true)}
-            className="w-9 h-9 flex items-center justify-center rounded-xl bg-[var(--surface-2)] text-[var(--text-secondary)]">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="w-9 h-9 flex items-center justify-center rounded-xl bg-[var(--surface-2)] text-[var(--text-secondary)]"
+          >
             <List size={20} />
           </button>
           <p className="text-sm font-bold text-[var(--text-primary)]">C.LC. Traiteur</p>

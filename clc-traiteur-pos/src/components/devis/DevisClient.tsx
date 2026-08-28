@@ -2,8 +2,10 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { m, AnimatePresence } from "framer-motion";
-import { MagnifyingGlass, Plus, Calendar, Receipt, PencilSimple, Trash, Warning, FilePdf, PresentationChart, CloudCheck, CloudSlash } from "@phosphor-icons/react";
+import { MagnifyingGlass, Plus, Calendar, Receipt, PencilSimple, Trash, Warning, FilePdf, PresentationChart, CloudCheck, CloudSlash, ArrowsClockwise } from "@phosphor-icons/react";
 import { downloadDevisPdf } from "@/lib/downloadDevisPdf";
+import { applyCloudMerge, buildSyncPayload, fetchCloudStore, pushCloudStore } from "@/lib/cloud-sync";
+import { useStore } from "@/lib/store";
 
 async function downloadDevisPptx(devis: Devis) {
   try {
@@ -22,7 +24,6 @@ async function downloadDevisPptx(devis: Devis) {
     URL.revokeObjectURL(url);
   } catch {}
 }
-import { useStore } from "@/lib/store";
 import { Devis, DevisStatus } from "@/lib/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -52,22 +53,45 @@ export default function DevisClient() {
   const [editing, setEditing] = useState<Devis | null>(null);
   const [toDelete, setToDelete] = useState<Devis | null>(null);
   const [cloudSync, setCloudSync] = useState<CloudSyncInfo | null>(null);
+  const [syncing, setSyncing] = useState(false);
+
+  const refreshCloudStatus = async () => {
+    const data = await fetchCloudStore();
+    if (!data) return null;
+    setCloudSync({
+      configured: data.configured,
+      devisCount: data.devisCount ?? 0,
+      devisIds: data.devisIds ?? [],
+      loadError: data.loadError ?? null,
+      updatedAt: data.updatedAt ?? null,
+    });
+    return data;
+  };
+
+  const handleCloudSync = async () => {
+    setSyncing(true);
+    try {
+      const state = useStore.getState();
+      if (state.devisListPro.length > 0) {
+        await pushCloudStore(buildSyncPayload(state));
+      }
+      const data = await refreshCloudStatus();
+      if (data?.store && (state.devisListPro.length === 0 || (data.devisCount ?? 0) > state.devisListPro.length)) {
+        applyCloudMerge(data.store);
+      }
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   useEffect(() => {
-    fetch("/api/sync/store", { cache: "no-store" })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!data) return;
-        setCloudSync({
-          configured: data.configured,
-          devisCount: data.devisCount ?? 0,
-          devisIds: data.devisIds ?? [],
-          loadError: data.loadError ?? null,
-          updatedAt: data.updatedAt ?? null,
-        });
-      })
-      .catch(() => setCloudSync(null));
-  }, [devisList.length, devisListPro.length]);
+    refreshCloudStatus().then((data) => {
+      if (!data?.store || appMode !== "pro" || devisListPro.length > 0) return;
+      if ((data.devisCount ?? 0) > 0) {
+        applyCloudMerge(data.store);
+      }
+    });
+  }, [appMode, devisListPro.length]);
 
   const filtered = useMemo(() => {
     return devisList.filter((d) => {
@@ -117,26 +141,39 @@ export default function DevisClient() {
             {devisList.length} devis — {stats.confirmed} confirmés
           </p>
           {cloudSync && (
-            <p className={`text-xs mt-1.5 flex items-center gap-1.5 ${cloudSync.loadError || syncMismatch ? "text-amber-400" : "text-[var(--text-muted)]"}`}>
-              {cloudSync.loadError ? (
-                <>
-                  <CloudSlash size={13} />
-                  Cloud inaccessible : {cloudSync.loadError}
-                </>
-              ) : !cloudSync.configured ? (
-                <>
-                  <CloudSlash size={13} />
-                  Synchronisation cloud non configurée sur Vercel
-                </>
-              ) : (
-                <>
-                  <CloudCheck size={13} />
-                  Cloud : {cloudSync.devisCount} devis
-                  {syncMismatch ? ` (local : ${devisListPro.length})` : ""}
-                  {cloudSync.updatedAt ? ` — maj ${formatDate(cloudSync.updatedAt)}` : ""}
-                </>
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <p className={`text-xs flex items-center gap-1.5 ${cloudSync.loadError || syncMismatch ? "text-amber-400" : "text-[var(--text-muted)]"}`}>
+                {cloudSync.loadError ? (
+                  <>
+                    <CloudSlash size={13} />
+                    Cloud inaccessible : {cloudSync.loadError}
+                  </>
+                ) : !cloudSync.configured ? (
+                  <>
+                    <CloudSlash size={13} />
+                    Synchronisation cloud non configurée sur Vercel
+                  </>
+                ) : (
+                  <>
+                    <CloudCheck size={13} />
+                    Cloud : {cloudSync.devisCount} devis
+                    {syncMismatch ? ` (local : ${devisListPro.length})` : ""}
+                    {cloudSync.updatedAt ? ` — maj ${formatDate(cloudSync.updatedAt)}` : ""}
+                  </>
+                )}
+              </p>
+              {(syncMismatch || (cloudSync.devisCount > 0 && devisListPro.length === 0)) && (
+                <button
+                  type="button"
+                  onClick={handleCloudSync}
+                  disabled={syncing}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-[var(--amber)] hover:underline disabled:opacity-50"
+                >
+                  <ArrowsClockwise size={13} className={syncing ? "animate-spin" : ""} />
+                  {syncing ? "Synchronisation…" : "Synchroniser"}
+                </button>
               )}
-            </p>
+            </div>
           )}
         </div>
         <m.button
