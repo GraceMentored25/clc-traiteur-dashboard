@@ -47,7 +47,7 @@ async function saveToSupabase(devisListPro: Devis[]) {
   }
 }
 
-/** GET — devis cloud (Vercel Blob prioritaire, Supabase en secours) */
+/** GET — devis cloud (Vercel Blob prioritaire) */
 export async function GET() {
   const guard = await requireSession();
   if (guard) return guard;
@@ -64,24 +64,30 @@ export async function GET() {
     });
   }
 
-  const blob = blobConfigured ? await loadDevisFromBlob() : { devis: [], updatedAt: null, error: "Blob absent" };
-  const supa = config.urlConfigured ? await loadFromSupabase() : { devis: [], updatedAt: null, error: null };
+  if (blobConfigured) {
+    const blob = await loadDevisFromBlob();
+    return NextResponse.json({
+      configured: true,
+      config: { ...config, blobConfigured: true },
+      devisCount: blob.devis.length,
+      devisIds: blob.devis.map((d) => d.id),
+      devisListPro: blob.devis,
+      updatedAt: blob.updatedAt,
+      error: blob.devis.length > 0 ? null : blob.error,
+      source: "blob",
+    });
+  }
 
-  const devis =
-    blob.devis.length >= supa.devis.length ? blob.devis : supa.devis.length > blob.devis.length ? supa.devis : blob.devis;
-
-  const updatedAt = blob.updatedAt ?? supa.updatedAt;
-  const loadError = blob.error && supa.error ? blob.error : blob.error && !blobConfigured ? blob.error : supa.error;
-
+  const supa = await loadFromSupabase();
   return NextResponse.json({
     configured: true,
-    config: { ...config, blobConfigured },
-    devisCount: devis.length,
-    devisIds: devis.map((d) => d.id),
-    devisListPro: devis,
-    updatedAt,
-    error: loadError,
-    source: blob.devis.length >= supa.devis.length && blobConfigured ? "blob" : "supabase",
+    config: { ...config, blobConfigured: false },
+    devisCount: supa.devis.length,
+    devisIds: supa.devis.map((d) => d.id),
+    devisListPro: supa.devis,
+    updatedAt: supa.updatedAt,
+    error: supa.devis.length > 0 ? null : supa.error,
+    source: "supabase",
   });
 }
 
@@ -111,11 +117,6 @@ export async function POST(req: NextRequest) {
   const blob = await saveDevisToBlob(devisListPro);
   if (blob.error) {
     return NextResponse.json({ ok: false, error: blob.error }, { status: 500 });
-  }
-
-  // Miroir optionnel vers Supabase si disponible
-  if (getSupabaseConfigStatus().urlConfigured) {
-    await saveToSupabase(devisListPro);
   }
 
   return NextResponse.json({ ok: true, devisCount: devisListPro.length, source: "blob" });

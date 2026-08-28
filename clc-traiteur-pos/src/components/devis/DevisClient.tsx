@@ -55,6 +55,7 @@ export default function DevisClient() {
   const [toDelete, setToDelete] = useState<Devis | null>(null);
   const [cloudSync, setCloudSync] = useState<CloudSyncInfo | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [initialSyncDone, setInitialSyncDone] = useState(false);
 
   const applySyncResult = (data: Awaited<ReturnType<typeof runFullCloudSync>>) => {
     setCloudSync({
@@ -82,6 +83,7 @@ export default function DevisClient() {
         await new Promise<void>((resolve) => useStore.persist.onFinishHydration(() => resolve()));
       }
       applySyncResult(await runFullCloudSync());
+      setInitialSyncDone(true);
     };
     syncAfterHydration();
   }, []);
@@ -96,8 +98,9 @@ export default function DevisClient() {
     });
   }, [devisList, search, statusFilter]);
 
-  const cloudError = cloudSync?.loadError || cloudSync?.saveError;
+  const cloudError = initialSyncDone && (cloudSync?.loadError || cloudSync?.saveError);
   const syncMismatch =
+    initialSyncDone &&
     cloudSync?.configured &&
     !cloudError &&
     appMode === "pro" &&
@@ -132,10 +135,17 @@ export default function DevisClient() {
         <div>
           <h1 className="text-2xl font-bold text-[var(--text-primary)] tracking-tight">Gestion de devis</h1>
           <p className="text-sm text-[var(--text-muted)] mt-1">
-            {devisList.length} devis — {stats.confirmed} confirmés
+            {!initialSyncDone
+              ? "Chargement des devis…"
+              : `${devisList.length} devis — ${stats.confirmed} confirmés`}
           </p>
-          {cloudSync && (
-            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            {!initialSyncDone ? (
+              <p className="text-xs flex items-center gap-1.5 text-[var(--text-muted)]">
+                <ArrowsClockwise size={13} className="animate-spin" />
+                Synchronisation cloud…
+              </p>
+            ) : cloudSync ? (
               <p className={`text-xs flex items-center gap-1.5 ${cloudError || syncMismatch ? "text-amber-400" : "text-[var(--text-muted)]"}`}>
                 {cloudSync.loadError ? (
                   <>
@@ -161,19 +171,19 @@ export default function DevisClient() {
                   </>
                 )}
               </p>
-              {(syncMismatch || cloudSync.devisCount > 0 || devisListPro.length > 0) && (
-                <button
-                  type="button"
-                  onClick={handleCloudSync}
-                  disabled={syncing}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-[var(--amber)] hover:underline disabled:opacity-50"
-                >
-                  <ArrowsClockwise size={13} className={syncing ? "animate-spin" : ""} />
-                  {syncing ? "Synchronisation…" : "Synchroniser"}
-                </button>
-              )}
-            </div>
-          )}
+            ) : null}
+            {initialSyncDone && cloudSync && (syncMismatch || cloudSync.devisCount > 0 || devisListPro.length > 0) && (
+              <button
+                type="button"
+                onClick={handleCloudSync}
+                disabled={syncing}
+                className="inline-flex items-center gap-1 text-xs font-medium text-[var(--amber)] hover:underline disabled:opacity-50"
+              >
+                <ArrowsClockwise size={13} className={syncing ? "animate-spin" : ""} />
+                {syncing ? "Synchronisation…" : "Synchroniser"}
+              </button>
+            )}
+          </div>
         </div>
         <m.button
           whileTap={{ scale: 0.97 }}
@@ -237,7 +247,12 @@ export default function DevisClient() {
       {/* Table — desktop */}
       <div className="rounded-2xl border border-[var(--border)] overflow-hidden bg-[var(--surface-1)]">
 
-        {filtered.length === 0 ? (
+        {!initialSyncDone ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <ArrowsClockwise size={32} className="text-[var(--amber)] animate-spin mb-3" />
+            <p className="text-sm font-medium text-[var(--text-secondary)]">Chargement des devis depuis le cloud…</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <Receipt size={36} className="text-[var(--text-muted)] mb-3" />
             <p className="text-sm font-medium text-[var(--text-secondary)]">Aucun devis trouvé</p>

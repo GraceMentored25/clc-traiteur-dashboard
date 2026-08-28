@@ -3,11 +3,6 @@ import type { AppState } from "@/lib/store";
 import { useStore } from "@/lib/store";
 import { mergeDevisLists } from "@/lib/supabase";
 import { MOCK_DEVIS } from "@/lib/data/mock-events";
-import {
-  isSupabaseConfigured,
-  loadDevisFromCloud,
-  saveDevisToCloud,
-} from "@/lib/supabase-browser";
 
 export interface CloudSyncResult {
   configured: boolean;
@@ -16,7 +11,7 @@ export interface CloudSyncResult {
   updatedAt: string | null;
   loadError: string | null;
   saveError: string | null;
-  source: "api-blob" | "supabase-direct" | "none";
+  source: "api-blob" | "none";
 }
 
 function applyMergedDevis(merged: Devis[]) {
@@ -48,43 +43,24 @@ export function buildSyncPayload(s: AppState) {
   };
 }
 
-/** Sync devis : union local + cloud via API (Vercel Blob), Supabase direct en secours. */
+/** Sync devis : union local + cloud via API (Vercel Blob). */
 export async function runFullCloudSync(): Promise<CloudSyncResult> {
   const local = useStore.getState().devisListPro;
-
-  // 1. Charger depuis l'API serveur (Vercel Blob — fiable)
   const apiLoad = await loadDevisViaApi();
-  let cloud = apiLoad.devis;
-  let cloudUpdatedAt = apiLoad.updatedAt;
-  let loadErr = apiLoad.error;
-  let source: CloudSyncResult["source"] = apiLoad.configured ? "api-blob" : "none";
 
-  // 2. Secours Supabase direct si l'API échoue et Supabase est configuré
-  if (isSupabaseConfigured() && (loadErr || cloud.length === 0)) {
-    const direct = await loadDevisFromCloud();
-    if (!direct.error && direct.devis.length > cloud.length) {
-      cloud = direct.devis;
-      cloudUpdatedAt = direct.updatedAt;
-      loadErr = null;
-      source = "supabase-direct";
-    } else if (loadErr && direct.error) {
-      loadErr = `${loadErr} | Supabase : ${direct.error}`;
-    }
-  }
-
-  const configured = apiLoad.configured || isSupabaseConfigured();
-  if (!configured) {
+  if (!apiLoad.configured) {
     return {
       configured: false,
       devisCount: local.length,
       devisIds: local.map((d) => d.id),
       updatedAt: null,
-      loadError: "Stockage cloud non configuré sur Vercel",
+      loadError: apiLoad.error ?? "Stockage cloud non configuré sur Vercel",
       saveError: null,
       source: "none",
     };
   }
 
+  const cloud = apiLoad.devis;
   const merged = mergeDevisLists(local, cloud);
   applyMergedDevis(merged);
 
@@ -95,39 +71,27 @@ export async function runFullCloudSync(): Promise<CloudSyncResult> {
 
   if (merged.length > cloud.length || idsChanged) {
     const apiSave = await pushDevisViaApi(merged);
-    if (!apiSave.ok) {
-      saveError = apiSave.error;
-      if (isSupabaseConfigured()) {
-        const direct = await saveDevisToCloud(merged);
-        if (!direct.error) {
-          saveError = null;
-          source = "supabase-direct";
-        } else if (saveError) {
-          saveError = `${saveError} | Supabase : ${direct.error}`;
-        }
-      }
-    }
+    if (!apiSave.ok) saveError = apiSave.error;
   }
 
   const final = useStore.getState().devisListPro;
+  const loadError = final.length > 0 || cloud.length > 0 ? null : apiLoad.error;
+
   return {
     configured: true,
     devisCount: final.length,
     devisIds: final.map((d) => d.id),
-    updatedAt: cloudUpdatedAt,
-    loadError: loadErr,
+    updatedAt: apiLoad.updatedAt,
+    loadError,
     saveError,
-    source,
+    source: "api-blob",
   };
 }
 
 export async function pushCloudStore(payload: Record<string, unknown>): Promise<boolean> {
   const devis = (payload.devisListPro as Devis[]) ?? [];
   const api = await pushDevisViaApi(devis);
-  if (api.ok) return true;
-  if (!isSupabaseConfigured()) return false;
-  const { error } = await saveDevisToCloud(devis);
-  return !error;
+  return api.ok;
 }
 
 /** @deprecated Utiliser runFullCloudSync */
