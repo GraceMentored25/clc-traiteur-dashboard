@@ -1,137 +1,32 @@
-import {
-  loadFromSupabase,
-  saveToSupabase,
-  mapSupabaseToStore,
-  mergeCloudStore,
-  type mapSupabaseToStore as MapFn,
-} from "@/lib/supabase";
-import { MOCK_DEVIS } from "@/lib/data/mock-events";
+import type { Devis } from "@/lib/types";
 import type { AppState } from "@/lib/store";
 import { useStore } from "@/lib/store";
+import { mergeDevisLists } from "@/lib/supabase";
+import { MOCK_DEVIS } from "@/lib/data/mock-events";
+import {
+  isSupabaseConfigured,
+  loadDevisFromCloud,
+  saveDevisToCloud,
+} from "@/lib/supabase-browser";
 
-export type MappedCloudStore = ReturnType<typeof MapFn>;
-
-export interface CloudSyncApiResponse {
+export interface CloudSyncResult {
   configured: boolean;
-  store: MappedCloudStore | null;
   devisCount: number;
   devisIds: string[];
   updatedAt: string | null;
   loadError: string | null;
-  source?: "direct" | "api";
+  saveError: string | null;
+  source: "devis-direct";
 }
 
-function toResponse(
-  store: MappedCloudStore | null,
-  raw: Record<string, unknown> | null,
-  loadError: string | null,
-  source: "direct" | "api"
-): CloudSyncApiResponse {
-  const devisListPro = store?.devisListPro ?? [];
-  return {
-    configured: true,
-    store,
-    devisCount: devisListPro.length,
-    devisIds: devisListPro.map((d) => d.id),
-    updatedAt: (raw?.updated_at as string) ?? null,
-    loadError,
-    source,
-  };
-}
-
-/** Lecture directe Supabase depuis le navigateur (contourne l'erreur Vercel→Supabase). */
-async function fetchCloudStoreDirect(): Promise<CloudSyncApiResponse> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) {
-    return {
-      configured: false,
-      store: null,
-      devisCount: 0,
-      devisIds: [],
-      updatedAt: null,
-      loadError: "Clés Supabase absentes du build",
-      source: "direct",
-    };
-  }
-
-  const { data, error } = await loadFromSupabase();
-  if (error) {
-    return {
-      configured: true,
-      store: null,
-      devisCount: 0,
-      devisIds: [],
-      updatedAt: null,
-      loadError: error,
-      source: "direct",
-    };
-  }
-
-  const store = data ? mapSupabaseToStore(data) : null;
-  return toResponse(store, data, null, "direct");
-}
-
-/** Lecture via API serveur (secours si direct échoue côté client). */
-async function fetchCloudStoreApi(): Promise<CloudSyncApiResponse | null> {
-  try {
-    const res = await fetch("/api/sync/store", { cache: "no-store" });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return { ...data, source: "api" as const };
-  } catch {
-    return null;
-  }
-}
-
-/** Charge le cloud — priorité au client direct (fonctionne sur tous les appareils). */
-export async function fetchCloudStore(): Promise<CloudSyncApiResponse | null> {
-  const direct = await fetchCloudStoreDirect();
-  if (!direct.loadError) return direct;
-
-  const api = await fetchCloudStoreApi();
-  if (api && !api.loadError) return api;
-
-  return direct;
-}
-
-/** Écriture directe Supabase depuis le navigateur. */
-async function pushCloudStoreDirect(payload: Record<string, unknown>): Promise<boolean> {
-  const { error } = await saveToSupabase(payload);
-  if (error) console.error("[cloud push direct]", error);
-  return !error;
-}
-
-async function pushCloudStoreApi(payload: Record<string, unknown>): Promise<boolean> {
-  try {
-    const res = await fetch("/api/sync/store", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json().catch(() => ({}));
-    return res.ok && data.ok !== false;
-  } catch {
-    return false;
-  }
-}
-
-/** Pousse vers le cloud — direct d'abord, API en secours. */
-export async function pushCloudStore(payload: Record<string, unknown>): Promise<boolean> {
-  const okDirect = await pushCloudStoreDirect(payload);
-  if (okDirect) return true;
-  return pushCloudStoreApi(payload);
-}
-
-/** Fusionne le cloud dans le store local. */
-export function applyCloudMerge(cloudStore: MappedCloudStore) {
-  const current = useStore.getState();
-  const { merged, needsCloudPush } = mergeCloudStore(current, cloudStore);
-  const { user: _u, ...rest } = merged;
-  void _u;
-
-  useStore.setState(rest as Partial<AppState>);
-  return { needsCloudPush, devisCount: merged.devisListPro.length };
+function applyMergedDevis(merged: Devis[]) {
+  const s = useStore.getState();
+  const appMode = s.appMode ?? "pro";
+  useStore.setState({
+    devisListPro: merged,
+    devisListLab: MOCK_DEVIS,
+    devisList: appMode === "pro" ? merged : MOCK_DEVIS,
+  });
 }
 
 export function buildSyncPayload(s: AppState) {
@@ -153,44 +48,144 @@ export function buildSyncPayload(s: AppState) {
   };
 }
 
+/** Sync devis : union local + cloud, puis push de la version la plus complète. */
+export async function runFullCloudSync(): Promise<CloudSyncResult> {
+  const configured = isSupabaseConfigured();
+  const local = useStore.getState().devisListPro;
+
+  if (!configured) {
+    return {
+      configured: false,
+      devisCount: local.length,
+      devisIds: local.map((d) => d.id),
+      updatedAt: null,
+      loadError: "Variables Supabase absentes du déploiement Vercel",
+      saveError: null,
+      source: "devis-direct",
+    };
+  }
+
+  const { devis: cloudDevis, updatedAt, error: loadError } = await loadDevisFromCloud();
+  let cloud = cloudDevis;
+  let loadErr = loadError;
+  let cloudUpdatedAt = updatedAt;
+
+  if (loadError) {
+    const apiLoad = await loadDevisViaApi();
+    if (!apiLoad.error && apiLoad.devis.length >= cloudDevis.length) {
+      cloud = apiLoad.devis;
+      cloudUpdatedAt = apiLoad.updatedAt;
+      loadErr = null;
+    }
+  }
+
+  const merged = mergeDevisLists(local, cloud);
+
+  applyMergedDevis(merged);
+
+  let saveError: string | null = null;
+  const idsChanged =
+    JSON.stringify(merged.map((d) => d.id).sort()) !==
+    JSON.stringify(cloud.map((d) => d.id).sort());
+
+  if (merged.length > cloud.length || idsChanged || merged.length > 0) {
+    const save = await saveDevisToCloud(merged);
+    saveError = save.error;
+
+    if (!save.error) {
+      const verify = await loadDevisFromCloud();
+      if (verify.error) saveError = verify.error;
+      else if (verify.devis.length < merged.length) {
+        saveError =
+          "Écriture refusée par Supabase (politiques RLS — exécutez supabase/migrations/20260828100000_clc_store_rls.sql)";
+      }
+    } else {
+      const apiSave = await pushDevisViaApi(merged);
+      if (apiSave.ok) saveError = null;
+      else if (apiSave.error) saveError = apiSave.error;
+    }
+  }
+
+  const final = useStore.getState().devisListPro;
+  return {
+    configured: true,
+    devisCount: final.length,
+    devisIds: final.map((d) => d.id),
+    updatedAt: cloudUpdatedAt,
+    loadError: loadErr,
+    saveError,
+    source: "devis-direct",
+  };
+}
+
+export async function pushCloudStore(payload: Record<string, unknown>): Promise<boolean> {
+  const devis = (payload.devisListPro as Devis[]) ?? [];
+  const { error } = await saveDevisToCloud(devis);
+  return !error;
+}
+
+/** @deprecated Utiliser runFullCloudSync */
+export async function fetchCloudStore() {
+  const r = await runFullCloudSync();
+  return {
+    configured: r.configured,
+    store: null,
+    devisCount: r.devisCount,
+    devisIds: r.devisIds,
+    updatedAt: r.updatedAt,
+    loadError: r.loadError ?? r.saveError,
+    source: r.source,
+  };
+}
+
+export function applyCloudMerge(cloudStore: { devisListPro?: Devis[] }) {
+  const merged = mergeDevisLists(useStore.getState().devisListPro, cloudStore.devisListPro ?? []);
+  applyMergedDevis(merged);
+  return { needsCloudPush: true, devisCount: merged.length };
+}
+
 export function ensureDevisListView() {
   const s = useStore.getState();
-  const appMode = s.appMode ?? "pro";
   useStore.setState({
     devisListLab: MOCK_DEVIS,
-    devisList: appMode === "pro" ? s.devisListPro : MOCK_DEVIS,
+    devisList: (s.appMode ?? "pro") === "pro" ? s.devisListPro : MOCK_DEVIS,
   });
 }
 
-/**
- * Sync complète : fusionne local + cloud (union de tous les devis)
- * puis pousse la version la plus complète vers Supabase.
- */
-export async function runFullCloudSync(): Promise<CloudSyncApiResponse | null> {
-  const beforeCount = useStore.getState().devisListPro.length;
-  const cloudResp = await fetchCloudStore();
-
-  if (cloudResp?.loadError) {
-    console.error("[cloud sync]", cloudResp.loadError);
-  }
-
-  if (cloudResp?.store) {
-    const { needsCloudPush } = applyCloudMerge(cloudResp.store);
-    const state = useStore.getState();
-    const afterCount = state.devisListPro.length;
-
-    if (needsCloudPush || afterCount > (cloudResp.devisCount ?? 0) || afterCount !== beforeCount) {
-      await pushCloudStore(buildSyncPayload(state));
+async function pushDevisViaApi(devis: Devis[]): Promise<{ ok: boolean; error: string | null }> {
+  try {
+    const res = await fetch("/api/sync/devis", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ devisListPro: devis }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      return { ok: false, error: data.error ?? `HTTP ${res.status}` };
     }
-    return fetchCloudStore();
+    return { ok: true, error: null };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Erreur réseau" };
   }
+}
 
-  ensureDevisListView();
-  const state = useStore.getState();
-  if (state.devisListPro.length > 0) {
-    await pushCloudStore(buildSyncPayload(state));
-    return fetchCloudStore();
+async function loadDevisViaApi(): Promise<{
+  devis: Devis[];
+  updatedAt: string | null;
+  error: string | null;
+}> {
+  try {
+    const res = await fetch("/api/sync/devis", { cache: "no-store" });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { devis: [], updatedAt: null, error: data.error ?? `HTTP ${res.status}` };
+    }
+    return {
+      devis: (data.devisListPro as Devis[]) ?? [],
+      updatedAt: data.updatedAt ?? null,
+      error: data.error ?? null,
+    };
+  } catch (err) {
+    return { devis: [], updatedAt: null, error: err instanceof Error ? err.message : "Erreur réseau" };
   }
-
-  return cloudResp;
 }

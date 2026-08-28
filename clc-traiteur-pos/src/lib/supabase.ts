@@ -1,11 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
 import type { Devis } from "@/lib/types";
 import { MOCK_DEVIS } from "@/lib/data/mock-events";
-
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-export const supabase = createClient(url, key);
+import { getSupabaseBrowser } from "@/lib/supabase-browser";
 
 const ROW_ID = "main";
 
@@ -35,6 +30,11 @@ export async function loadFromSupabase(): Promise<{
   data: Record<string, unknown> | null;
   error: string | null;
 }> {
+  const supabase = getSupabaseBrowser();
+  if (!supabase) {
+    return { data: null, error: "Supabase non configuré" };
+  }
+
   const { data, error } = await supabase
     .from("clc_store")
     .select("*")
@@ -52,6 +52,11 @@ export async function loadFromSupabase(): Promise<{
 
 // Sauvegarder tout le store dans Supabase (upsert)
 export async function saveToSupabase(state: Record<string, unknown>): Promise<{ error: string | null }> {
+  const supabase = getSupabaseBrowser();
+  if (!supabase) {
+    return { error: "Supabase non configuré" };
+  }
+
   const { error } = await supabase.from("clc_store").upsert({
     id: ROW_ID,
     devis_list_pro: state.devisListPro,
@@ -78,25 +83,8 @@ export async function saveToSupabase(state: Record<string, unknown>): Promise<{ 
 export async function syncStoreNow() {
   const { useStore } = await import("@/lib/store");
   const s = useStore.getState();
-  const payload = {
-    devisListPro: s.devisListPro,
-    devisListLab: s.devisListLab,
-    devisList: s.devisList,
-    appMode: s.appMode,
-    theme: s.theme,
-    customPrices: s.customPrices,
-    customDishes: s.customDishes,
-    customCategories: s.customCategories,
-    entreesCapital: s.entreesCapital,
-    ingredients: s.ingredients,
-    materiel: s.materiel,
-    customRecipes: s.customRecipes,
-    demandesCourses: s.demandesCourses,
-    demandesLogistique: s.demandesLogistique,
-  };
-
   const { pushCloudStore } = await import("@/lib/cloud-sync");
-  await pushCloudStore(payload);
+  await pushCloudStore({ devisListPro: s.devisListPro });
 }
 
 /** Fusionne l'état local avec le cloud — ne jamais perdre des devis locaux. */

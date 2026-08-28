@@ -41,6 +41,7 @@ type CloudSyncInfo = {
   devisCount: number;
   devisIds: string[];
   loadError: string | null;
+  saveError: string | null;
   updatedAt: string | null;
 };
 
@@ -55,35 +56,28 @@ export default function DevisClient() {
   const [cloudSync, setCloudSync] = useState<CloudSyncInfo | null>(null);
   const [syncing, setSyncing] = useState(false);
 
+  const applySyncResult = (data: Awaited<ReturnType<typeof runFullCloudSync>>) => {
+    setCloudSync({
+      configured: data.configured,
+      devisCount: data.devisCount ?? 0,
+      devisIds: data.devisIds ?? [],
+      loadError: data.loadError ?? null,
+      saveError: data.saveError ?? null,
+      updatedAt: data.updatedAt ?? null,
+    });
+  };
+
   const handleCloudSync = async () => {
     setSyncing(true);
     try {
-      const data = await runFullCloudSync();
-      if (data) {
-        setCloudSync({
-          configured: data.configured,
-          devisCount: data.devisCount ?? 0,
-          devisIds: data.devisIds ?? [],
-          loadError: data.loadError ?? null,
-          updatedAt: data.updatedAt ?? null,
-        });
-      }
+      applySyncResult(await runFullCloudSync());
     } finally {
       setSyncing(false);
     }
   };
 
   useEffect(() => {
-    runFullCloudSync().then((data) => {
-      if (!data) return;
-      setCloudSync({
-        configured: data.configured,
-        devisCount: data.devisCount ?? 0,
-        devisIds: data.devisIds ?? [],
-        loadError: data.loadError ?? null,
-        updatedAt: data.updatedAt ?? null,
-      });
-    });
+    runFullCloudSync().then(applySyncResult);
   }, []);
 
   const filtered = useMemo(() => {
@@ -96,9 +90,10 @@ export default function DevisClient() {
     });
   }, [devisList, search, statusFilter]);
 
+  const cloudError = cloudSync?.loadError || cloudSync?.saveError;
   const syncMismatch =
     cloudSync?.configured &&
-    !cloudSync.loadError &&
+    !cloudError &&
     appMode === "pro" &&
     cloudSync.devisCount !== devisListPro.length;
 
@@ -135,11 +130,16 @@ export default function DevisClient() {
           </p>
           {cloudSync && (
             <div className="mt-1.5 flex flex-wrap items-center gap-2">
-              <p className={`text-xs flex items-center gap-1.5 ${cloudSync.loadError || syncMismatch ? "text-amber-400" : "text-[var(--text-muted)]"}`}>
+              <p className={`text-xs flex items-center gap-1.5 ${cloudError || syncMismatch ? "text-amber-400" : "text-[var(--text-muted)]"}`}>
                 {cloudSync.loadError ? (
                   <>
                     <CloudSlash size={13} />
-                    Cloud inaccessible : {cloudSync.loadError}
+                    Lecture cloud : {cloudSync.loadError}
+                  </>
+                ) : cloudSync.saveError ? (
+                  <>
+                    <CloudSlash size={13} />
+                    Enregistrement cloud : {cloudSync.saveError}
                   </>
                 ) : !cloudSync.configured ? (
                   <>
