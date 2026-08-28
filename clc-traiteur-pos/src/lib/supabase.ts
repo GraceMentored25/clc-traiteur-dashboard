@@ -9,19 +9,21 @@ export const supabase = createClient(url, key);
 
 const ROW_ID = "main";
 
-/** Fusionne deux listes de devis par id (garde la version la plus récente). */
+function pickNewerDevis(a: Devis, b: Devis): Devis {
+  const aTs = new Date(a.createdAt).getTime();
+  const bTs = new Date(b.createdAt).getTime();
+  const newer = aTs >= bTs ? a : b;
+  const older = aTs >= bTs ? b : a;
+  return { ...older, ...newer };
+}
+
+/** Fusionne deux listes de devis par id (union — garde toutes les entrées, version la plus récente par id). */
 export function mergeDevisLists(local: Devis[] = [], cloud: Devis[] = []): Devis[] {
   const map = new Map<string, Devis>();
   for (const d of cloud) map.set(d.id, d);
   for (const d of local) {
     const existing = map.get(d.id);
-    if (!existing) {
-      map.set(d.id, d);
-      continue;
-    }
-    const localTs = new Date(d.createdAt).getTime();
-    const cloudTs = new Date(existing.createdAt).getTime();
-    map.set(d.id, localTs >= cloudTs ? d : existing);
+    map.set(d.id, existing ? pickNewerDevis(d, existing) : d);
   }
   return Array.from(map.values()).sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -29,21 +31,29 @@ export function mergeDevisLists(local: Devis[] = [], cloud: Devis[] = []): Devis
 }
 
 // Charger tout le store depuis Supabase
-export async function loadFromSupabase() {
+export async function loadFromSupabase(): Promise<{
+  data: Record<string, unknown> | null;
+  error: string | null;
+}> {
   const { data, error } = await supabase
     .from("clc_store")
     .select("*")
     .eq("id", ROW_ID)
     .single();
-  if (error || !data) return null;
-  return data;
+
+  if (error?.code === "PGRST116") {
+    return { data: null, error: null };
+  }
+  if (error) {
+    return { data: null, error: error.message };
+  }
+  return { data: data as Record<string, unknown>, error: null };
 }
 
 // Sauvegarder tout le store dans Supabase (upsert)
-export async function saveToSupabase(state: Record<string, unknown>) {
+export async function saveToSupabase(state: Record<string, unknown>): Promise<{ error: string | null }> {
   const { error } = await supabase.from("clc_store").upsert({
     id: ROW_ID,
-    // user_data intentionnellement absent — la session ne doit pas être stockée en DB
     devis_list_pro: state.devisListPro,
     devis_list_lab: state.devisListLab,
     devis_list: state.devisList,
@@ -61,9 +71,10 @@ export async function saveToSupabase(state: Record<string, unknown>) {
     updated_at: new Date().toISOString(),
   });
   if (error) console.error("Supabase save error:", error);
+  return { error: error?.message ?? null };
 }
 
-// Helper : sauvegarde immédiate de l'état courant du store (via API serveur)
+// Helper : sauvegarde immédiate de l'état courant du store
 export async function syncStoreNow() {
   const { useStore } = await import("@/lib/store");
   const s = useStore.getState();
@@ -84,15 +95,8 @@ export async function syncStoreNow() {
     demandesLogistique: s.demandesLogistique,
   };
 
-  try {
-    await fetch("/api/sync/store", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-  } catch (err) {
-    console.error("[syncStoreNow]", err);
-  }
+  const { pushCloudStore } = await import("@/lib/cloud-sync");
+  await pushCloudStore(payload);
 }
 
 /** Fusionne l'état local avec le cloud — ne jamais perdre des devis locaux. */
@@ -105,7 +109,11 @@ export function mergeCloudStore(
 ) {
   const mergedPro = mergeDevisLists(local.devisListPro, cloud.devisListPro ?? []);
   const appMode = local.appMode ?? cloud.appMode ?? "pro";
-  const cloudProCount = cloud.devisListPro?.length ?? 0;
+  const cloudPro = cloud.devisListPro ?? [];
+  const needsCloudPush =
+    mergedPro.length !== cloudPro.length ||
+    JSON.stringify(mergedPro.map((d) => d.id).sort()) !==
+      JSON.stringify(cloudPro.map((d) => d.id).sort());
 
   return {
     merged: {
@@ -115,7 +123,7 @@ export function mergeCloudStore(
       devisListLab: MOCK_DEVIS,
       devisList: appMode === "pro" ? mergedPro : MOCK_DEVIS,
     },
-    needsCloudPush: mergedPro.length > cloudProCount,
+    needsCloudPush,
   };
 }
 

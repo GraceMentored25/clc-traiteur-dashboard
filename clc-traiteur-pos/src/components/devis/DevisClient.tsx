@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { m, AnimatePresence } from "framer-motion";
 import { MagnifyingGlass, Plus, Calendar, Receipt, PencilSimple, Trash, Warning, FilePdf, PresentationChart, CloudCheck, CloudSlash, ArrowsClockwise } from "@phosphor-icons/react";
 import { downloadDevisPdf } from "@/lib/downloadDevisPdf";
-import { applyCloudMerge, buildSyncPayload, fetchCloudStore, pushCloudStore } from "@/lib/cloud-sync";
+import { runFullCloudSync } from "@/lib/cloud-sync";
 import { useStore } from "@/lib/store";
 
 async function downloadDevisPptx(devis: Devis) {
@@ -55,29 +55,18 @@ export default function DevisClient() {
   const [cloudSync, setCloudSync] = useState<CloudSyncInfo | null>(null);
   const [syncing, setSyncing] = useState(false);
 
-  const refreshCloudStatus = async () => {
-    const data = await fetchCloudStore();
-    if (!data) return null;
-    setCloudSync({
-      configured: data.configured,
-      devisCount: data.devisCount ?? 0,
-      devisIds: data.devisIds ?? [],
-      loadError: data.loadError ?? null,
-      updatedAt: data.updatedAt ?? null,
-    });
-    return data;
-  };
-
   const handleCloudSync = async () => {
     setSyncing(true);
     try {
-      const state = useStore.getState();
-      if (state.devisListPro.length > 0) {
-        await pushCloudStore(buildSyncPayload(state));
-      }
-      const data = await refreshCloudStatus();
-      if (data?.store && (state.devisListPro.length === 0 || (data.devisCount ?? 0) > state.devisListPro.length)) {
-        applyCloudMerge(data.store);
+      const data = await runFullCloudSync();
+      if (data) {
+        setCloudSync({
+          configured: data.configured,
+          devisCount: data.devisCount ?? 0,
+          devisIds: data.devisIds ?? [],
+          loadError: data.loadError ?? null,
+          updatedAt: data.updatedAt ?? null,
+        });
       }
     } finally {
       setSyncing(false);
@@ -85,13 +74,17 @@ export default function DevisClient() {
   };
 
   useEffect(() => {
-    refreshCloudStatus().then((data) => {
-      if (!data?.store || appMode !== "pro" || devisListPro.length > 0) return;
-      if ((data.devisCount ?? 0) > 0) {
-        applyCloudMerge(data.store);
-      }
+    runFullCloudSync().then((data) => {
+      if (!data) return;
+      setCloudSync({
+        configured: data.configured,
+        devisCount: data.devisCount ?? 0,
+        devisIds: data.devisIds ?? [],
+        loadError: data.loadError ?? null,
+        updatedAt: data.updatedAt ?? null,
+      });
     });
-  }, [appMode, devisListPro.length]);
+  }, []);
 
   const filtered = useMemo(() => {
     return devisList.filter((d) => {
@@ -162,7 +155,7 @@ export default function DevisClient() {
                   </>
                 )}
               </p>
-              {(syncMismatch || (cloudSync.devisCount > 0 && devisListPro.length === 0)) && (
+              {(syncMismatch || cloudSync.devisCount > 0 || devisListPro.length > 0) && (
                 <button
                   type="button"
                   onClick={handleCloudSync}

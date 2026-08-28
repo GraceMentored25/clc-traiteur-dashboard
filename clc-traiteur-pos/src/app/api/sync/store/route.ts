@@ -43,41 +43,55 @@ export async function GET() {
     });
   }
 
-  const { data, error } = await supabase
-    .from("clc_store")
-    .select("*")
-    .eq("id", ROW_ID)
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from("clc_store")
+      .select("*")
+      .eq("id", ROW_ID)
+      .single();
 
-  const rowMissing = error?.code === "PGRST116";
-  if (error && !rowMissing) {
-    console.error("[sync/store GET]", error);
+    const rowMissing = error?.code === "PGRST116";
+    if (error && !rowMissing) {
+      console.error("[sync/store GET]", error);
+      return NextResponse.json({
+        configured: true,
+        config,
+        store: null,
+        hasRow: false,
+        devisCount: 0,
+        devisIds: [],
+        updatedAt: null,
+        loadError: error.message,
+        loadErrorCode: error.code,
+      });
+    }
+
+    const store = data ? mapSupabaseToStore(data as Record<string, unknown>) : null;
+    const devisListPro = store?.devisListPro ?? [];
+
+    return NextResponse.json({
+      configured: true,
+      config,
+      store,
+      hasRow: Boolean(data),
+      devisCount: devisListPro.length,
+      devisIds: devisListPro.map((d) => d.id),
+      updatedAt: (data as { updated_at?: string } | null)?.updated_at ?? null,
+      loadError: null,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Erreur serveur";
+    console.error("[sync/store GET] exception", err);
     return NextResponse.json({
       configured: true,
       config,
       store: null,
-      hasRow: false,
       devisCount: 0,
       devisIds: [],
-      updatedAt: null,
-      loadError: error.message,
-      loadErrorCode: error.code,
+      loadError: message,
+      hint: "Le client navigateur utilisera la sync directe Supabase",
     });
   }
-
-  const store = data ? mapSupabaseToStore(data as Record<string, unknown>) : null;
-  const devisListPro = store?.devisListPro ?? [];
-
-  return NextResponse.json({
-    configured: true,
-    config,
-    store,
-    hasRow: Boolean(data),
-    devisCount: devisListPro.length,
-    devisIds: devisListPro.map((d) => d.id),
-    updatedAt: (data as { updated_at?: string } | null)?.updated_at ?? null,
-    loadError: null,
-  });
 }
 
 /** POST — sauvegarde le store dans Supabase */

@@ -1,60 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useStore } from "@/lib/store";
 import { applyTheme } from "@/lib/themes";
 import Sidebar from "./Sidebar";
 import { List } from "@phosphor-icons/react";
-import { DEFAULT_INGREDIENTS, DEFAULT_MATERIEL } from "@/lib/data/stocks";
-import type { AppState } from "@/lib/store";
-import {
-  applyCloudMerge,
-  buildSyncPayload,
-  ensureDevisListView,
-  fetchCloudStore,
-  pushCloudStore,
-} from "@/lib/cloud-sync";
-
-async function runCloudSync() {
-  const current = useStore.getState();
-  const cloudResp = await fetchCloudStore();
-
-  if (cloudResp?.loadError) {
-    console.error("[cloud sync]", cloudResp.loadError);
-  }
-
-  if (cloudResp?.store) {
-    const { needsCloudPush } = applyCloudMerge(cloudResp.store);
-    const state = useStore.getState();
-
-    useStore.setState({
-      ingredients:
-        state.ingredients?.length > 0
-          ? state.ingredients
-          : cloudResp.store.ingredients && (cloudResp.store.ingredients as unknown[]).length > 0
-            ? (cloudResp.store.ingredients as typeof DEFAULT_INGREDIENTS)
-            : DEFAULT_INGREDIENTS,
-      materiel:
-        state.materiel?.length > 0
-          ? state.materiel
-          : cloudResp.store.materiel && (cloudResp.store.materiel as unknown[]).length > 0
-            ? (cloudResp.store.materiel as typeof DEFAULT_MATERIEL)
-            : DEFAULT_MATERIEL,
-    });
-
-    if (needsCloudPush || current.devisListPro.length > (cloudResp.devisCount ?? 0)) {
-      await pushCloudStore(buildSyncPayload(useStore.getState()));
-    }
-    return;
-  }
-
-  ensureDevisListView();
-  const afterView = useStore.getState();
-  if (afterView.devisListPro.length > 0) {
-    await pushCloudStore(buildSyncPayload(afterView));
-  }
-}
+import { buildSyncPayload, pushCloudStore, runFullCloudSync } from "@/lib/cloud-sync";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const user = useStore((s) => s.user);
@@ -66,7 +18,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [cloudReady, setCloudReady] = useState(false);
 
-  // Session utilisateur (cookie HttpOnly)
+  const syncNow = useCallback(async () => {
+    await runFullCloudSync();
+  }, []);
+
   useEffect(() => {
     if (!user) {
       fetch("/api/auth/session")
@@ -85,7 +40,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Attendre la réhydratation localStorage (critique pour desktop → cloud)
   useEffect(() => {
     if (useStore.persist.hasHydrated()) {
       setStoreReady(true);
@@ -123,11 +77,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     root.style.setProperty("--secondary-text-hover", darkHover);
   }, [themeId]);
 
-  // Sync cloud APRÈS réhydratation localStorage
+  // Sync cloud après réhydratation localStorage
   useEffect(() => {
     if (!hydrated || !user || !storeReady || cloudReady) return;
-
-    runCloudSync().finally(() => setCloudReady(true));
+    runFullCloudSync().finally(() => setCloudReady(true));
   }, [hydrated, user, storeReady, cloudReady]);
 
   useEffect(() => {
@@ -164,27 +117,31 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     };
   }, [hydrated, user, cloudReady]);
 
-  // Sauvegarde à la fermeture (desktop) + quand l'app passe en arrière-plan (mobile Safari)
+  // Sauvegarde + re-sync quand l'app revient au premier plan (mobile / multi-onglets)
   useEffect(() => {
-    if (!user) return;
+    if (!user || !cloudReady) return;
 
-    const flush = () => {
-      if (cloudReady) {
-        pushCloudStore(buildSyncPayload(useStore.getState()));
+    const flush = () => pushCloudStore(buildSyncPayload(useStore.getState()));
+
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        flush();
+      } else {
+        syncNow();
       }
     };
 
-    const onVisibility = () => {
-      if (document.visibilityState === "hidden") flush();
-    };
+    const onFocus = () => syncNow();
 
     window.addEventListener("beforeunload", flush);
     document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", onFocus);
     return () => {
       window.removeEventListener("beforeunload", flush);
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", onFocus);
     };
-  }, [user, cloudReady]);
+  }, [user, cloudReady, syncNow]);
 
   useEffect(() => {
     if (hydrated && !user) router.replace("/");
