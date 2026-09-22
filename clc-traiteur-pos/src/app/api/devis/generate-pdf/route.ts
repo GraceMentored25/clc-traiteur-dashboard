@@ -381,18 +381,18 @@ function buildPrestationsPage(templatePage: string, serviceItems: DevisItem[], o
     };
   });
 
-  // Checkboxes : cochées + verrouillées si retenues, décochées + verrouillées sinon
+  // Cases custom : contour + coche dorés (les <input disabled> s'affichent en gris à l'impression)
+  const GOLD_CHECK =
+    '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">'
+    + '<path fill="none" stroke="#C99A43" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l5 5L19 6.5"/>'
+    + "</svg>";
   let checkIdx = 0;
-  h = h.replace(/<input[^>]*class="[^"]*\bservice-check\b[^"]*"[^>]*>/g, (full) => {
+  h = h.replace(/<input[^>]*class="[^"]*\bservice-check\b[^"]*"[^>]*>/g, () => {
     const slot = slotData[checkIdx++];
-    if (!slot) return full;
-    const withoutState = full
-      .replace(/\s+checked\b/g, "")
-      .replace(/\s+disabled\b/g, "")
-      .replace(/\s+onclick="[^"]*"/g, "")
-      .replace(/\s+onmousedown="[^"]*"/g, "");
-    const attrs = slot.checked ? " checked disabled" : " disabled";
-    return withoutState.replace(/>$/, `${attrs}>`);
+    if (!slot) return "";
+    const on = slot.checked ? " is-checked" : "";
+    const mark = slot.checked ? GOLD_CHECK : "";
+    return `<span class="service-check${on}" aria-hidden="true">${mark}</span>`;
   });
 
   let nameIdx = 0, detailIdx = 0, priceIdx = 0;
@@ -712,9 +712,39 @@ const PRINT_CSS = `<style id="print-overrides">
   .menu-ico  { width:21px !important; height:21px !important; color:#a77835 !important; display:flex; align-items:center; justify-content:center; }
   .menu-ico svg { width:21px !important; height:21px !important; display:block; }
 
-  /* Prestations retenues : cases figées (non décochables) */
-  .service-check { pointer-events: none; }
-  .service-check:disabled { opacity: 1; accent-color: #c99a43; cursor: default; }
+  /* Prestations : case dorée (contour + coche) alignée sur le titre */
+  .service-check {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    position: absolute !important;
+    left: 12px !important;
+    top: 8px !important;
+    width: 28px !important;
+    height: 28px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    border: 2.5px solid #C99A43 !important;
+    border-radius: 4px !important;
+    background: transparent !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    pointer-events: none;
+    opacity: 1 !important;
+    filter: none !important;
+    z-index: 3;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .service-check svg { width: 16px; height: 16px; display: block; overflow: visible; }
+  .service-name {
+    top: 8px !important;
+    height: 28px !important;
+    line-height: 28px !important;
+    display: flex !important;
+    align-items: center !important;
+  }
 
   /* Nom / Société : même hauteur que la zone « Bon pour accord » (.sign-area = 54px) */
   textarea.sign-line.name-line,
@@ -793,7 +823,14 @@ const PRINT_CSS = `<style id="print-overrides">
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-    .service-check:disabled { opacity: 1 !important; accent-color: #c99a43 !important; }
+    .service-check {
+      border: 2.5px solid #C99A43 !important;
+      background: transparent !important;
+      opacity: 1 !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    .service-check svg path { stroke: #C99A43 !important; }
   }
 </style>`;
 
