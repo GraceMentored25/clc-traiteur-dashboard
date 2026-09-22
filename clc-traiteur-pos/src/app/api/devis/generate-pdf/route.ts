@@ -738,7 +738,8 @@ const PRINT_CSS = `<style id="print-overrides">
     print-color-adjust: exact !important;
   }
   .service-check svg { width: 16px; height: 16px; display: block; overflow: visible; }
-  .service-name {
+  .service-name,
+  .service-price {
     top: 8px !important;
     height: 28px !important;
     line-height: 28px !important;
