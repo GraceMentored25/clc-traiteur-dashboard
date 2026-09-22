@@ -657,8 +657,8 @@ export async function generateDevisPDF(devis: Devis) {
     doc.text(bottom, x + 4, sY + 40);
   };
 
-  drawSigBox(L, "Signature du client", "Précédée de « Bon pour accord »", devis.clientName);
-  drawSigBox(L + sigW + 8, "Signature C.LC. Traiteur", "Représentant(e) autorisé(e)", "Chez La Camerounaise");
+  drawSigBox(L, "Bon pour accord", "Nom / Société du client", devis.clientName);
+  drawSigBox(L + sigW + 8, "Bon pour accord", "Nom / Société — C.LC. Traiteur", "Chez La Camerounaise");
 
   // ── PIED DE PAGE ─────────────────────────────────────────────────────────
   const pages = doc.getNumberOfPages();
