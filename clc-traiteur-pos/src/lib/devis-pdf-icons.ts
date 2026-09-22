@@ -1,47 +1,28 @@
-/** Icônes culinaires — SVG filled (lisibles à 21px, contrairement aux Lucide stroke). */
+/** Icônes culinaires extraites de la légende du template devis_modele.html (page 18). */
 
 import type { DevisItem } from "@/lib/types";
 import { DISHES } from "@/lib/data/dishes";
 
-function icon(path: string): string {
-  return `<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path fill="currentColor" d="${path}"/></svg>`;
-}
-
-/** Verre cocktail (apéritif / vin d'honneur) — forme pleine, pas de flûtes croisées. */
-export const APERITIF_ICON = icon(
-  "M21 5V3H3v2l8 9v5H6v2h12v-2h-5v-5l8-9zM7.43 7L5.66 5h12.69l-1.78 2H7.43z"
-);
-
-/** Barbecue / grillades (viandes et poissons grillés). */
-export const GRILL_ICON = icon(
-  "M17 5c0-1.1-.9-2-2-2H9C7.9 3 7 3.9 7 5v1H4v2h1v10c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V8h1V6h-3V5zm-8 0h6v1H9V5zm9 13H6V8h12v10zM8 10h2v6H8v-6zm3 0h2v6h-2v-6zm3 0h2v6h-2v-6z"
-);
-
-/** Marmite (plats cuisinés / repas). */
-export const PLAT_CUISINES_ICON = icon(
-  "M3 10v2h2v7c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2v-7h2v-2H3zm4 2h10v7H7v-7zM8 6V4h2V2h4v2h2v2H8z"
-);
-
-/** Assiette (accompagnements). */
-export const ACCOMPAGNEMENTS_ICON = icon(
-  "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm0-3c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5z"
-);
+export const APERITIF_ICON = "<svg aria-hidden=\"true\" focusable=\"false\" viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"M6 2h2.2l-1.3 8.2-.1 1.1 9.4 8.1c.35.3.25.85-.2 1.05l-.75.35c-.5.22-1.08-.05-1.28-.58L5.6 11.1 6 2z\"/><path d=\"M15.8 2h2.2l1.3 8.2.1 1.1-9.4 8.1c-.35.3-.25.85.2 1.05l.75.35c.5.22 1.08-.05 1.28-.58L18.4 11.1 17.8 2z\"/></svg>";
+export const GRILL_ICON = "<svg aria-hidden=\"true\" focusable=\"false\" viewBox=\"0 0 24 24\" fill=\"currentColor\"><circle cx=\"12\" cy=\"12\" r=\"9.2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\"/><path d=\"M5.8 9.2 18.2 18.8M4.2 12.4 19.8 16.6\" stroke=\"currentColor\" stroke-width=\"1.1\" fill=\"none\" opacity=\".55\"/><path d=\"M8.6 8.4h1.7v8.4H8.6zm2.2-.7h1.7v9.1h-1.7zm2.2.3h1.7v8.4h-1.7z\"/><path d=\"M9.1 10.2h.9M9.1 12h.9M9.1 13.8h.9M11.3 9.8h.9M11.3 11.6h.9M11.3 13.4h.9M13.5 10.4h.9M13.5 12.2h.9M13.5 14h.9\" opacity=\".45\"/></svg>";
+export const PLAT_CUISINES_ICON = "<svg aria-hidden=\"true\" focusable=\"false\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4.5 16.75c0-2.15 3.35-3.75 7.5-3.75s7.5 1.6 7.5 3.75\"/><path d=\"M7.75 16.75V12.2a4.25 4.25 0 0 1 8.5 0v4.55\"/><circle cx=\"12\" cy=\"6.15\" r=\"1.2\" fill=\"currentColor\" stroke=\"none\"/></svg>";
+export const ACCOMPAGNEMENTS_ICON = "<svg aria-hidden=\"true\" focusable=\"false\" viewBox=\"0 0 24 24\"><path fill=\"currentColor\" d=\"M3 10v2h2v7c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2v-7h2v-2zm4 2h10v7H7z\"/></svg>";
 
 const CATEGORY_ICONS: Record<string, string> = {
   "Apéritifs": APERITIF_ICON,
   "Grillades": GRILL_ICON,
   "Accompagnements": ACCOMPAGNEMENTS_ICON,
-  "Entrées & légumes frais": icon("M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z"),
-  "Veloutés & potages": icon("M2 12h20c0 5.52-4.48 10-10 10S2 17.52 2 12zm2.05-1C4.56 6.91 8.03 4 12 4s7.44 2.91 7.95 7H4.05z"),
+  "Entrées & légumes frais": "<svg aria-hidden=\"true\" focusable=\"false\" class=\"lucide lucide-salad\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M7 21h10\" /> <path d=\"M12 21a9 9 0 0 0 9-9H3a9 9 0 0 0 9 9Z\" /> <path d=\"M11.38 12a2.4 2.4 0 0 1-.4-4.77 2.4 2.4 0 0 1 3.2-2.77 2.4 2.4 0 0 1 3.47-.63 2.4 2.4 0 0 1 3.37 3.37 2.4 2.4 0 0 1-1.1 3.7 2.51 2.51 0 0 1 .03 1.1\" /> <path d=\"m13 12 4-4\" /> <path d=\"M10.9 7.25A3.99 3.99 0 0 0 4 10c0 .73.2 1.41.54 2\" /> </svg>",
+  "Veloutés & potages": "<svg aria-hidden=\"true\" focusable=\"false\" class=\"lucide lucide-soup\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M12 21a9 9 0 0 0 9-9H3a9 9 0 0 0 9 9Z\" /> <path d=\"M7 21h10\" /> <path d=\"M19.5 12 22 6\" /> <path d=\"M16.25 3c.27.1.8.53.75 1.36-.06.83-.93 1.2-1 2.02-.05.78.34 1.24.73 1.62\" /> <path d=\"M11.25 3c.27.1.8.53.74 1.36-.05.83-.93 1.2-.98 2.02-.06.78.33 1.24.72 1.62\" /> <path d=\"M6.25 3c.27.1.8.53.75 1.36-.06.83-.93 1.2-1 2.02-.05.78.34 1.24.74 1.62\" /> </svg>",
   "Plats cuisinés": PLAT_CUISINES_ICON,
   "Viandes": GRILL_ICON,
-  "Poissons": icon("M19.5 12c.9-2.6-.2-5.4-2.5-6.9C14.7 3.6 11 3.2 8 4.5 5.8 5.5 4.1 7.4 3 9.7c1.3.4 2.4 1.5 2.8 2.9-.4 1.4-1.5 2.5-2.8 2.9 1.1 2.3 2.8 4.2 5 5.2 3 1.3 6.7.9 9-1.6 2.3-1.5 3.4-4.3 2.5-6.9zM16 10.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3z"),
-  "Desserts & pâtisseries": icon("M12 6c1.11 0 2-.9 2-2 0-.38-.1-.73-.29-1.03L12 0l-1.71 2.97c-.19.3-.29.65-.29 1.03 0 1.1.9 2 2 2zm6 3h-5V7h-2v2H6c-1.66 0-3 1.34-3 3v9c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-9c0-1.66-1.34-3-3-3z"),
-  "Boissons & cocktails": icon("M21 5V3H3v2l8 9v5H6v2h12v-2h-5v-5l8-9zM7.43 7L5.66 5h12.69l-1.78 2H7.43z"),
-  "Eaux & boissons fraîches": icon("M18 2H6l1.5 16.5A2.5 2.5 0 0 0 10 21h4a2.5 2.5 0 0 0 2.5-2.5L18 2zm-2.15 8H8.15L7.7 6h8.6l-.45 4z"),
-  "Cafés, thés & infusions": icon("M2 21h18v-2H2v2zM20 8h-2V5H4v8c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-1h2c1.11 0 2-.89 2-2V10c0-1.11-.89-2-2-2zm0 3h-2v-1h2v1z"),
-  "Boulangerie & brunch": icon("M5 9.2C5 6.9 8.1 5 12 5s7 1.9 7 4.2V16c0 1.1-.9 2-2 2H7c-1.1 0-2-.9-2-2V9.2zM7 9h10c0-.8-2.1-2-5-2S7 8.2 7 9z"),
-  "Fruits & frais": icon("M17.2 8.02c-.7-.7-1.6-1.1-2.5-1.2.3-1.2 0-2.5-.8-3.5L12.5 2c-.2 1.5-1 2.8-2.2 3.6C8.7 6.5 7 8.2 7 10.5c0 3.3 2.2 7.5 5 7.5s5-4.2 5-7.5c0-.9-.3-1.7-.8-2.48zM12 20c-1.1 0-2.2-.3-3.2-.8.6 1.7 2.2 2.8 4 2.8h.2c.1-.7.2-1.3.2-2 0 0-.7 0-1.2 0z"),
+  "Poissons": GRILL_ICON,
+  "Desserts & pâtisseries": "<svg aria-hidden=\"true\" focusable=\"false\" class=\"lucide lucide-cake-slice\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M16 13H3\" /> <path d=\"M16 17H3\" /> <path d=\"m7.2 7.9-3.388 2.5A2 2 0 0 0 3 12.01V20a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-8.654c0-2-2.44-6.026-6.44-8.026a1 1 0 0 0-1.082.057L10.4 5.6\" /> <circle cx=\"9\" cy=\"7\" r=\"2\" /> </svg>",
+  "Boissons & cocktails": "<svg aria-hidden=\"true\" focusable=\"false\" class=\"lucide lucide-martini\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M12 12 4.207 4.207A.707.707 0 0 1 4.707 3h14.586a.707.707 0 0 1 .5 1.207z\" /> <path d=\"M12 12v10\" /> <path d=\"M7 22h10\" /> </svg>",
+  "Eaux & boissons fraîches": "<svg aria-hidden=\"true\" focusable=\"false\" class=\"lucide lucide-glass-water\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M5.116 4.104A1 1 0 0 1 6.11 3h11.78a1 1 0 0 1 .994 1.105L17.19 20.21A2 2 0 0 1 15.2 22H8.8a2 2 0 0 1-2-1.79z\" /> <path d=\"M6 12a5 5 0 0 1 6 0 5 5 0 0 0 6 0\" /> </svg>",
+  "Cafés, thés & infusions": "<svg aria-hidden=\"true\" focusable=\"false\" class=\"lucide lucide-coffee\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M10 2v2\" /> <path d=\"M14 2v2\" /> <path d=\"M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1\" /> <path d=\"M6 2v2\" /> </svg>",
+  "Boulangerie & brunch": "<svg aria-hidden=\"true\" focusable=\"false\" class=\"lucide lucide-croissant\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M10.2 18H4.774a1.5 1.5 0 0 1-1.352-.97 11 11 0 0 1 .132-6.487\" /> <path d=\"M18 10.2V4.774a1.5 1.5 0 0 0-.97-1.352 11 11 0 0 0-6.486.132\" /> <path d=\"M18 5a4 3 0 0 1 4 3 2 2 0 0 1-2 2 10 10 0 0 0-5.139 1.42\" /> <path d=\"M5 18a3 4 0 0 0 3 4 2 2 0 0 0 2-2 10 10 0 0 1 1.42-5.14\" /> <path d=\"M8.709 2.554a10 10 0 0 0-6.155 6.155 1.5 1.5 0 0 0 .676 1.626l9.807 5.42a2 2 0 0 0 2.718-2.718l-5.42-9.807a1.5 1.5 0 0 0-1.626-.676\" /> </svg>",
+  "Fruits & frais": "<svg aria-hidden=\"true\" focusable=\"false\" class=\"lucide lucide-apple\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" > <path d=\"M12 6.528V3a1 1 0 0 1 1-1h0\" /> <path d=\"M18.237 21A15 15 0 0 0 22 11a6 6 0 0 0-10-4.472A6 6 0 0 0 2 11a15.1 15.1 0 0 0 3.763 10 3 3 0 0 0 3.648.648 5.5 5.5 0 0 1 5.178 0A3 3 0 0 0 18.237 21\" /> </svg>",
 };
 
 const DISH_LEGEND_MAP: Record<string, string> = {
