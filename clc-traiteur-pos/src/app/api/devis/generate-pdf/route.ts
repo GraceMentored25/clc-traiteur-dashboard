@@ -674,7 +674,7 @@ function buildSignaturePage(templatePage: string, devis: Devis, now: string, out
     () => {
       const isClient = nameLineIdx++ === 0;
       const ph = isClient ? "Nom / Société du client" : "Nom / Société";
-      return `<input class="sign-line name-line" type="text" maxlength="80" placeholder="${ph}" autocomplete="off" />`;
+      return `<textarea class="sign-line name-line" rows="2" maxlength="80" placeholder="${ph}" autocomplete="off"></textarea>`;
     }
   );
   // Pré-remplir « Fait à » (ville du traiteur) et « Le » (date de génération)
@@ -716,23 +716,30 @@ const PRINT_CSS = `<style id="print-overrides">
   .service-check { pointer-events: none; }
   .service-check:disabled { opacity: 1; accent-color: #c99a43; cursor: default; }
 
-  /* Nom / Société : champ texte remplissable */
+  /* Nom / Société : même hauteur que la zone « Bon pour accord » (.sign-area = 54px) */
+  textarea.sign-line.name-line,
   input.sign-line.name-line {
     display: block;
     width: 100%;
-    height: 36px;
+    height: 54px;
+    min-height: 54px;
     margin-top: 4px;
-    padding: 0 2px;
+    padding: 8px 2px 6px;
     border: none;
     border-bottom: 1.25px solid var(--tan);
     border-radius: 0;
     background: transparent;
     font: 400 16px Raleway, Arial, sans-serif;
+    line-height: 1.35;
     color: var(--ink);
     outline: none;
     box-sizing: border-box;
+    resize: none;
+    overflow: hidden;
   }
+  textarea.sign-line.name-line:focus,
   input.sign-line.name-line:focus { border-bottom-color: var(--gold); }
+  textarea.sign-line.name-line::placeholder,
   input.sign-line.name-line::placeholder { color: #b7b3a8; font-style: italic; }
 
   /* ── Alignement recap-section ── */
@@ -775,7 +782,10 @@ const PRINT_CSS = `<style id="print-overrides">
     .frame { inset: 5mm !important; border-radius: 10px !important; }
     img { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    textarea.sign-line.name-line,
     input.sign-line.name-line {
+      height: 54px !important;
+      min-height: 54px !important;
       border: none !important;
       border-bottom: 1.25px solid #E9D8B6 !important;
       background: transparent !important;
