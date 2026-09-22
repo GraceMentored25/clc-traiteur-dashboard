@@ -130,14 +130,26 @@ function splitSectionsIntoPages(sections: Section[]): Section[][] {
   return pages;
 }
 
-function sectionPhotoUrl(label: string): string {
+function sectionPhotoKey(label: string): "aperitif" | "diner" | "cafe" | "dessert" | "buffet" | "generique" {
   const l = label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  if (/vin d.?honneur|aperitif|cocktail/.test(l)) return "/sections/aperitif.png";
-  if (/soiree|diner|gala|dejeuner|rencontre des familles/.test(l)) return "/sections/diner.png";
-  if (/brunch|pause|cafe/.test(l)) return "/sections/cafe.png";
-  if (/dessert|gateau|gouter|after/.test(l)) return "/sections/dessert.png";
-  if (/buffet/.test(l)) return "/sections/buffet.png";
-  return "/sections/generique.png";
+  if (/vin d.?honneur|aperitif|cocktail/.test(l)) return "aperitif";
+  if (/soiree|diner|gala|dejeuner|rencontre des familles/.test(l)) return "diner";
+  if (/brunch|pause|cafe/.test(l)) return "cafe";
+  if (/dessert|gateau|gouter|after/.test(l)) return "dessert";
+  if (/buffet/.test(l)) return "buffet";
+  return "generique";
+}
+
+/** Data URI : le devis s'ouvre en blob URL, donc `/sections/*.png` ne se charge pas. */
+const SECTION_PHOTO_URI = new Map<string, string>();
+function sectionPhotoSrc(label: string): string {
+  const key = sectionPhotoKey(label);
+  const cached = SECTION_PHOTO_URI.get(key);
+  if (cached) return cached;
+  const file = path.join(process.cwd(), "public", "sections", `${key}.png`);
+  const uri = `data:image/png;base64,${fs.readFileSync(file).toString("base64")}`;
+  SECTION_PHOTO_URI.set(key, uri);
+  return uri;
 }
 
 function computeTotals(items: DevisItem[]) {
@@ -286,7 +298,7 @@ function buildEventPage(templatePage: string, devis: Devis & {lieu?:string}, sec
         cardHead = tmplCard.slice(chStart, chEnd);
         cardHead = cardHead.replace(
           /(<img[^>]*class="[^"]*\bcard-photo\b[^"]*"[^>]*src=")[^"]*(")/,
-          `$1${sectionPhotoUrl(sec.label)}$2`
+          `$1${sectionPhotoSrc(sec.label)}$2`
         );
         cardHead = cardHead.replace(
           /(<div[^>]*class="[^"]*\bcard-title\b[^"]*"[^>]*>)[^<]*(<\/div>)/,
