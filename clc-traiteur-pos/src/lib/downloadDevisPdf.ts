@@ -27,7 +27,7 @@ export async function downloadDevisPdf(devis: DevisPdfPayload): Promise<void> {
     return;
   }
 
-  win.document.write("<html><body style='font-family:sans-serif;padding:40px;color:#555'>Génération du PDF en cours…</body></html>");
+  win.document.write("<html><body style='font-family:sans-serif;padding:40px;color:#555'>Ouverture du devis…</body></html>");
 
   const res = await fetch("/api/devis/generate-pdf", {
     method: "POST",

@@ -348,16 +348,18 @@ function buildPrestationsPage(templatePage: string, serviceItems: DevisItem[], o
     };
   });
 
-  // Checkboxes : forcer checked=true si sélectionné, false sinon
+  // Checkboxes : cochées + verrouillées si retenues, décochées + verrouillées sinon
   let checkIdx = 0;
   h = h.replace(/<input[^>]*class="[^"]*\bservice-check\b[^"]*"[^>]*>/g, (full) => {
     const slot = slotData[checkIdx++];
     if (!slot) return full;
-    // Retirer d'abord tout checked existant, puis rajouter si nécessaire
-    const withoutChecked = full.replace(/\s+checked\b/g, "");
-    return slot.checked
-      ? withoutChecked.replace(/>$/, " checked>")
-      : withoutChecked;
+    const withoutState = full
+      .replace(/\s+checked\b/g, "")
+      .replace(/\s+disabled\b/g, "")
+      .replace(/\s+onclick="[^"]*"/g, "")
+      .replace(/\s+onmousedown="[^"]*"/g, "");
+    const attrs = slot.checked ? " checked disabled" : " disabled";
+    return withoutState.replace(/>$/, `${attrs}>`);
   });
 
   let nameIdx = 0, detailIdx = 0, priceIdx = 0;
@@ -623,8 +625,20 @@ function buildSignaturePage(templatePage: string, devis: Devis, now: string, out
   let h = templatePage;
   h = h.replace(/(<span[^>]*class="[^"]*\bpn\b[^"]*"[^>]*>)\d*(<\/span>)/, `$1${outPageNum}$2`);
   h = setField(h, "sig-client", esc(devis.clientName));
+  // Signature & cachet → Bon pour accord
+  h = h.replace(/Signature\s*(?:&amp;|&)\s*cachet/gi, "Bon pour accord");
   // Supprimer l'icône dorée dans les sign-box
   h = h.replace(/<span[^>]*class="icon[^"]*"[^>]*>[\s\S]*?<\/span>/g, "");
+  // Nom / Société : champs texte remplissables (client + traiteur)
+  let nameLineIdx = 0;
+  h = h.replace(
+    /<div class="sign-line name-line"[^>]*contenteditable="true"[^>]*>\s*<\/div>/g,
+    () => {
+      const isClient = nameLineIdx++ === 0;
+      const ph = isClient ? "Nom / Société du client" : "Nom / Société";
+      return `<input class="sign-line name-line" type="text" maxlength="80" placeholder="${ph}" autocomplete="off" />`;
+    }
+  );
   // Pré-remplir « Fait à » (ville du traiteur) et « Le » (date de génération)
   let bottomLineIdx = 0;
   const bottomValues = [esc(brandVille), esc(now)];
@@ -676,7 +690,30 @@ const PRINT_CSS = `<style id="print-overrides">
   .food-list .food-qty,
   .food-row .food-qty  { font-family:Raleway,Arial,sans-serif !important; font-size:19px !important; font-weight:700 !important; line-height:1 !important; text-align:right !important; white-space:nowrap; color:var(--ink) !important; }
   .menu-ico  { width:21px !important; height:21px !important; color:#a77835 !important; display:flex; align-items:center; justify-content:center; }
-  .menu-ico svg { width:21px !important; height:21px !important; }
+  .menu-ico svg { width:21px !important; height:21px !important; display:block; }
+
+  /* Prestations retenues : cases figées (non décochables) */
+  .service-check { pointer-events: none; }
+  .service-check:disabled { opacity: 1; accent-color: #c99a43; cursor: default; }
+
+  /* Nom / Société : champ texte remplissable */
+  input.sign-line.name-line {
+    display: block;
+    width: 100%;
+    height: 36px;
+    margin-top: 4px;
+    padding: 0 2px;
+    border: none;
+    border-bottom: 1.25px solid var(--tan);
+    border-radius: 0;
+    background: transparent;
+    font: 400 16px Raleway, Arial, sans-serif;
+    color: var(--ink);
+    outline: none;
+    box-sizing: border-box;
+  }
+  input.sign-line.name-line:focus { border-bottom-color: var(--gold); }
+  input.sign-line.name-line::placeholder { color: #b7b3a8; font-style: italic; }
 
   /* ── Alignement recap-section : centrage vertical avec sous-titre ── */
   .recap-section { align-items: center !important; }
@@ -687,7 +724,7 @@ const PRINT_CSS = `<style id="print-overrides">
   .recap-extra { height:auto !important; min-height:69px; box-sizing:border-box; padding-bottom:4px; }
   .toolbar,.page-number { display:none !important; }
   @media screen {
-    body { padding:24px; background:#1a1a1a; }
+    body { padding:76px 24px 24px !important; background:#1a1a1a; }
     .page-host {
       display:block !important;
       margin:0 auto 24px;
@@ -708,6 +745,15 @@ const PRINT_CSS = `<style id="print-overrides">
     .page { transform:none !important; width:210mm; height:297mm; }
     img { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    input.sign-line.name-line {
+      border: none !important;
+      border-bottom: 1.25px solid #E9D8B6 !important;
+      background: transparent !important;
+      color: #15271F !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .service-check:disabled { opacity: 1 !important; accent-color: #c99a43 !important; }
   }
 </style>`;
 
@@ -776,9 +822,14 @@ export async function POST(req: NextRequest) {
 
     // ── Footer JS ─────────────────────────────────────────────────────────────
     const total = pages.length;
+    const toolbar = `<div id="pdf-toolbar" style="position:fixed;z-index:9999;inset:0 0 auto;height:56px;background:rgba(6,43,32,.97);border-bottom:1px solid rgba(215,179,109,.55);display:flex;align-items:center;justify-content:center;gap:12px;padding:8px 14px;color:white;font-family:Raleway,Arial,sans-serif">
+  <strong style="font-family:Montserrat,Arial,sans-serif;margin-right:6px">Devis ${esc(devis.id)}</strong>
+  <span style="color:#f1ddb0;font-size:13px">Complétez Nom / Société puis enregistrez en PDF</span>
+  <button type="button" onclick="window.print()" style="border:1px solid #c99a43;border-radius:999px;background:#c99a43;color:#062B20;padding:8px 16px;cursor:pointer;font:700 13px Raleway">Imprimer / PDF</button>
+</div>`;
+
     const footerScript = `<script>
 (function(){
-  // Ajouter les footers sur chaque page
   document.querySelectorAll('.page').forEach(function(p,i){
     var f=document.createElement('div');
     f.style.cssText='position:absolute;bottom:5mm;left:14mm;right:14mm;display:flex;justify-content:space-between;font-size:7px;color:#C99A43;padding-top:2px;font-family:Montserrat,Raleway,Arial,sans-serif;letter-spacing:0.04em;';
@@ -786,23 +837,16 @@ export async function POST(req: NextRequest) {
     p.style.position='relative';
     p.appendChild(f);
   });
-  // Attendre que toutes les images et polices soient chargées avant d'imprimer
-  function doPrint(){
-    var imgs = document.querySelectorAll('img');
-    var pending = imgs.length;
-    if(pending === 0){ window.print(); return; }
-    function tryPrint(){ if(--pending <= 0) window.print(); }
-    imgs.forEach(function(img){
-      if(img.complete){ tryPrint(); }
-      else { img.addEventListener('load', tryPrint); img.addEventListener('error', tryPrint); }
-    });
-  }
-  if(document.readyState === 'complete'){ doPrint(); }
-  else { window.addEventListener('load', doPrint); }
+  document.querySelectorAll('.service-check').forEach(function(el){
+    el.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); });
+  });
 })();
 </script>`;
 
-    const final = `${head}<body>\n<main>\n${pages.join("\n")}\n</main>\n${footerScript}\n</body>\n</html>`;
+    const printHideToolbar = `<style>@media print { #pdf-toolbar { display:none !important; } body { padding:0 !important; } }</style>`;
+    head = head.replace("</head>", printHideToolbar + "</head>");
+
+    const final = `${head}<body style="padding-top:76px">\n${toolbar}\n<main>\n${pages.join("\n")}\n</main>\n${footerScript}\n</body>\n</html>`;
 
     return new NextResponse(final, {
       status: 200,
