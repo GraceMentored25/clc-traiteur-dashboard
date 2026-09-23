@@ -722,7 +722,8 @@ const PRINT_CSS = `<style id="print-overrides">
   .food-row .food-name { line-height:1 !important; white-space:nowrap; color:var(--ink) !important; }
   .food-row .food-qty  { line-height:1 !important; text-align:right !important; white-space:nowrap; color:var(--ink) !important; }
   .menu-ico  { width:21px !important; height:21px !important; color:#a77835 !important; display:flex; align-items:center; justify-content:center; }
-  .menu-ico svg { width:21px !important; height:21px !important; display:block; }
+  .menu-ico svg,
+  .menu-ico img { width:21px !important; height:21px !important; display:block; object-fit:contain; }
 
   /* Prestations : case dorée (contour + coche) alignée sur le titre */
   .service-check {
