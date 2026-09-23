@@ -725,13 +725,13 @@ const PRINT_CSS = `<style id="print-overrides">
   .menu-ico svg,
   .menu-ico img { width:21px !important; height:21px !important; display:block; object-fit:contain; }
 
-  /* Prestations : case dorée (contour + coche) alignée sur le titre */
+  /* Prestations : case + titre + prix descendus vers le centre / 2e ligne */
   .service-check {
     appearance: none !important;
     -webkit-appearance: none !important;
     position: absolute !important;
     left: 12px !important;
-    top: 8px !important;
+    top: 16px !important;
     width: 28px !important;
     height: 28px !important;
     margin: 0 !important;
@@ -753,7 +753,7 @@ const PRINT_CSS = `<style id="print-overrides">
   .service-check svg { width: 16px; height: 16px; display: block; overflow: visible; }
   .service-name,
   .service-price {
-    top: 8px !important;
+    top: 16px !important;
     height: 28px !important;
     line-height: 28px !important;
     display: flex !important;
