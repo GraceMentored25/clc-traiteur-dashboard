@@ -19,7 +19,7 @@ function flaticonIcon(filename: string): string {
   return html;
 }
 
-export const APERITIF_ICON = () => flaticonIcon("aperitif-champagne.png");
+export const APERITIF_ICON = () => flaticonIcon("aperitif-canapes.png");
 export const GRILL_ICON = () => flaticonIcon("grillades-barbecue.png");
 export const PLAT_CUISINES_ICON = () => flaticonIcon("plat-cloche.png");
 export const ACCOMPAGNEMENTS_ICON = () => flaticonIcon("accompagnement-riz.png");
