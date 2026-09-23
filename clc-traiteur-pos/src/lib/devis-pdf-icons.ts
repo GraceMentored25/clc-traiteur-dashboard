@@ -134,6 +134,14 @@ const DISH_LEGEND_MAP: Record<string, string> = {
   "couscous tapioca": "Accompagnements",
 };
 
+function normalizeKey(value: string): string {
+  return value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+}
+
+const DISH_LEGEND_NORM: Record<string, string> = Object.fromEntries(
+  Object.entries(DISH_LEGEND_MAP).map(([key, cat]) => [normalizeKey(key), cat])
+);
+
 const DISH_CATEGORY = new Map(DISHES.map((d) => [d.id, d.category]));
 const SERVICE_DISH_IDS = new Set(DISHES.filter((d) => d.category === "Services").map((d) => d.id));
 
@@ -151,10 +159,6 @@ const SERVICE_NAME_RE =
   /serveur|marmite|service de table|tente|chapiteau|chaise|déco|décoration|transport|livraison|sono|animation|photographe/i;
 const SERVICE_SECTION_RE = /^services?$/i;
 
-function normalizeKey(value: string): string {
-  return value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-}
-
 /** Prestation additionnelle : catégorie Services ou section « Service(s) » de l'application. */
 export function isServiceItem(item: DevisItem): boolean {
   if (item.section && (SERVICE_SECTION_RE.test(item.section) || item.section === "__services__")) {
@@ -167,9 +171,9 @@ export function isServiceItem(item: DevisItem): boolean {
 function inferLegendCategory(dishName: string, dishId?: number): string {
   const normalized = normalizeKey(dishName);
 
-  if (DISH_LEGEND_MAP[normalized]) return DISH_LEGEND_MAP[normalized];
+  if (DISH_LEGEND_NORM[normalized]) return DISH_LEGEND_NORM[normalized];
 
-  for (const [key, cat] of Object.entries(DISH_LEGEND_MAP)) {
+  for (const [key, cat] of Object.entries(DISH_LEGEND_NORM)) {
     if (normalized.includes(key) || key.includes(normalized)) return cat;
   }
 
